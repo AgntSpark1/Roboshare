@@ -276,7 +276,7 @@ contract SubscriptionRouter {
 - 没有提款、没有管理员转账函数、不可升级；唯一的管理操作是守护者 `pause()`（治理 `unpause()`），暂停后所有认购停止。
 - 由于用户授权的是这一个单例合约，它是全平台风险最集中的位置，需在外部审计中重点审查。
 
-授权额度（DApp 行为，D-23）：首次购买时检测 `allowance(user, router)`，不足时引导用户授权。授权额度由用户在 DApp 中填写，预填本次购买金额，用户可调高为自己的投资预算；默认不提供无限授权。之后只要剩余额度足够，购买即为一笔交易。DApp 显示当前剩余授权额度，并提供"撤销授权"（授权为 0）按钮。
+授权额度（DApp 行为，D-23）：首次购买时检测 `allowance(user, router)`，不足时引导用户授权。默认**无限授权**（`type(uint256).max`，已于 2026-10-09 确认）。授权前 DApp 明确提示：授权在撤销前一直有效，若在钓鱼网站授权或合约存在漏洞，钱包内全部 USDT 都有风险。之后每次购买都是一笔交易。DApp 显示当前授权状态，并提供"撤销授权"（授权为 0）按钮。因此第 2 阶段的路由合约安全约束（只从 `msg.sender` 拉取、只转入已关联项目、精确金额）是硬性要求。
 
 USDT 不假定支持 EIP-2612 `permit`；如经核实支持，可作为后续优化。
 
@@ -360,7 +360,7 @@ sequenceDiagram
   participant T as RwaShareToken
   participant AR as AssetRegistry
   participant R as SubscriptionRouter
-  Inv->>SC: approve(R, 用户设定的额度)（仅首次或额度不足时）
+  Inv->>SC: approve(R, 无限额度)（仅首次）
   Inv->>R: subscribe(projectId, units, maxCost)
   R->>OM: quote(units)
   R->>SC: transferFrom(inv, OM, cost)
