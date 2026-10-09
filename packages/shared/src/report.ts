@@ -54,6 +54,7 @@ export type FinancialReport = z.infer<typeof financialReportSchema>;
 
 /** Deterministic JSON: object keys sorted, no whitespace. */
 export function canonicalJson(value: unknown): string {
+  if (typeof value === "bigint") return JSON.stringify(value.toString());
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value !== null && typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>)
