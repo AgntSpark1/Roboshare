@@ -32,7 +32,7 @@
   "operator": "0x…",
   "reviewerSafe": "0x…",
   "complianceRelayer": "0x…",
-  "timelockDelaySeconds": 172800,
+  "timelockDelaySeconds": 86400,
   "allowedPaymentTokens": ["0x…"]
 }
 ```

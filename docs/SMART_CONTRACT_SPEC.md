@@ -37,7 +37,6 @@
 | `REVIEWER_ROLE` | 财务/审核 Safe | 验证项目、批准/驳回报告与批次 | 批准任何由其自身提交的内容（通过 `msg.sender != submitter` 强制执行） |
 | `COMPLIANCE_AGENT_ROLE` | 合规中继器（热密钥，链下限速） | 设置/续期/撤销投资资格、冻结/解冻 | `IdentityRegistry` 之外的任何操作 |
 | `PAUSER_ROLE` | 守护者（Guardian）Safe | 对代币、募集、分配合约、身份写入执行 `pause()`；`suspend` 项目 | 解除暂停、转账、变更配置 |
-| `RECOVERY_ROLE` | 时间锁 ← 治理 Safe | 对以 `recoveryEnabled = true` 部署的代币执行 `forcedTransfer` | 对禁用恢复功能的代币执行任何操作 |
 | `MINTER`（不是角色，而是不可变绑定） | 该项目的 `OfferingManager` | 在上限内铸造 | — |
 | `FACTORY_ROLE` | `ProjectFactory` | 一次性关联各项目合约 | 重新关联、变更状态 |
 
@@ -184,15 +183,15 @@ OpenZeppelin `ERC20` + `AccessControl` + `Pausable`，并使用 OpenZeppelin `Ch
 
 ### 6.1 不可变参数
 
-`projectId`、`assetRegistry`、`identityRegistry`、`CAP = 100`、`decimals() = 0`、`recoveryEnabled`、`allowedClassesMask`（本项目允许的投资者类别位掩码）。
+`projectId`、`assetRegistry`、`identityRegistry`、`CAP = 100`、`decimals() = 0`、`allowedClassesMask`（本项目允许的投资者类别位掩码）。
 
 ### 6.2 行为
 
 - `bindMinter(offering)`：FACTORY_ROLE，仅一次。
 - `mint(to, units)`：仅限已绑定的铸造方；`totalSupply + units <= CAP`；`to` 必须具备投资资格且类别被允许。
 - MVP 中不提供 `burn`。
-- 重写 `_update(from, to, value)`，适用于 `transfer`、`transferFrom`、铸造及强制转让：
-  - `whenNotPaused`（强制转让仅在治理方于暂停期间显式调用时才可绕过暂停，见 6.3）。
+- 重写 `_update(from, to, value)`，适用于 `transfer`、`transferFrom` 和铸造：
+  - `whenNotPaused`。
   - 对于普通转让：项目状态 ∈ {FUNDED, ACTIVE}（D-12）；`!isFrozen(from)`；`isEligible(to)`；`!isFrozen(to)`；`to` 的类别被允许；`value > 0`。
   - 写入以 `block.number` 为键的余额与总供应量检查点。
 - `balanceOfAt(account, blockNumber)`、`totalSupplyAt(blockNumber)`，适用于 `blockNumber < block.number`。
@@ -201,9 +200,9 @@ OpenZeppelin `ERC20` + `AccessControl` + `Pausable`，并使用 OpenZeppelin `Ch
 
 ERC-20 一致性：接口与事件均为标准形式。当限制条件生效时转让会回滚；这为 ERC-20 所允许，但意味着该代币无法与假定可自由转让的协议（DEX、大多数借贷市场、大多数跨链桥）配合使用。这一点已在 TOKENOMICS 和 RISK_DISCLOSURES 中披露。
 
-### 6.3 恢复（D-14）
+### 6.3 不提供找回功能（D-14）
 
-`forcedTransfer(from, to, units, evidenceHash)`：`RECOVERY_ROLE`（经时间锁），仅当 `recoveryEnabled` 时可用。`to` 必须具备投资资格。触发 `ForcedTransfer(from, to, units, evidenceHash)` 以及标准的 `Transfer` 事件。默认禁用；仅当权益文件 (Rights Document) 对此有规定时，才按项目启用。
+代币没有 `forcedTransfer`，也没有 `RECOVERY_ROLE`。任何角色（包括治理）都无法在持有人不签名的情况下移动其代币。投资人丢失私钥将永久失去对应单位及其分配。
 
 ### 6.4 暂停
 
@@ -218,7 +217,7 @@ struct OfferingConfig {
     IERC20  paymentToken;   // allowlisted stablecoin; decimals read on-chain at configure time
     uint256 unitPrice;      // payment-token base units per unit
     uint32  maxUnits;       // must equal token CAP (100)
-    uint32  minUnits;       // default 100 (all-or-nothing, D-4)
+    uint32  minUnits;       // 1..maxUnits, set per offering by governance (partial fill allowed, D-4)
     uint32  perWalletMax;   // 1..100
     uint64  startTime;
     uint64  endTime;
@@ -385,7 +384,7 @@ sequenceDiagram
 ## 12. 不变量（将使用 Foundry 不变量测试进行测试）
 
 1. `token.totalSupply() ≤ 100` 始终成立；只有已绑定的铸造方能增加该值。
-2. 每个非零余额都属于在收到单位时具备投资资格的地址（或在强制转让时具备投资资格的目标地址）。
+2. 每个非零余额都属于在收到单位时具备投资资格的地址。
 3. `OfferingManager` 稳定币余额 == 处于 `ESCROWED` 或 `REFUNDABLE` 状态的认购人已付款项之和。
 4. 结算后，`token.totalSupply() == Σ units of SETTLED subscribers`（即 SETTLED 认购人的单位数之和）。
 5. 对每个批次：`Σnet + Σfee + dustOut == pool`；`Σ 已领取净额 ≤ Σ net`。
@@ -397,4 +396,4 @@ sequenceDiagram
 
 ## 13. 自定义错误（示意）
 
-`ProjectExists`、`AssetAlreadyRegistered`、`InvalidTransition(from,to)`、`NotEligible(wallet)`、`WalletFrozen(wallet)`、`ClassNotAllowed`、`CapExceeded`、`TransfersDisabledInState(state)`、`OfferingNotOpen`、`OfferingWindowClosed`、`PerWalletLimit`、`UnexpectedTransferAmount`、`SubscriberIneligible`、`ReportNotApproved`、`AmountExceedsReport`、`BatchPending`、`HoldersNotSorted`、`HolderSetIncomplete`、`SnapshotOutOfRange`、`AlreadyClaimed`、`NothingToClaim`、`SelfApproval`、`RecoveryDisabled`、`MarketConfigMismatch`。
+`ProjectExists`、`AssetAlreadyRegistered`、`InvalidTransition(from,to)`、`NotEligible(wallet)`、`WalletFrozen(wallet)`、`ClassNotAllowed`、`CapExceeded`、`TransfersDisabledInState(state)`、`OfferingNotOpen`、`OfferingWindowClosed`、`PerWalletLimit`、`UnexpectedTransferAmount`、`SubscriberIneligible`、`ReportNotApproved`、`AmountExceedsReport`、`BatchPending`、`HoldersNotSorted`、`HolderSetIncomplete`、`SnapshotOutOfRange`、`AlreadyClaimed`、`NothingToClaim`、`SelfApproval`、`MarketConfigMismatch`。

@@ -6,8 +6,8 @@
 
 ```mermaid
 flowchart TB
-  GS[治理 Safe<br/>建议 3-of-5，硬件钱包] --> TL[TimelockController<br/>建议 48 小时延迟]
-  TL -->|DEFAULT_ADMIN_ROLE, RECOVERY_ROLE| C[所有 RoboShare 合约]
+  GS[治理 Safe<br/>2-of-3，硬件钱包] --> TL[TimelockController<br/>24 小时延迟]
+  TL -->|DEFAULT_ADMIN_ROLE| C[所有 RoboShare 合约]
   GUARD[守护者 Guardian Safe<br/>建议 2-of-3] -->|PAUSER_ROLE| C
   OPS[运营方 Safe 或 EOA] -->|OPERATOR_ROLE| C
   REVS[审核人 Safe] -->|REVIEWER_ROLE| C
@@ -64,7 +64,7 @@ flowchart TB
 
 ## 6. 监控
 
-对以下情况发出告警：任何 `RoleGranted/RoleRevoked`、时间锁上的 `CallScheduled`、`Paused`、`ForcedTransfer`、`WalletFrozen`、超过阈值的批次提案、对账不一致、索引器延迟 > N 个区块、中继交易失败、投资资格更新量异常。
+对以下情况发出告警：任何 `RoleGranted/RoleRevoked`、时间锁上的 `CallScheduled`、`Paused`、`WalletFrozen`、超过阈值的批次提案、对账不一致、索引器延迟 > N 个区块、中继交易失败、投资资格更新量异常。
 
 ## 7. 上主网前必须完成的审查
 

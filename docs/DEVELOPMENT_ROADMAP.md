@@ -12,7 +12,7 @@
 2. `IdentityRegistry` + TEST-ONLY 模拟服务商辅助工具。
 3. 带转换表的 `AssetRegistry`。
 4. `AuditRegistry`。
-5. `RwaShareToken`（上限、铸造者绑定、`_update` 限制、检查点、恢复标志）。
+5. `RwaShareToken`（上限、铸造者绑定、`_update` 限制、检查点）。
 6. `OfferingManager`（托管、结算、失败、取消、退款）。
 7. `RevenueDistributor`（+ `FeeTiers` 库）。
 8. `ProjectFactory`（或脚本化部署，视字节码大小而定）。

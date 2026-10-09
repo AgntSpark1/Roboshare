@@ -98,7 +98,7 @@ erDiagram
 
 | 表 | 关键列 | 说明 |
 |---|---|---|
-| `token_transfer` | id, project_id, from_address, to_address, units, kind (MINT/TRANSFER/FORCED), chain_event_id | 每个链上事件唯一 |
+| `token_transfer` | id, project_id, from_address, to_address, units, kind (MINT/TRANSFER), chain_event_id | 每个链上事件唯一 |
 | `holding` | project_id, wallet_address, units, last_block | 主键 (project_id, wallet_address)；由转账记录投影生成 |
 | `holding_snapshot` | project_id, block_number, wallet_address, units | 为准备分配批次而物化；以 `balanceOfAt` 进行核验 |
 
