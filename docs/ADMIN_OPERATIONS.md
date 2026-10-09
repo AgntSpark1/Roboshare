@@ -1,67 +1,67 @@
-# RoboShare — Admin Operations Runbook
+# RoboShare — 管理运营手册
 
-Status: **DRAFT (Phase 1).** Procedures for the intended system. Screens and scripts referenced here do not exist yet.
+状态：**草案（DRAFT，Phase 1）。** 针对预期系统的操作流程。此处提及的界面和脚本目前尚不存在。
 
-Roles below refer to [SMART_CONTRACT_SPEC.md §2](SMART_CONTRACT_SPEC.md#2-roles-and-authority). "Safe proposal" means the admin console creates a Safe transaction that the required signers review and sign in Safe{Wallet}.
+下文所述角色参见 [SMART_CONTRACT_SPEC.md §2](SMART_CONTRACT_SPEC.md)。"Safe 提案"是指管理控制台创建一笔 Safe 交易，由所需签名者在 Safe{Wallet} 中审查并签名。
 
-## 1. Register a vehicle project
-1. **Operator**: create draft in admin → Projects. Enter title, issuer, make/model, VIN (encrypted, used only to derive the salted `assetId`).
-2. Upload required documents (purchase agreement, title/registration or contractual-interest evidence, insurance, operating agreement, Rights Document). Each upload is hashed and submitted to AuditRegistry.
-3. Submit `registerProject` (state DRAFT).
-4. **Reviewer** (different person): review documents off-chain, then `verifyProject` → VERIFIED. If issues, return to DRAFT with reason.
+## 1. 登记车辆项目
+1. **运营方**：在管理后台 → 项目中创建草稿。输入标题、发行人、品牌/型号、VIN（加密存储，仅用于派生加盐的 `assetId`）。
+2. 上传所需文件（购车协议、产权/登记证明或合同权益证明、保险、运营协议、权益文件 (Rights Document)）。每次上传均计算哈希并提交至 AuditRegistry。
+3. 提交 `registerProject`（状态 DRAFT）。
+4. **审核人**（必须为不同人员）：在链下审查文件，然后执行 `verifyProject` → VERIFIED。如有问题，附理由退回 DRAFT。
 
-Checklist before VERIFIED: Rights Document final and hashed; issuer formation documents hashed; risk factors written; no PII in any on-chain field.
+进入 VERIFIED 前的检查清单：权益文件 (Rights Document) 已定稿并已计算哈希；发行人设立文件已计算哈希；风险因素已撰写；任何链上字段中均不含个人身份信息（PII）。
 
-## 2. Configure and open an offering
-1. Governance view: enter unit price, payment token (from allowlist; decimals shown as read on-chain), min/max units (default 100/100), per-wallet max, start/end, treasury Safe, terms record.
-2. Console validates and creates a Safe proposal for `ProjectFactory.deployProject` (if not yet deployed), `configure`, `open`, scheduled through the timelock.
-3. After the delay, execute. State → OFFERING.
+## 2. 配置并开启募集
+1. 治理视图：输入单价、支付代币（从白名单中选择；显示从链上读取的 decimals）、最小/最大单位数（默认 100/100）、单钱包上限、开始/结束时间、金库 Safe、条款记录。
+2. 控制台进行校验，并为 `ProjectFactory.deployProject`（若尚未部署）、`configure`、`open` 创建 Safe 提案，通过时间锁排期。
+3. 延迟期满后执行。状态 → OFFERING。
 
-## 3. During the offering
-- Monitor subscriptions and eligibility. If a subscriber's eligibility lapses or is revoked, governance decides whether to `excludeSubscriber` (refund) before settlement.
-- Never promise allocation outside the contract's first-come rule.
+## 3. 募集期间
+- 监控认购情况和投资资格。若某认购人的投资资格失效或被撤销，由治理决定是否在结算前执行 `excludeSubscriber`（退款）。
+- 绝不承诺合约先到先得规则之外的分配。
 
-## 4. Settle or fail
-- Target met: **Operator** runs pre-check (all subscribers still eligible) then `settle`. Proceeds go to treasury; state FUNDED.
-- Target missed after deadline: anyone may call `finalizeFailed`; console shows a button. Notify subscribers that refunds are claimable.
-- Cancellation for cause: governance `cancel` via Safe proposal with reason document.
+## 4. 结算或失败
+- 达到目标：**运营方**执行预检查（所有认购人仍具备投资资格），然后执行 `settle`。募集所得进入金库；状态 FUNDED。
+- 截止后未达目标：任何人均可调用 `finalizeFailed`；控制台显示相应按钮。通知认购人可领取退款。
+- 因故取消：治理通过 Safe 提案执行 `cancel`，并附理由文件。
 
-## 5. Activate
-Governance transitions FUNDED → ACTIVE with an evidence record (e.g. vehicle delivered, insured, registered for service). The evidence is an attestation; label it as such on the project page.
+## 5. 激活
+治理将状态从 FUNDED 转换为 ACTIVE，并附证据记录（例如车辆已交付、已投保、已登记运营）。该证据属于声明/证明（attestation）；须在项目页面上如实标注。
 
-## 6. Periodic financial reporting
-1. **Operator** prepares the report for the period (revenue lines, expense lines, reserves, distributable amount) with evidence attachments. Schema validation must pass.
-2. Submit → hash anchored (SUBMITTED).
-3. **Reviewer** checks figures against evidence; approves or rejects with reason. Self-review is blocked.
-4. Amendments: submit an amendment referencing the previous report; the old one becomes SUPERSEDED on approval. Never edit an anchored report.
+## 6. 定期财务报告
+1. **运营方**编制该期间的报告（收入明细、支出明细、储备、可分配金额），并附证据附件。必须通过 schema 校验。
+2. 提交 → 哈希锚定（SUBMITTED）。
+3. **审核人**依据证据核对数字；批准或附理由驳回。禁止自我审核。
+4. 修订：提交引用前一份报告的修订版；修订版获批后，旧报告变为 SUPERSEDED。绝不编辑已锚定的报告。
 
-## 7. Distribution batch
-1. **Operator** opens Distributions → New batch: choose approved report, amount (≤ remaining distributable for that period), snapshot block (period end). Console shows holder list from the indexer and a TS preview of every allocation, fee and dust.
-2. Reconciliation must be clean; otherwise the console blocks proposals.
-3. Submit `proposeBatch`. Console compares on-chain `AllocationRecorded` events with the preview; any mismatch → do not approve, open an incident.
-4. Treasury Safe approves the exact stablecoin amount to the distributor.
-5. **Reviewer** approves the batch (Safe proposal). Funds pulled; fee sent to fee recipient; state CLAIMABLE.
-6. Publish the report page; notify holders.
+## 7. 分配批次
+1. **运营方**打开 分配 → 新建批次：选择已批准的报告、金额（≤ 该期间剩余可分配金额）、快照区块（期末）。控制台显示来自索引器的持有人列表，以及每笔分配额、费用和尾差（dust）的 TS 预览。
+2. 对账必须无异常；否则控制台会阻止提案。
+3. 提交 `proposeBatch`。控制台将链上 `AllocationRecorded` 事件与预览进行比对；如有任何不一致 → 不得批准，并开启事件处理流程。
+4. 金库 Safe 向分配合约授权准确的稳定币金额。
+5. **审核人**批准该批次（Safe 提案）。资金被拉取；费用发送至费用接收方；状态 CLAIMABLE。
+6. 发布报告页面；通知持有人。
 
-## 8. Compliance operations
-- Eligibility updates flow from the KYC provider through the relayer automatically.
-- Manual freeze (e.g. sanctions hit): Compliance → Wallets → Freeze, with reason code. Unfreeze requires governance.
-- Expiry reminders sent to investors ahead of `expiresAt`.
+## 8. 合规运营
+- 投资资格更新通过中继器自动从 KYC 服务商同步。
+- 手动冻结（例如命中制裁名单）：合规 → 钱包 → 冻结，并附原因代码。解除冻结需要治理批准。
+- 在 `expiresAt` 之前向投资者发送到期提醒。
 
-## 9. Exit and termination
-1. Governance moves ACTIVE/SUSPENDED → EXIT_PENDING (sale, retirement, replacement) or → TERMINATED (exceptional), with evidence. Transfers freeze.
-2. Final report includes sale proceeds and wind-down costs; normal report + batch flow.
-3. When the final batch is CLAIMABLE and no batch is pending, governance closes the project (CLOSED) and may sweep residual dust to treasury.
-4. Unclaimed allocations remain claimable.
-5. Replacement vehicle = new project with a new asset ID; it is not a continuation of the old token unless a documented migration is approved.
+## 9. 退出与终止
+1. 治理将状态从 ACTIVE/SUSPENDED 转换为 EXIT_PENDING（出售、报废、替换）或 → TERMINATED（特殊情况），并附证据。转让随即冻结。
+2. 最终报告包括出售所得和清算成本；按常规的报告 + 批次流程处理。
+3. 当最终批次处于 CLAIMABLE 且没有待处理批次时，治理关闭项目（CLOSED），并可将剩余尾差（dust）划转至金库。
+4. 未领取的分配额始终可领取。
+5. 替换车辆 = 使用新资产 ID 的新项目；除非经批准的有记录的迁移，否则它不是旧代币的延续。
 
-## 10. Emergency controls
-- Guardian pauses via Safe (token / offering / distributor / identity). See [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md).
-- Unpause requires governance via timelock.
+## 10. 紧急控制
+- 守护者（Guardian）通过 Safe 执行暂停（代币 / 募集 / 分配合约 / 身份）。参见 [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)。
+- 解除暂停需要治理通过时间锁执行。
 
-## 11. Role management
-- All grants/revokes are governance Safe proposals through the timelock. Console shows current holders from the indexer and pending timelock operations.
-- Quarterly access review: compare on-chain holders, staff accounts, and Safe signers.
+## 11. 角色管理
+- 所有授予/撤销操作均为通过时间锁执行的治理 Safe 提案。控制台显示来自索引器的当前持有人及待执行的时间锁操作。
+- 每季度访问审查：比对链上持有人、员工账户和 Safe 签名者。
 
-## 12. Exports
-Admin → Exports: project register, holdings at block, subscriptions, reports, batches and allocations (CSV). Every export is logged in `admin_action`.
+## 12. 导出
+管理后台 → 导出：项目登记册、指定区块的持仓、认购、报告、批次及分配额（CSV）。每次导出均记录在 `admin_action` 中。

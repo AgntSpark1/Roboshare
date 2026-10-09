@@ -1,47 +1,47 @@
-# RoboShare — Tokenomics
+# RoboShare — 代币经济学
 
-Status: **DRAFT (Phase 1).** The fee tiers and unit structure below are **proposed business rules**, not verified market standards. They have not been reviewed by counsel or tax advisers. All numbers in examples are illustrative.
+状态：**草案（DRAFT，第 1 阶段）。** 以下费率档位与单位结构属于**拟议的业务规则**，并非经过验证的市场标准。它们尚未经过法律顾问或税务顾问审查。示例中的所有数字仅用于说明。
 
-## 1. What a unit is
+## 1. 什么是单位
 
-- Each vehicle project issues its own token (`RwaShareToken`), one contract per project.
-- **Authorized supply: 100 whole units per project, immutable.** `decimals = 0`; fractions do not exist.
-- Default legal meaning (decision D-1, pending counsel): **one unit = a contractual economic right to 1 % of the project's distributable profit pool**, as defined in that project's Rights Document. The Rights Document hash is stored on-chain in `AssetRegistry`.
-- A unit is **not** ownership of the vehicle, **not** a share of the operator, and **not** a claim on any other project, unless a project's Rights Document explicitly and lawfully says otherwise.
-- Alternatives (SPV equity, debt note) are different instruments with different rights, priorities and regulatory treatment. They are not interchangeable and would each need their own Rights Document template and possibly different transfer rules.
+- 每个车辆项目发行自己的代币（`RwaShareToken`），每个项目一个合约。
+- **授权供应量：每个项目 100 个完整单位，不可变更。** `decimals = 0`；不存在小数单位。
+- 默认法律含义（决策 D-1，待法律顾问确认）：**一个单位 = 对该项目可分配利润池 1% 的合同性经济权利**，具体以该项目的权益文件 (Rights Document) 为准。权益文件 (Rights Document) 的哈希存储在链上 `AssetRegistry` 中。
+- 一个单位**不是**车辆的所有权，**不是**运营方的股份，**也不是**对任何其他项目的权利主张，除非某项目的权益文件 (Rights Document) 明确且合法地另有规定。
+- 替代方案（SPV（特殊目的载体）股权、债务票据）是不同的金融工具，具有不同的权利、优先级和监管处理。它们不可互换，且各自需要独立的权益文件 (Rights Document) 模板，并可能需要不同的转让规则。
 
-## 2. Issuance
+## 2. 发行
 
-| Item | Rule |
+| 项目 | 规则 |
 |---|---|
-| Who can mint | Only the project's `OfferingManager`, bound once at deployment |
-| When | At settlement of a successful offering (D-5) |
-| Max | 100 units; cap enforced in the token |
-| Fill rule | All-or-nothing by default (D-4): fewer than 100 subscribed by the deadline → offering cancelled, full refunds |
-| Price | `unitPrice` set per offering before launch, in an allowlisted stablecoin's base units. No price is assumed in these docs |
-| Unsold units | Under all-or-nothing there are none. If a lower minimum is ever enabled, unissued units are never minted and distributions are pro-rata over **issued** units, so each issued unit then represents more than 1 %. This is why the default is all-or-nothing |
-| Burn | None in MVP. Units remain after `CLOSED` as a historical record |
+| 谁可以铸造 | 仅限该项目的 `OfferingManager`，在部署时一次性绑定 |
+| 何时 | 在募集成功并结算时（D-5） |
+| 上限 | 100 个单位；上限在代币合约中强制执行 |
+| 满额规则 | 默认全有或全无（D-4）：截止时认购不足 100 个 → 募集取消，全额退款 |
+| 价格 | `unitPrice` 在每次募集启动前设定，以白名单稳定币的基础单位计。本文档不假定任何价格 |
+| 未售出单位 | 在全有或全无规则下不存在未售出单位。若将来启用较低的最低额度，未发行单位永不铸造，分配按**已发行**单位按比例进行，因此每个已发行单位将代表超过 1% 的权益。这正是默认采用全有或全无的原因 |
+| 销毁 | MVP 中不进行销毁。进入 `CLOSED` 后单位仍保留，作为历史记录 |
 
-## 3. Transfers
+## 3. 转让
 
-- Peer-to-peer between eligible wallets only (eligibility, not frozen, investor class allowed for the project).
-- Allowed only while the project is `FUNDED` or `ACTIVE` (D-12).
-- No official secondary market in the MVP (D-19). DEX pools, lending markets and bridges will generally fail eligibility checks; the token should be treated as **illiquid**.
-- ERC-20 interface and events are standard, but restricted transfers revert. It is accurate to call the token "ERC-20 interface-compatible with transfer restrictions"; it is not accurate to call it freely transferable.
+- 仅限在合格钱包之间点对点进行（具备投资资格、未被冻结、投资者类别获准参与该项目）。
+- 仅在项目处于 `FUNDED` 或 `ACTIVE` 状态时允许（D-12）。
+- MVP 中没有官方二级市场（D-19）。DEX 资金池、借贷市场和跨链桥通常无法通过投资资格检查；该代币应被视为**非流动性**资产。
+- ERC-20 接口和事件是标准的，但受限转让会回滚（revert）。将该代币称为“带转让限制、与 ERC-20 接口兼容”是准确的；称其可自由转让则不准确。
 
-## 4. Distribution model
+## 4. 分配模型
 
-### 4.1 Waterfall (performed off-chain, evidenced by an approved report)
+### 4.1 瀑布式分配（在链下执行，以经批准的报告为证据）
 
-1. Confirm actual project revenue for the period.
-2. Deduct documented operating costs (charging, cleaning, maintenance, insurance, platform/fleet fees, depreciation treatment as defined).
-3. Deduct approved reserves and priority obligations (debt service, taxes payable by the issuer, legal priorities).
-4. Result = **distributable profit D** for the period, recorded in the financial report and anchored in `AuditRegistry` with status `APPROVED`.
-5. Batches for that period may distribute at most D in total.
+1. 确认该期间项目的实际收入。
+2. 扣除有记录的运营成本（充电、清洁、维护、保险、平台/车队费用、按规定方式处理的折旧）。
+3. 扣除经批准的储备金和优先债务（偿债、发行人应缴税款、法定优先权）。
+4. 结果 = 该期间的**可分配利润 D**，记录在财务报告中，并以 `APPROVED` 状态锚定于 `AuditRegistry`。
+5. 该期间的各分配批次合计最多分配 D。
 
-If D ≤ 0, no batch is created, and the operator fee is zero (D-9). Loss carry-forward rules are not yet defined.
+若 D ≤ 0，则不创建批次，运营方费用为零（D-9）。亏损结转规则尚未确定。
 
-### 4.2 Per-holder allocation (performed on-chain)
+### 4.2 按持有人分配（在链上执行）
 
 ```
 grossᵢ = floor(D × uᵢ / U)
@@ -50,13 +50,13 @@ netᵢ   = grossᵢ − feeᵢ
 dust   = D − Σ grossᵢ
 ```
 
-- `uᵢ` = holder's units at the snapshot block (end of reporting period, D-7); `U` = total issued units at the same block.
-- Tier is based on units **in this project only** (D-6), at the snapshot.
-- Units bought after the snapshot earn nothing for that period; units sold before it earn nothing for that period.
+- `uᵢ` = 持有人在快照区块（报告期末，D-7）持有的单位数；`U` = 同一区块的已发行单位总数。
+- 档位**仅依据该项目内**的持有单位数（D-6），以快照时为准。
+- 快照之后买入的单位不享有该期间的收益；快照之前卖出的单位也不享有该期间的收益。
 
-### 4.3 Proposed operator-fee tiers
+### 4.3 拟议的运营方费率档位
 
-| Units held (per project, at snapshot) | Operator share of the holder's gross allocation | Basis points |
+| 持有单位数（按项目计，以快照时为准） | 运营方在持有人总分配额中所占比例 | 基点 |
 |---|---|---|
 | 1–4 | 20 % | 2 000 |
 | 5–9 | 17.5 % | 1 750 |
@@ -64,13 +64,13 @@ dust   = D − Σ grossᵢ
 | 20–49 | 12.5 % | 1 250 |
 | 50–100 | 10 % | 1 000 |
 
-Tiers are fixed in each project's `RevenueDistributor` at deployment. Changing tiers applies only to new projects and must be disclosed in that project's offering terms.
+档位在部署时固定于每个项目的 `RevenueDistributor` 中。档位变更仅适用于新项目，且必须在该项目的募集条款中披露。
 
-### 4.4 Worked example (illustrative only)
+### 4.4 计算示例（仅用于说明）
 
-Assume D = 10 000 stablecoin units for a period, U = 100 units issued, holders: A 50, B 25, C 10, D 9, E 4, F 2.
+假设某期间 D = 10 000 稳定币单位，U = 100 个已发行单位，持有人：A 50、B 25、C 10、D 9、E 4、F 2。
 
-| Holder | Units | Gross | Tier | Fee | Net |
+| 持有人 | 单位 | 总额 | 档位 | 费用 | 净额 |
 |---|---|---|---|---|---|
 | A | 50 | 5 000 | 10 % | 500 | 4 500 |
 | B | 25 | 2 500 | 12.5 % | 312.5 | 2 187.5 |
@@ -78,31 +78,31 @@ Assume D = 10 000 stablecoin units for a period, U = 100 units issued, holders: 
 | D | 9 | 900 | 17.5 % | 157.5 | 742.5 |
 | E | 4 | 400 | 20 % | 80 | 320 |
 | F | 2 | 200 | 20 % | 40 | 160 |
-| **Total** | **100** | **10 000** | | **1 240** | **8 760** |
+| **合计** | **100** | **10 000** | | **1 240** | **8 760** |
 
-On-chain, amounts are integer base units (e.g. 10 000 × 10¹⁸ for an 18-decimal stablecoin), so 312.5 is exactly representable and dust is at most a few base units.
+在链上，金额以整数基础单位表示（例如对于 18 位小数的稳定币为 10 000 × 10¹⁸），因此 312.5 可被精确表示，尾差（dust）最多为几个基础单位。
 
-Note the effective operator take depends on the holder mix (12.4 % here). A single flat 20 % deduction from total profit would be wrong under these rules.
+请注意，运营方的实际抽成比例取决于持有人构成（此例中为 12.4%）。在这些规则下，从总利润中统一扣除 20% 的做法是错误的。
 
-### 4.5 Rounding and dust (D-10)
+### 4.5 取整与尾差（dust）（D-10）
 
-- Fee is floored, so rounding on the fee split favours the investor.
-- `dust = D − Σgross` (strictly less than the number of holders, in base units) is carried into the project's next batch pool and recorded on-chain.
-- On `CLOSED`, residual dust is swept to the issuer treasury with an event.
+- 费用向下取整，因此费用拆分中的取整偏向投资者。
+- `dust = D − Σgross`（以基础单位计，严格小于持有人数量）结转至该项目下一批次的资金池，并在链上记录。
+- 进入 `CLOSED` 时，剩余尾差将转入发行人金库，并发出事件。
 
-### 4.6 Claims
+### 4.6 领取
 
-- Pull-based: holders claim per batch; operator may `claimFor` a holder (funds still go to the holder).
-- Frozen wallets cannot claim until unfrozen; entitlement is preserved (D-13).
-- Unclaimed amounts are never swept to the operator.
+- 主动领取（pull）模式：持有人按批次领取；运营方可以为持有人调用 `claimFor`（资金仍转给持有人）。
+- 被冻结的钱包在解冻前无法领取；权益予以保留（D-13）。
+- 未领取的金额永远不会被转给运营方。
 
-## 5. Fees not covered by tiers
+## 5. 档位之外的费用
 
-Any management fee, platform fee, or fleet-operator fee charged before distributable profit must appear as an expense line in the financial report and be disclosed in the offering terms. The tiered operator share is applied **only** to each holder's allocated profit. Whether separate management fees exist is unresolved (D-8).
+在计算可分配利润之前收取的任何管理费、平台费或车队运营方费用，都必须作为费用行列入财务报告，并在募集条款中披露。分档的运营方分成**仅**适用于每位持有人所分配的利润。是否存在单独的管理费尚未确定（D-8）。
 
-## 6. Things the token does not do
+## 6. 代币不具备的功能
 
-- No yield promise, no guaranteed return, no redemption right unless a Rights Document grants one.
-- No staking, governance voting, or protocol-level emissions.
-- No automatic deposit of subscription funds into Aave or any DeFi protocol.
-- Not accepted as Aave collateral; no such listing is assumed.
+- 不承诺收益，不保证回报，除非权益文件 (Rights Document) 授予赎回权，否则无赎回权。
+- 无质押、无治理投票、无协议层面的代币增发。
+- 不会自动将认购资金存入 Aave 或任何 DeFi 协议。
+- 不被 Aave 接受为抵押品；不假定存在此类上架。

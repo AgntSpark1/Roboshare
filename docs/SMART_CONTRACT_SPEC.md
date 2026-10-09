@@ -1,54 +1,54 @@
-# RoboShare — Smart Contract Specification
+# RoboShare — 智能合约规范
 
-Status: **DRAFT (Phase 1).** Specification only. No Solidity has been written, compiled, or tested. Function signatures may change during Phase 2; any change will be reflected here.
+状态：**草案（DRAFT，第 1 阶段）。** 仅为规范。尚未编写、编译或测试任何 Solidity 代码。函数签名可能在第 2 阶段发生变化；任何变更都将在本文档中同步体现。
 
-Target: BNB Smart Chain (testnet chain ID 97, mainnet chain ID 56). Solidity 0.8.x (exact version pinned in `foundry.toml`). OpenZeppelin Contracts v5.x (exact tag pinned). All contracts **non-upgradeable** (decision D-15).
+目标链：BNB Smart Chain（BSC）（测试网 chain ID 97，主网 chain ID 56）。Solidity 0.8.x（确切版本固定在 `foundry.toml` 中）。OpenZeppelin Contracts v5.x（固定确切标签）。所有合约均**不可升级**（决策 D-15）。
 
-> EVM target note: the `evm_version` setting must match opcodes supported by BSC at deployment time. Phase 2 will set it explicitly and verify by deploying to chain 97 before relying on newer opcodes (e.g. `PUSH0`, transient storage).
+> EVM 目标说明：`evm_version` 设置必须与部署时 BSC 支持的操作码相匹配。第 2 阶段将显式设置该值，并在依赖较新的操作码（例如 `PUSH0`、瞬态存储）之前，先部署到 chain 97 进行验证。
 
 ---
 
-## 1. Module overview
+## 1. 模块概览
 
-| Module | Cardinality | Responsibility |
+| 模块 | 数量 | 职责 |
 |---|---|---|
-| `AssetRegistry` | 1 (singleton) | Project + asset identity, issuer reference, lifecycle state machine, links to per-project contracts |
-| `AuditRegistry` | 1 | Append-only document and report hashes, review status, amendments |
-| `IdentityRegistry` | 1 | Wallet eligibility (status, class, jurisdiction, expiry), freeze |
-| `ProjectFactory` | 1 | Deploys and wires the per-project trio; links them in `AssetRegistry` |
-| `RwaShareToken` | 1 per project | Restricted ERC-20, decimals 0, cap 100, balance checkpoints |
-| `OfferingManager` | 1 per project | Escrowed subscriptions, settlement (mint + release funds), refunds |
-| `RevenueDistributor` | 1 per project | Report-bound batches, tiered fee allocation, pull claims, dust |
-| `AaveReader` | 1 (Phase 5) | View-only reads from a verified Aave V3 market |
-| `ICrossChainGateway` | interface only | Documented for future use; **not implemented or wired** (D-18) |
+| `AssetRegistry` | 1（单例） | 项目与资产身份、发行方引用、生命周期状态机、指向各项目合约的链接 |
+| `AuditRegistry` | 1 | 仅追加的文档与报告哈希、审核状态、修订 |
+| `IdentityRegistry` | 1 | 钱包投资资格（状态、类别、司法管辖区、到期时间）、冻结 |
+| `ProjectFactory` | 1 | 部署并连接每个项目的三件套合约；在 `AssetRegistry` 中建立关联 |
+| `RwaShareToken` | 每个项目 1 个 | 限制转让的 ERC-20，decimals 为 0，上限 100，余额检查点 |
+| `OfferingManager` | 每个项目 1 个 | 托管认购、结算（铸造 + 释放资金）、退款 |
+| `RevenueDistributor` | 每个项目 1 个 | 与报告绑定的批次、分档费率分配、主动领取（pull）、尾差（dust） |
+| `AaveReader` | 1（第 5 阶段） | 从经过验证的 Aave V3 市场进行只读读取 |
+| `ICrossChainGateway` | 仅接口 | 为未来使用而记录；**未实现，也未接入**（D-18） |
 
-Why a split rather than one contract: each responsibility has a different authority set and failure mode. Per-project contracts isolate accounting so a bug or freeze in one project cannot touch another project's funds.
+为何拆分而非使用单一合约：每项职责对应不同的权限集合与失效模式。按项目划分的合约隔离了账务，使一个项目中的缺陷或冻结不会触及另一个项目的资金。
 
-If `ProjectFactory` exceeds the EIP-170 24 KB code limit when it embeds three creation codes, Phase 2 will either split it into per-type deployers or use scripted deployment followed by a governance-only `AssetRegistry.linkContracts` call that verifies wiring on-chain. The decision is recorded in Phase 2.
+如果 `ProjectFactory` 在内嵌三份创建代码后超过 EIP-170 规定的 24 KB 代码上限，第 2 阶段将选择以下方案之一：将其拆分为按类型划分的部署器，或采用脚本化部署，随后由仅限治理调用的 `AssetRegistry.linkContracts` 在链上验证连接关系。该决策将在第 2 阶段记录。
 
-## 2. Roles and authority
+## 2. 角色与权限
 
-All contracts use OpenZeppelin `AccessControl`. `DEFAULT_ADMIN_ROLE` is held by an OpenZeppelin `TimelockController` whose proposer/executor is the **governance Safe** (D-16). No EOA holds `DEFAULT_ADMIN_ROLE` after deployment.
+所有合约均使用 OpenZeppelin `AccessControl`。`DEFAULT_ADMIN_ROLE` 由一个 OpenZeppelin `TimelockController` 持有，其提议者/执行者为**治理 Safe**（D-16）。部署完成后，没有任何 EOA 持有 `DEFAULT_ADMIN_ROLE`。
 
-| Role | Holder (target) | Can | Cannot |
+| 角色 | 持有者（目标） | 可以 | 不可以 |
 |---|---|---|---|
-| `DEFAULT_ADMIN_ROLE` | Timelock ← Governance Safe | grant/revoke roles, unpause, configure offerings before open, cancel offerings, lifecycle transitions marked GOV, set fee recipient/treasury (timelocked) | mint directly, move escrow or distribution funds to itself, edit records |
-| `OPERATOR_ROLE` | Operator Safe or ops EOA | register projects, submit documents/reports, propose batches, call `settle`, `claimFor` | approve own submissions, mint, change roles |
-| `REVIEWER_ROLE` | Finance/review Safe | verify projects, approve/reject reports and batches | approve anything it submitted (enforced `msg.sender != submitter`) |
-| `COMPLIANCE_AGENT_ROLE` | Compliance relayer (hot key, rate-limited off-chain) | set/renew/revoke eligibility, freeze/unfreeze | anything outside `IdentityRegistry` |
-| `PAUSER_ROLE` | Guardian Safe | `pause()` on token, offering, distributor, identity writes; `suspend` project | unpause, transfer, change config |
-| `RECOVERY_ROLE` | Timelock ← Governance Safe | `forcedTransfer` on tokens deployed with `recoveryEnabled = true` | anything on tokens with recovery disabled |
-| `MINTER` (not a role, an immutable binding) | The project's `OfferingManager` | mint up to the cap | — |
-| `FACTORY_ROLE` | `ProjectFactory` | link per-project contracts once | relink, change state |
+| `DEFAULT_ADMIN_ROLE` | 时间锁 ← 治理 Safe | 授予/撤销角色、解除暂停、在开放前配置募集、取消募集、执行标记为 GOV 的生命周期状态转换、设置费用接收方/金库（经时间锁） | 直接铸造、将托管或分配资金转给自己、编辑记录 |
+| `OPERATOR_ROLE` | 运营方 Safe 或运维 EOA | 注册项目、提交文档/报告、提议批次、调用 `settle`、`claimFor` | 批准自己提交的内容、铸造、变更角色 |
+| `REVIEWER_ROLE` | 财务/审核 Safe | 验证项目、批准/驳回报告与批次 | 批准任何由其自身提交的内容（通过 `msg.sender != submitter` 强制执行） |
+| `COMPLIANCE_AGENT_ROLE` | 合规中继器（热密钥，链下限速） | 设置/续期/撤销投资资格、冻结/解冻 | `IdentityRegistry` 之外的任何操作 |
+| `PAUSER_ROLE` | 守护者（Guardian）Safe | 对代币、募集、分配合约、身份写入执行 `pause()`；`suspend` 项目 | 解除暂停、转账、变更配置 |
+| `RECOVERY_ROLE` | 时间锁 ← 治理 Safe | 对以 `recoveryEnabled = true` 部署的代币执行 `forcedTransfer` | 对禁用恢复功能的代币执行任何操作 |
+| `MINTER`（不是角色，而是不可变绑定） | 该项目的 `OfferingManager` | 在上限内铸造 | — |
+| `FACTORY_ROLE` | `ProjectFactory` | 一次性关联各项目合约 | 重新关联、变更状态 |
 
-Separation rules enforced in code:
-- Report: `approver != submitter`.
-- Batch: `approver != proposer`.
-- Project verification: `verifier != registrant`.
+在代码中强制执行的职责分离规则：
+- 报告：`approver != submitter`。
+- 批次：`approver != proposer`。
+- 项目验证：`verifier != registrant`。
 
 ## 3. AssetRegistry
 
-### 3.1 Storage
+### 3.1 存储
 
 ```solidity
 enum ProjectState { NONE, DRAFT, VERIFIED, OFFERING, FUNDED, ACTIVE, SUSPENDED,
@@ -70,46 +70,46 @@ mapping(bytes32 projectId => Project) projects;
 mapping(bytes32 assetId => bytes32 projectId) assetToProject; // never cleared
 ```
 
-### 3.2 Functions
+### 3.2 函数
 
-| Function | Access | Notes |
+| 函数 | 访问权限 | 说明 |
 |---|---|---|
-| `registerProject(projectId, assetId, issuerId, rightsDocHash)` | OPERATOR | reverts `ProjectExists`, `AssetAlreadyRegistered`, `ZeroValue` |
-| `updateDraft(projectId, issuerId, rightsDocHash)` | OPERATOR | only in `DRAFT` |
-| `transition(projectId, newState, reasonHash)` | per table below | `reasonHash` must be non-zero and should exist in AuditRegistry |
-| `linkContracts(projectId, token, offering, distributor)` | FACTORY_ROLE | once, only in `VERIFIED` |
-| `markFunded(projectId)` / `markOffering` / `markCancelled` | the project's `OfferingManager` only | driven by offering outcomes |
-| `getProject(projectId)` / `stateOf(projectId)` | view | |
+| `registerProject(projectId, assetId, issuerId, rightsDocHash)` | OPERATOR | 回滚错误：`ProjectExists`、`AssetAlreadyRegistered`、`ZeroValue` |
+| `updateDraft(projectId, issuerId, rightsDocHash)` | OPERATOR | 仅在 `DRAFT` 状态下 |
+| `transition(projectId, newState, reasonHash)` | 见下表 | `reasonHash` 必须非零，且应存在于 AuditRegistry 中 |
+| `linkContracts(projectId, token, offering, distributor)` | FACTORY_ROLE | 仅一次，且仅在 `VERIFIED` 状态下 |
+| `markFunded(projectId)` / `markOffering` / `markCancelled` | 仅限该项目的 `OfferingManager` | 由募集结果驱动 |
+| `getProject(projectId)` / `stateOf(projectId)` | 只读 | |
 
-### 3.3 Transition table
+### 3.3 状态转换表
 
-| From | To | Caller |
+| 从 | 到 | 调用方 |
 |---|---|---|
-| DRAFT | VERIFIED | REVIEWER (≠ registrant) |
-| DRAFT | CANCELLED | OPERATOR or GOV |
+| DRAFT | VERIFIED | REVIEWER（≠ 注册人） |
+| DRAFT | CANCELLED | OPERATOR 或 GOV |
 | VERIFIED | DRAFT | REVIEWER |
-| VERIFIED | OFFERING | linked OfferingManager (`open`, GOV-triggered) |
+| VERIFIED | OFFERING | 已关联的 OfferingManager（`open`，由 GOV 触发） |
 | VERIFIED | CANCELLED | GOV |
-| OFFERING | FUNDED | linked OfferingManager (`settle`) |
-| OFFERING | CANCELLED | linked OfferingManager (`cancel` / `finalizeFailed`) |
+| OFFERING | FUNDED | 已关联的 OfferingManager（`settle`） |
+| OFFERING | CANCELLED | 已关联的 OfferingManager（`cancel` / `finalizeFailed`） |
 | FUNDED | ACTIVE | GOV |
 | FUNDED, ACTIVE, SUSPENDED | TERMINATED | GOV |
-| ACTIVE | SUSPENDED | GOV or PAUSER |
+| ACTIVE | SUSPENDED | GOV 或 PAUSER |
 | SUSPENDED | ACTIVE | GOV |
 | ACTIVE, SUSPENDED | EXIT_PENDING | GOV |
-| EXIT_PENDING, TERMINATED | CLOSED | GOV, and only if the distributor reports no `PROPOSED` batch |
+| EXIT_PENDING, TERMINATED | CLOSED | GOV，且仅当分配合约报告不存在 `PROPOSED` 批次时 |
 
-Any other pair reverts `InvalidTransition(from, to)`. `CANCELLED` and `CLOSED` are terminal.
+任何其他状态组合都会以 `InvalidTransition(from, to)` 回滚。`CANCELLED` 和 `CLOSED` 为终态。
 
-A state is an **attestation by the caller**. `ACTIVE` means governance attested the vehicle is in service, with evidence referenced by `reasonHash`; the chain does not and cannot verify it.
+状态是**调用方作出的声明/证明（attestation）**。`ACTIVE` 表示治理方已声明该车辆处于运营中，并以 `reasonHash` 引用相应证据；链本身不会、也无法对此进行验证。
 
-### 3.4 Events
+### 3.4 事件
 
-`ProjectRegistered(projectId, assetId, issuerId, rightsDocHash, registrant)`, `ProjectStateChanged(projectId, from, to, reasonHash, actor)`, `ProjectContractsLinked(projectId, token, offering, distributor)`, `DraftUpdated(projectId, issuerId, rightsDocHash)`.
+`ProjectRegistered(projectId, assetId, issuerId, rightsDocHash, registrant)`、`ProjectStateChanged(projectId, from, to, reasonHash, actor)`、`ProjectContractsLinked(projectId, token, offering, distributor)`、`DraftUpdated(projectId, issuerId, rightsDocHash)`。
 
 ## 4. AuditRegistry
 
-Append-only. Nothing is overwritten; amendments are new records pointing at what they supersede.
+仅追加。任何内容都不会被覆盖；修订是指向其所取代记录的新记录。
 
 ```solidity
 enum RecordKind { DOCUMENT, FINANCIAL_REPORT, EVIDENCE, ATTESTATION }
@@ -138,17 +138,17 @@ mapping(bytes32 => Record) records;
 mapping(bytes32 projectId => mapping(bytes32 periodKey => bytes32 recordId)) activeReportForPeriod;
 ```
 
-| Function | Access | Rules |
+| 函数 | 访问权限 | 规则 |
 |---|---|---|
-| `submitRecord(...)` | OPERATOR | duplicate `recordId` reverts; reports require `periodEnd > periodStart`, non-zero token; `distributableAmount` may be 0 (loss period, no batch possible) |
-| `approve(recordId)` | REVIEWER ≠ submitter | `SUBMITTED → APPROVED`; for reports, sets `activeReportForPeriod` and fails `PeriodAlreadyApproved` unless it supersedes the active one |
-| `reject(recordId, reasonHash)` | REVIEWER ≠ submitter | `SUBMITTED → REJECTED` |
-| `submitAmendment(prevRecordId, ...)` | OPERATOR | new record with `supersedes = prev`; on approval prev becomes `SUPERSEDED` |
-| `verify(recordId, contentHash) → bool` | view | used by the frontend "verify document" button |
+| `submitRecord(...)` | OPERATOR | 重复的 `recordId` 会回滚；报告要求 `periodEnd > periodStart` 且代币地址非零；`distributableAmount` 可以为 0（亏损期间，无法创建批次） |
+| `approve(recordId)` | REVIEWER ≠ 提交人 | `SUBMITTED → APPROVED`；对于报告，设置 `activeReportForPeriod`，若其并非取代当前有效报告则以 `PeriodAlreadyApproved` 失败 |
+| `reject(recordId, reasonHash)` | REVIEWER ≠ 提交人 | `SUBMITTED → REJECTED` |
+| `submitAmendment(prevRecordId, ...)` | OPERATOR | 新记录，`supersedes = prev`；批准后，原记录变为 `SUPERSEDED` |
+| `verify(recordId, contentHash) → bool` | 只读 | 供前端"验证文档"按钮使用 |
 
-Events: `RecordSubmitted`, `RecordApproved`, `RecordRejected`, `RecordSuperseded`.
+事件：`RecordSubmitted`、`RecordApproved`、`RecordRejected`、`RecordSuperseded`。
 
-A matching hash proves the file is byte-identical to what was anchored. It does **not** prove the document is authentic or truthful.
+哈希匹配证明该文件与锚定时的内容逐字节相同。它**不能**证明文档是真实的或内容属实。
 
 ## 5. IdentityRegistry
 
@@ -164,54 +164,54 @@ struct Eligibility {
 mapping(address => Eligibility) eligibility;
 ```
 
-| Function | Access |
+| 函数 | 访问权限 |
 |---|---|
 | `setEligibility(wallet, class, jurisdiction, expiresAt, attestationRef)` | COMPLIANCE_AGENT |
-| `batchSetEligibility(...)` | COMPLIANCE_AGENT, max 50 per call |
-| `revoke(wallet, reasonCode)` → status `NONE` | COMPLIANCE_AGENT |
-| `freeze(wallet, reasonCode)` / `unfreeze(wallet)` | COMPLIANCE_AGENT (freeze), GOV (unfreeze) |
-| `isEligible(wallet) → bool` | view: `status == ELIGIBLE && block.timestamp < expiresAt` |
-| `isFrozen(wallet) → bool` | view |
-| `classOf(wallet)`, `jurisdictionOf(wallet)` | view |
+| `batchSetEligibility(...)` | COMPLIANCE_AGENT，每次调用最多 50 个 |
+| `revoke(wallet, reasonCode)` → 状态 `NONE` | COMPLIANCE_AGENT |
+| `freeze(wallet, reasonCode)` / `unfreeze(wallet)` | COMPLIANCE_AGENT（冻结）、GOV（解冻） |
+| `isEligible(wallet) → bool` | 只读：`status == ELIGIBLE && block.timestamp < expiresAt` |
+| `isFrozen(wallet) → bool` | 只读 |
+| `classOf(wallet)`、`jurisdictionOf(wallet)` | 只读 |
 
-Events: `EligibilitySet(wallet, class, jurisdiction, expiresAt, attestationRef, agent)`, `EligibilityRevoked`, `WalletFrozen`, `WalletUnfrozen`.
+事件：`EligibilitySet(wallet, class, jurisdiction, expiresAt, attestationRef, agent)`、`EligibilityRevoked`、`WalletFrozen`、`WalletUnfrozen`。
 
-`MockComplianceProvider` exists **only** under `test/mocks/` and in the dev backend. It is labelled TEST-ONLY and the backend refuses to start it when `CHAIN_ID == 56`.
+`MockComplianceProvider` **仅**存在于 `test/mocks/` 下及开发环境后端中。它被标注为 TEST-ONLY（仅限测试），且当 `CHAIN_ID == 56` 时后端会拒绝启动它。
 
 ## 6. RwaShareToken
 
-OpenZeppelin `ERC20` + `AccessControl` + `Pausable`, with OpenZeppelin `Checkpoints` for historical balances.
+OpenZeppelin `ERC20` + `AccessControl` + `Pausable`，并使用 OpenZeppelin `Checkpoints` 记录历史余额。
 
-### 6.1 Immutable parameters
+### 6.1 不可变参数
 
-`projectId`, `assetRegistry`, `identityRegistry`, `CAP = 100`, `decimals() = 0`, `recoveryEnabled`, `allowedClassesMask` (bitmask of investor classes permitted for this project).
+`projectId`、`assetRegistry`、`identityRegistry`、`CAP = 100`、`decimals() = 0`、`recoveryEnabled`、`allowedClassesMask`（本项目允许的投资者类别位掩码）。
 
-### 6.2 Behaviour
+### 6.2 行为
 
-- `bindMinter(offering)`: FACTORY_ROLE, once.
-- `mint(to, units)`: only the bound minter; `totalSupply + units <= CAP`; `to` must be eligible and class-allowed.
-- No `burn` in the MVP.
-- `_update(from, to, value)` override, applied to `transfer`, `transferFrom`, mint, and forced transfer:
-  - `whenNotPaused` (forced transfer bypasses pause only if governance explicitly calls it while paused, see 6.3).
-  - For ordinary transfers: project state ∈ {FUNDED, ACTIVE} (D-12); `!isFrozen(from)`; `isEligible(to)`; `!isFrozen(to)`; class of `to` allowed; `value > 0`.
-  - Writes balance and total-supply checkpoints keyed by `block.number`.
-- `balanceOfAt(account, blockNumber)`, `totalSupplyAt(blockNumber)` for `blockNumber < block.number`.
-- `canTransfer(from, to, value) → (bool, bytes32 reasonCode)` view, so wallets and the UI can explain a failure before sending.
-- Standard `Transfer` and `Approval` events. `approve` is unrestricted (standard ERC-20); restrictions apply when value moves.
+- `bindMinter(offering)`：FACTORY_ROLE，仅一次。
+- `mint(to, units)`：仅限已绑定的铸造方；`totalSupply + units <= CAP`；`to` 必须具备投资资格且类别被允许。
+- MVP 中不提供 `burn`。
+- 重写 `_update(from, to, value)`，适用于 `transfer`、`transferFrom`、铸造及强制转让：
+  - `whenNotPaused`（强制转让仅在治理方于暂停期间显式调用时才可绕过暂停，见 6.3）。
+  - 对于普通转让：项目状态 ∈ {FUNDED, ACTIVE}（D-12）；`!isFrozen(from)`；`isEligible(to)`；`!isFrozen(to)`；`to` 的类别被允许；`value > 0`。
+  - 写入以 `block.number` 为键的余额与总供应量检查点。
+- `balanceOfAt(account, blockNumber)`、`totalSupplyAt(blockNumber)`，适用于 `blockNumber < block.number`。
+- `canTransfer(from, to, value) → (bool, bytes32 reasonCode)` 只读函数，使钱包和 UI 能在发送前解释失败原因。
+- 标准的 `Transfer` 和 `Approval` 事件。`approve` 不受限制（标准 ERC-20）；限制在价值转移时生效。
 
-ERC-20 conformance: the interface and events are standard. Transfers revert when restrictions apply; that is permitted by ERC-20 but means the token will not work with protocols that assume free transferability (DEXs, most lending markets, most bridges). This is disclosed in TOKENOMICS and RISK_DISCLOSURES.
+ERC-20 一致性：接口与事件均为标准形式。当限制条件生效时转让会回滚；这为 ERC-20 所允许，但意味着该代币无法与假定可自由转让的协议（DEX、大多数借贷市场、大多数跨链桥）配合使用。这一点已在 TOKENOMICS 和 RISK_DISCLOSURES 中披露。
 
-### 6.3 Recovery (D-14)
+### 6.3 恢复（D-14）
 
-`forcedTransfer(from, to, units, evidenceHash)`: `RECOVERY_ROLE` (timelocked), only if `recoveryEnabled`. `to` must be eligible. Emits `ForcedTransfer(from, to, units, evidenceHash)` plus the standard `Transfer`. Disabled by default; enabled per project only when the Rights Document provides for it.
+`forcedTransfer(from, to, units, evidenceHash)`：`RECOVERY_ROLE`（经时间锁），仅当 `recoveryEnabled` 时可用。`to` 必须具备投资资格。触发 `ForcedTransfer(from, to, units, evidenceHash)` 以及标准的 `Transfer` 事件。默认禁用；仅当权益文件 (Rights Document) 对此有规定时，才按项目启用。
 
-### 6.4 Pause
+### 6.4 暂停
 
-`pause()`: PAUSER. `unpause()`: DEFAULT_ADMIN. Events from OZ `Pausable`.
+`pause()`：PAUSER。`unpause()`：DEFAULT_ADMIN。事件来自 OZ `Pausable`。
 
 ## 7. OfferingManager
 
-### 7.1 Configuration (set before `open`, then immutable)
+### 7.1 配置（在 `open` 之前设置，之后不可变）
 
 ```solidity
 struct OfferingConfig {
@@ -227,9 +227,9 @@ struct OfferingConfig {
 }
 ```
 
-`configure(cfg)`: GOV, only while project is `VERIFIED` and offering not opened. `open()`: GOV, moves project to `OFFERING`.
+`configure(cfg)`：GOV，仅在项目处于 `VERIFIED` 且募集尚未开放时。`open()`：GOV，将项目转为 `OFFERING`。
 
-### 7.2 Subscription lifecycle
+### 7.2 认购生命周期
 
 ```solidity
 enum SubStatus { NONE, ESCROWED, SETTLED, REFUNDABLE, REFUNDED }
@@ -238,22 +238,22 @@ address[] subscribers; // ≤ 100 because each subscription is ≥ 1 unit and ma
 uint32 unitsSold;
 ```
 
-| Function | Access | Rules |
+| 函数 | 访问权限 | 规则 |
 |---|---|---|
-| `subscribe(units)` | eligible wallet | state OFFERING, `startTime ≤ now < endTime`, `units > 0`, `unitsSold + units ≤ maxUnits`, `unitsOf + units ≤ perWalletMax`, class allowed, not paused, nonReentrant. Pulls `units × unitPrice` with `SafeERC20.safeTransferFrom` and checks the received balance delta equals the expected amount (rejects fee-on-transfer tokens). |
-| `excludeSubscriber(wallet, reasonHash)` | GOV | before settlement; marks `REFUNDABLE`, reduces `unitsSold` (for subscribers who became ineligible) |
-| `settle()` | OPERATOR | `unitsSold ≥ minUnits` and (`now ≥ endTime` or `unitsSold == maxUnits`); every `ESCROWED` subscriber must still be eligible, else revert `SubscriberIneligible(wallet)` (GOV excludes first); mints to each; transfers proceeds to `treasury`; registry → FUNDED |
-| `finalizeFailed()` | anyone | `now ≥ endTime` and `unitsSold < minUnits`; all `ESCROWED` → `REFUNDABLE`; registry → CANCELLED |
-| `cancel(reasonHash)` | GOV | before settlement; all → `REFUNDABLE`; registry → CANCELLED |
-| `claimRefund()` | subscriber | `REFUNDABLE → REFUNDED`, effects before transfer, nonReentrant, blocked while paused (D-21) |
+| `subscribe(units)` | 合格钱包 | 状态为 OFFERING，`startTime ≤ now < endTime`，`units > 0`，`unitsSold + units ≤ maxUnits`，`unitsOf + units ≤ perWalletMax`，类别被允许，未暂停，nonReentrant。使用 `SafeERC20.safeTransferFrom` 拉取 `units × unitPrice`，并检查实际收到的余额变化等于预期金额（拒绝转账收费型代币）。 |
+| `excludeSubscriber(wallet, reasonHash)` | GOV | 结算之前；标记为 `REFUNDABLE`，减少 `unitsSold`（针对已失去投资资格的认购人） |
+| `settle()` | OPERATOR | `unitsSold ≥ minUnits` 且（`now ≥ endTime` 或 `unitsSold == maxUnits`）；每个 `ESCROWED` 认购人必须仍具备投资资格，否则以 `SubscriberIneligible(wallet)` 回滚（需先由 GOV 排除）；为每位认购人铸造；将募集款转入 `treasury`；注册表 → FUNDED |
+| `finalizeFailed()` | 任何人 | `now ≥ endTime` 且 `unitsSold < minUnits`；所有 `ESCROWED` → `REFUNDABLE`；注册表 → CANCELLED |
+| `cancel(reasonHash)` | GOV | 结算之前；全部 → `REFUNDABLE`；注册表 → CANCELLED |
+| `claimRefund()` | 认购人 | `REFUNDABLE → REFUNDED`，先更新状态再转账，nonReentrant，暂停期间被阻止（D-21） |
 
-No function lets any role withdraw escrow other than `settle` (to the configured treasury) and `claimRefund` (to the subscriber). Withdrawal of a subscription during the offering window is not supported by default; a cooling-off right, if required, is a legal decision (see PHASE1_ANALYSIS §8).
+除 `settle`（转入已配置的金库）和 `claimRefund`（转给认购人）外，没有任何函数允许任何角色提取托管资金。默认不支持在募集窗口期内撤回认购；如需冷静期权利，属于法律层面的决策（见 PHASE1_ANALYSIS §8）。
 
-Events: `OfferingConfigured`, `OfferingOpened`, `Subscribed(wallet, units, amount)`, `SubscriberExcluded`, `OfferingSettled(unitsSold, proceeds, treasury)`, `OfferingFailed`, `OfferingCancelled`, `RefundClaimed(wallet, amount)`.
+事件：`OfferingConfigured`、`OfferingOpened`、`Subscribed(wallet, units, amount)`、`SubscriberExcluded`、`OfferingSettled(unitsSold, proceeds, treasury)`、`OfferingFailed`、`OfferingCancelled`、`RefundClaimed(wallet, amount)`。
 
 ## 8. RevenueDistributor
 
-### 8.1 Fee tiers (immutable per deployment)
+### 8.1 费率档位（每次部署不可变）
 
 ```solidity
 // thresholds ascending, inclusive lower bounds in whole units
@@ -261,9 +261,9 @@ uint32[5] TIER_MIN = [1, 5, 10, 20, 50];
 uint16[5] TIER_BPS = [2000, 1750, 1500, 1250, 1000];
 ```
 
-Validated at construction: thresholds strictly ascending starting at 1, bps non-increasing, each ≤ 10 000. Changing tiers means a new distributor, only for new projects.
+在构造时校验：阈值从 1 开始严格递增，基点非递增，且每项 ≤ 10 000。变更档位意味着部署新的分配合约，且仅适用于新项目。
 
-### 8.2 Batch data
+### 8.2 批次数据
 
 ```solidity
 enum BatchStatus { NONE, PROPOSED, CLAIMABLE, REJECTED }
@@ -285,9 +285,9 @@ mapping(uint256 batchId => mapping(address => Allocation)) allocations;
 mapping(bytes32 reportPeriodKey => uint256) distributedForPeriod;
 ```
 
-### 8.3 Allocation formula (D-10)
+### 8.3 分配额公式（D-10）
 
-For each holder *i* with snapshot units *uᵢ*, snapshot supply *U*, pool *D*:
+对于每位持有人 *i*，设其快照单位数为 *uᵢ*，快照总供应量为 *U*，资金池为 *D*：
 
 ```
 grossᵢ = floor(D × uᵢ / U)
@@ -297,47 +297,47 @@ netᵢ   = grossᵢ − feeᵢ
 dust   = D − Σ grossᵢ          (0 ≤ dust < number of holders, in base units)
 ```
 
-Invariant: `Σnetᵢ + Σfeeᵢ + dust == D`.
+不变量：`Σnetᵢ + Σfeeᵢ + dust == D`。
 
-Worked example (illustrative, matches the master prompt): D = 10 000 USD-equivalent, U = 100, holder has 10 units → gross 1 000, tier 15 %, fee 150, net 850.
+计算示例（仅作说明，与需求说明一致）：D = 10 000 美元等值，U = 100，持有人持有 10 个单位 → 毛额 1 000，档位 15 %，费用 150，净额 850。
 
-### 8.4 Functions
+### 8.4 函数
 
-| Function | Access | Rules |
+| 函数 | 访问权限 | 规则 |
 |---|---|---|
-| `proposeBatch(reportId, amount, snapshotBlock, address[] holders)` | OPERATOR | project state ∈ {ACTIVE, EXIT_PENDING, TERMINATED}; no other `PROPOSED` batch; report is `APPROVED`, same project, same payment token; `amount > 0`; `distributedForPeriod + amount ≤ report.distributableAmount`; `fundedAtBlock ≤ snapshotBlock < block.number`; `holders` strictly ascending (proves uniqueness), no zero address; `Σ balanceOfAt(hᵢ) == totalSupplyAt(snapshotBlock)` and every `balanceOfAt(hᵢ) > 0`. Computes and stores allocations. |
-| `approveBatch(batchId, funder)` | REVIEWER ≠ proposer | `PROPOSED → CLAIMABLE`; pulls exactly `amount` from `funder` (balance-delta checked); transfers `totalFee` to `feeRecipient`; records `distributedForPeriod`; carries `dustOut` |
-| `rejectBatch(batchId, reasonHash)` | REVIEWER | `PROPOSED → REJECTED`; no funds moved |
-| `claim(batchId)` / `claimMany(batchIds)` | holder | batch `CLAIMABLE`, `!claimed`, `net > 0`, `!isFrozen(msg.sender)` (D-13), not paused; set `claimed` then transfer; nonReentrant |
-| `claimFor(batchId, holder)` | OPERATOR | same checks; funds always go to `holder` |
-| `sweepDust()` | GOV | only when project `CLOSED`; sends carried dust to treasury |
+| `proposeBatch(reportId, amount, snapshotBlock, address[] holders)` | OPERATOR | 项目状态 ∈ {ACTIVE, EXIT_PENDING, TERMINATED}；不存在其他 `PROPOSED` 批次；报告为 `APPROVED`，属于同一项目，使用同一支付代币；`amount > 0`；`distributedForPeriod + amount ≤ report.distributableAmount`；`fundedAtBlock ≤ snapshotBlock < block.number`；`holders` 严格递增（以证明唯一性），且不含零地址；`Σ balanceOfAt(hᵢ) == totalSupplyAt(snapshotBlock)` 且每个 `balanceOfAt(hᵢ) > 0`。计算并存储分配额。 |
+| `approveBatch(batchId, funder)` | REVIEWER ≠ 提议人 | `PROPOSED → CLAIMABLE`；从 `funder` 精确拉取 `amount`（校验余额变化）；将 `totalFee` 转给 `feeRecipient`；记录 `distributedForPeriod`；结转 `dustOut` |
+| `rejectBatch(batchId, reasonHash)` | REVIEWER | `PROPOSED → REJECTED`；不转移任何资金 |
+| `claim(batchId)` / `claimMany(batchIds)` | 持有人 | 批次为 `CLAIMABLE`，`!claimed`，`net > 0`，`!isFrozen(msg.sender)`（D-13），未暂停；先设置 `claimed` 再转账；nonReentrant |
+| `claimFor(batchId, holder)` | OPERATOR | 相同检查；资金始终转给 `holder` |
+| `sweepDust()` | GOV | 仅当项目为 `CLOSED` 时；将结转的尾差（dust）发送至金库 |
 
-Unclaimed allocations are never swept to the operator. Any long-term unclaimed-property process is a legal matter handled outside the MVP.
+未领取的分配额绝不会被清扫给运营方。任何长期未领取财产的处理流程均属于法律事项，在 MVP 范围之外处理。
 
-Why on-chain computation with pull claims (D-11): with at most 100 holders the full allocation fits in one transaction, so the contract itself enforces the formula and the tier table instead of trusting an off-chain Merkle root. Pull claims avoid a single failing recipient blocking everyone and keep gas per action bounded. The cost is one larger proposal transaction per period.
+为何采用链上计算加主动领取（pull）模式（D-11）：持有人最多 100 位，完整的分配计算可在一笔交易内完成，因此由合约本身强制执行公式和档位表，而无需信任链下的 Merkle 根。主动领取可避免单个接收方失败而阻塞所有人，并使每次操作的 gas 保持有界。代价是每个期间需要一笔较大的提议交易。
 
-Events: `BatchProposed(batchId, reportId, amount, snapshotBlock, pool, totalNet, totalFee, dustOut)`, `AllocationRecorded(batchId, holder, units, gross, feeBps, net)`, `BatchApproved(batchId, approver, funder)`, `BatchRejected`, `Claimed(batchId, holder, net, caller)`, `DustCarried`, `DustSwept`.
+事件：`BatchProposed(batchId, reportId, amount, snapshotBlock, pool, totalNet, totalFee, dustOut)`、`AllocationRecorded(batchId, holder, units, gross, feeBps, net)`、`BatchApproved(batchId, approver, funder)`、`BatchRejected`、`Claimed(batchId, holder, net, caller)`、`DustCarried`、`DustSwept`。
 
-## 9. Interaction sequences
+## 9. 交互时序
 
-### 9.1 Subscribe and settle
+### 9.1 认购与结算
 
 ```mermaid
 sequenceDiagram
-  participant Inv as Investor
+  participant Inv as 投资者
   participant OM as OfferingManager
   participant IR as IdentityRegistry
-  participant SC as Stablecoin
+  participant SC as 稳定币
   participant T as RwaShareToken
   participant AR as AssetRegistry
   Inv->>SC: approve(OM, units*price)
   Inv->>OM: subscribe(units)
   OM->>IR: isEligible(inv), classOf(inv)
   OM->>SC: transferFrom(inv, OM, amount)
-  Note over OM: escrowed
-  participant Op as Operator
+  Note over OM: 已托管
+  participant Op as 运营方
   Op->>OM: settle()
-  loop each subscriber
+  loop 每位认购人
     OM->>IR: isEligible(sub)
     OM->>T: mint(sub, units)
     T->>IR: isEligible(sub)
@@ -346,22 +346,22 @@ sequenceDiagram
   OM->>AR: markFunded(projectId)
 ```
 
-### 9.2 Report → batch → claim
+### 9.2 报告 → 批次 → 领取
 
 ```mermaid
 sequenceDiagram
-  participant Op as Operator
-  participant Rev as Reviewer
+  participant Op as 运营方
+  participant Rev as 审核人
   participant AUD as AuditRegistry
   participant RD as RevenueDistributor
   participant T as RwaShareToken
-  participant SC as Stablecoin
-  participant Inv as Investor
+  participant SC as 稳定币
+  participant Inv as 投资者
   Op->>AUD: submitRecord(FINANCIAL_REPORT, hash, period, distributable)
   Rev->>AUD: approve(reportId)
   Op->>RD: proposeBatch(reportId, amount, snapshotBlock, holders[])
   RD->>T: balanceOfAt / totalSupplyAt
-  Note over RD: allocations stored
+  Note over RD: 已存储分配额
   Rev->>RD: approveBatch(batchId, treasury)
   RD->>SC: transferFrom(treasury, RD, amount)
   RD->>SC: transfer(feeRecipient, totalFee)
@@ -369,32 +369,32 @@ sequenceDiagram
   RD->>SC: transfer(inv, net)
 ```
 
-## 10. AaveReader (Phase 5, view-only)
+## 10. AaveReader（第 5 阶段，只读）
 
-- Constructor takes `expectedChainId` and the Aave V3 `PoolAddressesProvider`. Reverts if `block.chainid != expectedChainId`.
-- `pool()`, `oracle()`, `dataProvider()` resolved through the provider and compared against configured values; mismatch → `MarketConfigMismatch`.
-- `reserveList()`, `reserveConfig(asset)`, `reserveRates(asset)` only for assets in an explicit allowlist.
-- No `approve`, `supply`, `borrow`, or `withdraw` functions exist. Any transactional adapter is a separate future contract requiring explicit review.
-- Most read paths will run off-chain in the worker (viem `readContract`) against the same verified addresses; the on-chain reader exists so other contracts never need to trust a backend for Aave data. Phase 5 decides whether the on-chain reader is needed at all.
-- Addresses are not included in this spec. They will be taken from the official Aave address book / governance records and cross-checked on chain before being written to `infra/deployments/<chainId>.json`.
+- 构造函数接收 `expectedChainId` 和 Aave V3 `PoolAddressesProvider`。若 `block.chainid != expectedChainId` 则回滚。
+- `pool()`、`oracle()`、`dataProvider()` 通过 provider 解析，并与配置值比对；不匹配 → `MarketConfigMismatch`。
+- `reserveList()`、`reserveConfig(asset)`、`reserveRates(asset)` 仅适用于显式白名单中的资产。
+- 不存在 `approve`、`supply`、`borrow` 或 `withdraw` 函数。任何交易型适配器都将是一个独立的未来合约，需经过明确审查。
+- 大多数读取路径将在链下 worker 中（viem `readContract`）针对同一组经过验证的地址执行；链上读取合约的存在是为了让其他合约无需为获取 Aave 数据而信任后端。是否确实需要链上读取合约由第 5 阶段决定。
+- 本规范不包含任何地址。地址将取自 Aave 官方地址簿/治理记录，并在写入 `infra/deployments/<chainId>.json` 之前在链上进行交叉核对。
 
-## 11. Cross-chain (future, D-18)
+## 11. 跨链（未来，D-18）
 
-`ICrossChainGateway` (documentation only) would require: unique message IDs, source/destination chain IDs, allowlisted source contracts, replay protection, finality thresholds, rate limits, burn-and-mint or lock-and-mint with supply reconciliation, pause, and failed-message recovery. `RwaShareToken` has no bridge mint path; adding one requires a new token deployment and separate audit.
+`ICrossChainGateway`（仅作文档）将需要：唯一消息 ID、源链/目标链 ID、白名单源合约、重放保护、最终性阈值、速率限制、带供应量对账的销毁-铸造或锁定-铸造机制、暂停，以及失败消息恢复。`RwaShareToken` 不具备跨链桥铸造路径；如需添加，需要部署新的代币并进行单独审计。
 
-## 12. Invariants (to be tested with Foundry invariant tests)
+## 12. 不变量（将使用 Foundry 不变量测试进行测试）
 
-1. `token.totalSupply() ≤ 100` always; only the bound minter increases it.
-2. Every non-zero balance belongs to an address that was eligible at the time it received units (or a forced-transfer target that was eligible).
-3. `OfferingManager` stablecoin balance == Σ paid of subscribers in `ESCROWED` or `REFUNDABLE`.
-4. After settlement, `token.totalSupply() == Σ units of SETTLED subscribers`.
-5. For each batch: `Σnet + Σfee + dustOut == pool`; `Σ claimed net ≤ Σ net`.
-6. Distributor stablecoin balance == Σ unclaimed net of CLAIMABLE batches + carried dust.
-7. No allocation is claimed twice.
-8. `distributedForPeriod[p] ≤ approvedReport(p).distributableAmount`.
-9. Project state only moves along the transition table.
-10. No address other than the timelock holds `DEFAULT_ADMIN_ROLE` after deployment script completes.
+1. `token.totalSupply() ≤ 100` 始终成立；只有已绑定的铸造方能增加该值。
+2. 每个非零余额都属于在收到单位时具备投资资格的地址（或在强制转让时具备投资资格的目标地址）。
+3. `OfferingManager` 稳定币余额 == 处于 `ESCROWED` 或 `REFUNDABLE` 状态的认购人已付款项之和。
+4. 结算后，`token.totalSupply() == Σ units of SETTLED subscribers`（即 SETTLED 认购人的单位数之和）。
+5. 对每个批次：`Σnet + Σfee + dustOut == pool`；`Σ 已领取净额 ≤ Σ net`。
+6. 分配合约稳定币余额 == CLAIMABLE 批次中未领取净额之和 + 结转的尾差（dust）。
+7. 任何分配额都不会被领取两次。
+8. `distributedForPeriod[p] ≤ approvedReport(p).distributableAmount`。
+9. 项目状态只能按照状态转换表变化。
+10. 部署脚本执行完成后，除时间锁外没有任何地址持有 `DEFAULT_ADMIN_ROLE`。
 
-## 13. Custom errors (indicative)
+## 13. 自定义错误（示意）
 
-`ProjectExists`, `AssetAlreadyRegistered`, `InvalidTransition(from,to)`, `NotEligible(wallet)`, `WalletFrozen(wallet)`, `ClassNotAllowed`, `CapExceeded`, `TransfersDisabledInState(state)`, `OfferingNotOpen`, `OfferingWindowClosed`, `PerWalletLimit`, `UnexpectedTransferAmount`, `SubscriberIneligible`, `ReportNotApproved`, `AmountExceedsReport`, `BatchPending`, `HoldersNotSorted`, `HolderSetIncomplete`, `SnapshotOutOfRange`, `AlreadyClaimed`, `NothingToClaim`, `SelfApproval`, `RecoveryDisabled`, `MarketConfigMismatch`.
+`ProjectExists`、`AssetAlreadyRegistered`、`InvalidTransition(from,to)`、`NotEligible(wallet)`、`WalletFrozen(wallet)`、`ClassNotAllowed`、`CapExceeded`、`TransfersDisabledInState(state)`、`OfferingNotOpen`、`OfferingWindowClosed`、`PerWalletLimit`、`UnexpectedTransferAmount`、`SubscriberIneligible`、`ReportNotApproved`、`AmountExceedsReport`、`BatchPending`、`HoldersNotSorted`、`HolderSetIncomplete`、`SnapshotOutOfRange`、`AlreadyClaimed`、`NothingToClaim`、`SelfApproval`、`RecoveryDisabled`、`MarketConfigMismatch`。

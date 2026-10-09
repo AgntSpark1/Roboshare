@@ -1,73 +1,73 @@
-# RoboShare — Threat Model
+# RoboShare — 威胁模型
 
-Status: **DRAFT (Phase 1).** Built from the design, not from code. To be revisited after Phase 2 (contracts), Phase 3 (backend) and before any audit. Internal threat modelling does not replace an independent security audit.
+状态：**草案（DRAFT，第 1 阶段）。** 基于设计而非代码构建。将在第 2 阶段（合约）、第 3 阶段（后端）之后以及任何审计之前重新审视。内部威胁建模不能替代独立的安全审计。
 
-## 1. Assets to protect
+## 1. 需保护的资产
 
-| ID | Asset | Why it matters |
+| ID | 资产 | 重要性 |
 |---|---|---|
-| AS-1 | Escrowed subscription funds (OfferingManager) | Investor money before settlement |
-| AS-2 | Distribution funds (RevenueDistributor) | Investor money awaiting claims |
-| AS-3 | Token supply and balances | Define who is entitled to what |
-| AS-4 | Eligibility state | Gate for legal transferability |
-| AS-5 | Governance and role keys | Control over all of the above |
-| AS-6 | Financial report integrity | Determines how much is distributed |
-| AS-7 | Private compliance data and documents | PII, legal exposure |
-| AS-8 | Indexed DB state shown to users | Users act on it |
-| AS-9 | Public representations (UI copy, whitepaper) | Misrepresentation liability |
+| AS-1 | 托管中的认购资金（OfferingManager） | 结算前的投资者资金 |
+| AS-2 | 分配资金（RevenueDistributor） | 等待领取的投资者资金 |
+| AS-3 | 代币供应量与余额 | 决定谁有权获得什么 |
+| AS-4 | 投资资格状态 | 合法可转让性的准入关口 |
+| AS-5 | 治理与角色密钥 | 控制上述所有资产 |
+| AS-6 | 财务报告完整性 | 决定分配金额 |
+| AS-7 | 私密合规数据与文档 | 个人身份信息（PII）、法律风险敞口 |
+| AS-8 | 向用户展示的已索引数据库状态 | 用户据此采取行动 |
+| AS-9 | 公开陈述（UI 文案、白皮书） | 虚假陈述责任 |
 
-## 2. Actors
+## 2. 参与者
 
-External attacker; malicious or compromised investor; compromised operator staff; compromised reviewer; compromised compliance relayer key; compromised governance signer(s); malicious RPC provider; compromised KYC provider or webhook spoofing; supply-chain attacker (npm/forge dependencies); insider with DB access; phishing site impersonating RoboShare.
+外部攻击者；恶意或被攻陷的投资者；被攻陷的运营方员工；被攻陷的审核人；被攻陷的合规中继（relayer）密钥；被攻陷的治理签名人；恶意 RPC 提供商；被攻陷的 KYC 服务商或 webhook 伪造；供应链攻击者（npm/forge 依赖）；拥有数据库访问权限的内部人员；冒充 RoboShare 的钓鱼网站。
 
-## 3. Trust boundaries
+## 3. 信任边界
 
-1. Browser ↔ API (session, CSRF, XSS).
-2. Wallet ↔ contracts (signing, phishing).
-3. API/worker ↔ chain RPC (data integrity, availability).
-4. KYC provider ↔ API webhook.
-5. API ↔ compliance schema / private storage.
-6. Governance Safe ↔ timelock ↔ contracts.
-7. Off-chain facts ↔ on-chain attestations.
+1. 浏览器 ↔ API（会话、CSRF、XSS）。
+2. 钱包 ↔ 合约（签名、钓鱼）。
+3. API/worker ↔ 链 RPC（数据完整性、可用性）。
+4. KYC 服务商 ↔ API webhook。
+5. API ↔ 合规 schema / 私有存储。
+6. 治理 Safe ↔ 时间锁 ↔ 合约。
+7. 链下事实 ↔ 链上声明/证明（attestation）。
 
-## 4. Threats and mitigations (STRIDE-oriented)
+## 4. 威胁与缓解措施（以 STRIDE 为导向）
 
-| ID | Threat | Target | Likelihood / Impact | Mitigations | Residual |
+| ID | 威胁 | 目标 | 可能性 / 影响 | 缓解措施 | 残余风险 |
 |---|---|---|---|---|---|
-| T-1 | Unauthorized mint | AS-3 | L / Critical | Mint only by immutable bound minter; cap 100 in token; invariant + fuzz tests | Bug in OfferingManager settlement |
-| T-2 | Governance key compromise grants roles or force-transfers | AS-3, AS-5 | M / Critical | Safe ≥3-of-5 on hardware wallets → 48h timelock; monitoring of `RoleGranted`, `CallScheduled`; guardian can pause during delay; recovery disabled by default | Collusion of threshold signers |
-| T-3 | Operator submits inflated/fake report | AS-2, AS-6 | M / High | Reviewer ≠ submitter enforced on-chain; evidence documents hashed; batch ≤ report distributable; funds pulled from treasury only on reviewer approval; external audit for annual reports | Collusion between operator and reviewer; contract cannot verify truth |
-| T-4 | Duplicate distribution for same period | AS-2 | M / High | `distributedForPeriod` cap; one PROPOSED batch at a time; period uniqueness in AuditRegistry | — |
-| T-5 | Double claim | AS-2 | M / High | `claimed` flag set before transfer; nonReentrant; tests | — |
-| T-6 | Incorrect allocation (tier, rounding, missing holder) | AS-2 | M / High | On-chain computation; sorted unique holders; Σ balances == supply check; TS mirror for preview; fuzz Σnet+Σfee+dust == pool | Tier rule itself wrong (business risk) |
-| T-7 | Transfer to ineligible wallet / bypass via `transferFrom` | AS-3, AS-4 | M / High | Checks in `_update` (covers all paths); expiry checked; state-gated | Eligibility data wrong at provider |
-| T-8 | Compliance relayer key compromised: marks attacker eligible / freezes investors | AS-4 | M / High | Key in KMS; rate limit + anomaly alerts; relayer can't unfreeze (GOV only); relayer cannot move tokens; eligibility alone gives no funds | Attacker can make wallets eligible to receive transfers that holders still have to initiate |
-| T-9 | Reentrancy via malicious payment token or hooks | AS-1, AS-2 | L / High | Allowlisted stablecoins only; CEI; ReentrancyGuard; balance-delta checks | Stablecoin issuer upgrade risk |
-| T-10 | Fee-on-transfer / rebasing / blacklisting stablecoin | AS-1, AS-2 | M / Medium | Balance-delta check on pulls; allowlist; document issuer blacklist risk (USDT/USDC style freezes) | Issuer can freeze contract balances |
-| T-11 | Excess approvals / unexpected spending | AS-1, AS-2 | L / Medium | UI requests exact-amount approvals; contracts pull exactly computed amounts; no arbitrary `transferFrom` with user-supplied `from` except `funder` restricted to reviewer call | — |
-| T-12 | Lifecycle abuse (e.g. reopen offering, activate without evidence) | AS-3 | L / Medium | Transition table; terminal states; `reasonHash` required | Attestations can still be false |
-| T-13 | Pause abuse / griefing by guardian | availability | L / Medium | Guardian can only pause; unpause by GOV; pause events monitored | Short DoS |
-| T-14 | Stuck funds (pause forever, offering never settled) | AS-1 | L / High | `finalizeFailed` permissionless after deadline; refunds pull-based; refunds allowed while paused? → **decision: refunds blocked while paused** to stop drain during exploit, but pause has runbook max duration | Governance inaction |
-| T-15 | RPC returns forged/stale data | AS-8 | M / Medium | Two providers, compare head; confirmations; reconciliation; money actions simulated against wallet's own RPC | — |
-| T-16 | Chain reorg shows phantom balances/claims | AS-8 | M / Low | Confirmation depth; parent-hash check; rollback | — |
-| T-17 | Webhook spoofing from fake KYC provider | AS-4 | M / High | HMAC, timestamp window, replay cache, IP allowlist if offered | Provider compromise |
-| T-18 | PII leak from API/DB/logs | AS-7 | M / High | Separate schema + DB role; column encryption; no PII on-chain; log redaction; access logs; pre-signed URLs ≤ 5 min | Insider with KMS access |
-| T-19 | Phishing site / malicious calldata | investors | H / High | Published contract addresses; `canTransfer` and simulation in UI; domain in SIWE; security.txt; user education | Users signing on fake sites |
-| T-20 | Supply-chain compromise (npm, forge libs) | all | M / High | Pinned versions + lockfiles; `pnpm audit`/OSV scanner; Dependabot; review of lib updates; no postinstall scripts from untrusted packages | — |
-| T-21 | XSS/CSRF in admin console leads to signed admin txs | AS-5 | M / High | Strict CSP; httpOnly SameSite cookies; CSRF tokens; admin money actions go to Safe proposals (signers review on Safe UI) | — |
-| T-22 | Misrepresentation (projections as actuals, implied vehicle ownership) | AS-9 | M / High | `figureKind` enforced in schema/DTOs; UI labels; legal review of copy; Rights Document summary required before OFFERING | — |
-| T-23 | Aave misconfiguration (wrong address, wrong chain) | data | L / Medium | Read-only; chain ID check; provider-resolved addresses compared to config; allowlist | — |
-| T-24 | Cross-chain duplication of interests | AS-3 | N/A in MVP | No bridge mint path in token | Future work requires new review |
-| T-25 | Lost investor keys | investor | M / Medium | Optional timelocked `forcedTransfer` with evidence (D-14) | If disabled, lost units remain lost (disclosed) |
-| T-26 | Front-running of subscriptions near cap | fairness | M / Low | First-come is the stated rule; per-wallet max; disclosed | — |
-| T-27 | Snapshot manipulation (buy before snapshot, sell after) | fairness | L / Low | Snapshot fixed at period end, which is in the past when proposed; transfers restricted to eligible wallets | Eligible holders can still trade around period ends (disclosed) |
+| T-1 | 未经授权的铸造 | AS-3 | 低 / 严重 | 仅由不可变绑定的铸造者铸造；代币内上限为 100；不变量测试 + 模糊测试 | OfferingManager 结算中的漏洞 |
+| T-2 | 治理密钥被攻陷，导致授予角色或强制转让 | AS-3, AS-5 | 中 / 严重 | 基于硬件钱包的 Safe ≥3-of-5 → 48 小时时间锁；监控 `RoleGranted`、`CallScheduled`；守护者（Guardian）可在延迟期内暂停；恢复功能默认禁用 | 达到阈值的签名人合谋 |
+| T-3 | 运营方提交虚增/虚假报告 | AS-2, AS-6 | 中 / 高 | 链上强制审核人 ≠ 提交人；证明文件进行哈希；批次 ≤ 报告中的可分配金额；仅在审核人批准后才从金库拉取资金；年度报告进行外部审计 | 运营方与审核人合谋；合约无法验证真实性 |
+| T-4 | 同一期间重复分配 | AS-2 | 中 / 高 | `distributedForPeriod` 上限；同一时间仅允许一个 PROPOSED 批次；AuditRegistry 中的期间唯一性 | — |
+| T-5 | 重复领取 | AS-2 | 中 / 高 | 转账前设置 `claimed` 标志；nonReentrant；测试 | — |
+| T-6 | 分配额错误（档位、取整、遗漏持有人） | AS-2 | 中 / 高 | 链上计算；持有人排序且唯一；Σ 余额 == 供应量检查；TS 镜像用于预览；模糊测试 Σnet+Σfee+dust == pool | 档位规则本身有误（业务风险） |
+| T-7 | 转让至不合格钱包 / 通过 `transferFrom` 绕过 | AS-3, AS-4 | 中 / 高 | 在 `_update` 中检查（覆盖所有路径）；检查过期；按状态限制 | 服务商处的投资资格数据有误 |
+| T-8 | 合规中继密钥被攻陷：将攻击者标记为合格 / 冻结投资者 | AS-4 | 中 / 高 | 密钥存放于 KMS；速率限制 + 异常告警；中继无法解冻（仅 GOV 可以）；中继无法转移代币；仅凭投资资格无法获得资金 | 攻击者可使钱包具备接收转让的资格，但转让仍需由持有人发起 |
+| T-9 | 通过恶意支付代币或钩子进行重入 | AS-1, AS-2 | 低 / 高 | 仅限白名单稳定币；CEI；ReentrancyGuard；余额差额检查 | 稳定币发行方升级风险 |
+| T-10 | 转账收费 / 弹性供应（rebasing）/ 可拉黑的稳定币 | AS-1, AS-2 | 中 / 中 | 拉取资金时进行余额差额检查；白名单；记录发行方拉黑风险（USDT/USDC 式冻结） | 发行方可冻结合约余额 |
+| T-11 | 过度授权 / 意外支出 | AS-1, AS-2 | 低 / 中 | UI 请求精确金额授权；合约仅拉取精确计算的金额；除仅限审核人调用的 `funder` 外，不存在使用用户提供 `from` 的任意 `transferFrom` | — |
+| T-12 | 生命周期滥用（如重新开放募集、无证据即激活） | AS-3 | 低 / 中 | 状态转换表；终止状态；必须提供 `reasonHash` | 声明/证明（attestation）仍可能为虚假 |
+| T-13 | 守护者滥用暂停 / 恶意干扰 | 可用性 | 低 / 中 | 守护者只能暂停；由 GOV 解除暂停；监控暂停事件 | 短时拒绝服务 |
+| T-14 | 资金被锁（永久暂停、募集始终未结算） | AS-1 | 低 / 高 | 截止日期后任何人均可调用 `finalizeFailed`；退款采用主动领取（pull）模式；暂停期间是否允许退款？→ **决策：暂停期间禁止退款**，以防止漏洞利用期间资金被抽空，但运行手册规定了暂停的最长持续时间 | 治理不作为 |
+| T-15 | RPC 返回伪造/过时数据 | AS-8 | 中 / 中 | 两个提供商，比对链头；确认数；对账；涉及资金的操作在钱包自身的 RPC 上进行模拟 | — |
+| T-16 | 链重组（reorg）导致显示虚假余额/领取 | AS-8 | 中 / 低 | 确认深度；父哈希检查；回滚 | — |
+| T-17 | 来自伪造 KYC 服务商的 webhook 伪造 | AS-4 | 中 / 高 | HMAC、时间戳窗口、重放缓存、IP 白名单（如服务商提供） | 服务商被攻陷 |
+| T-18 | 通过 API/数据库/日志泄露 PII | AS-7 | 中 / 高 | 独立 schema + 数据库角色；列级加密；链上不存 PII；日志脱敏；访问日志；预签名 URL ≤ 5 分钟 | 拥有 KMS 访问权限的内部人员 |
+| T-19 | 钓鱼网站 / 恶意 calldata | 投资者 | 高 / 高 | 公布合约地址；UI 中提供 `canTransfer` 与模拟；SIWE 中包含域名；security.txt；用户教育 | 用户在虚假网站上签名 |
+| T-20 | 供应链攻击（npm、forge 库） | 全部 | 中 / 高 | 固定版本 + lockfile；`pnpm audit`/OSV 扫描器；Dependabot；审查库更新；不运行来自不可信包的 postinstall 脚本 | — |
+| T-21 | 管理控制台中的 XSS/CSRF 导致签署管理交易 | AS-5 | 中 / 高 | 严格 CSP；httpOnly SameSite cookie；CSRF 令牌；涉及资金的管理操作转为 Safe 提案（签名人在 Safe UI 上审查） | — |
+| T-22 | 虚假陈述（将预测作为实际数据、暗示拥有车辆所有权） | AS-9 | 中 / 高 | 在 schema/DTO 中强制 `figureKind`；UI 标注；文案经法律审查；进入 OFFERING 前必须提供权益文件 (Rights Document) 摘要 | — |
+| T-23 | Aave 配置错误（地址错误、链错误） | 数据 | 低 / 中 | 只读；链 ID 检查；将 provider 解析的地址与配置比对；白名单 | — |
+| T-24 | 投资权益的跨链重复 | AS-3 | MVP 中不适用 | 代币中无跨链桥铸造路径 | 后续工作需重新审查 |
+| T-25 | 投资者密钥丢失 | 投资者 | 中 / 中 | 可选的、带证据且受时间锁约束的 `forcedTransfer`（D-14） | 若禁用，丢失的单位将永久丢失（已披露） |
+| T-26 | 接近上限时抢跑认购 | 公平性 | 中 / 低 | 先到先得为既定规则；每钱包上限；已披露 | — |
+| T-27 | 快照操纵（快照前买入、快照后卖出） | 公平性 | 低 / 低 | 快照固定在期间结束时，提案时该时点已成为过去；转让仅限合格钱包 | 合格持有人仍可在期间结束前后进行交易（已披露） |
 
-## 5. Abuse cases to cover in tests
+## 5. 测试中需覆盖的滥用场景
 
-Mapped in [TESTING_GUIDE.md](TESTING_GUIDE.md): unauthorized mint, cap overflow, duplicate project, unauthorized transfer, expired eligibility, duplicate batch, wrong allocation, dust, zero batch, invalid transitions, unauthorized admin, paused behaviour, bad Aave config, unexpected approvals, malformed/unapproved reports, reentrancy with a malicious token mock.
+已在 [TESTING_GUIDE.md](TESTING_GUIDE.md) 中映射：未经授权的铸造、上限溢出、重复项目、未经授权的转让、投资资格过期、重复批次、分配额错误、尾差（dust）、零额批次、非法状态转换、未经授权的管理操作、暂停时的行为、错误的 Aave 配置、意外授权、格式错误/未经批准的报告、使用恶意代币 mock 的重入。
 
-## 6. Open items
+## 6. 待办事项
 
-- Choose KYC provider, then model its specific integration risks.
-- Decide pause semantics for refunds and claims (current default: both blocked while paused; revisit with counsel because blocking refunds has investor-protection implications).
-- Define on-call and monitoring vendor.
+- 选定 KYC 服务商，然后对其具体集成风险进行建模。
+- 确定暂停对退款和领取的语义（当前默认方案：暂停期间两者均被禁止；需与法律顾问重新评估，因为禁止退款涉及投资者保护问题）。
+- 确定值班（on-call）安排与监控服务供应商。

@@ -1,57 +1,57 @@
-# RoboShare Whitepaper (Draft)
+# RoboShare 白皮书（草案）
 
-**Version 0.1 — Phase 1 draft for internal review.** This is not an offer to sell or a solicitation to buy any security or investment. No offering exists. No legal, tax, or regulatory review has taken place. Statements marked **[Assumption]** or **[Unverified]** have not been confirmed.
+**版本 0.1 — Phase 1 草案，供内部审阅。** 本文件不构成出售任何证券或投资的要约，亦不构成购买任何证券或投资的邀约。目前不存在任何募集。尚未进行任何法律、税务或监管审查。标注为 **[假设]** 或 **[未经核实]** 的陈述尚未得到确认。
 
-## 1. Summary
+## 1. 概述
 
-RoboShare is a platform for issuing and servicing legally defined investment interests in individual Robotaxi vehicle projects. Each project is organized through an issuing entity, documented off-chain, and represented on BNB Smart Chain by a restricted-transfer token capped at 100 whole units. Distributions of verified project profit are calculated and paid on-chain against approved financial reports, with a tiered operator fee.
+RoboShare 是一个针对单个 Robotaxi 车辆项目发行并管理具有法律定义的投资权益的平台。每个项目通过一个发行主体组织，在链下形成文件，并在 BNB Smart Chain（BSC）上以一种限制转让的代币来表示，上限为 100 个完整单位。经核实的项目利润的分配依据已批准的财务报告在链上计算和支付，并收取分档的运营方费用。
 
-The platform's purpose is transparency and auditability: who holds what, what was reported, who approved it, and what was paid, all linked by document hashes and transaction records.
+平台的宗旨是透明与可审计：谁持有什么、报告了什么、由谁批准、支付了什么，全部通过文件哈希和交易记录相互关联。
 
-## 2. Problem
+## 2. 问题
 
-Investing in a single revenue-generating vehicle is difficult for individuals: legal structuring is per asset, record-keeping is opaque, distributions are manual, and investors rarely see the evidence behind reported numbers.
+个人投资单一的创收车辆十分困难：法律架构需逐个资产搭建，记录保存不透明，分配依靠人工处理，投资者也很少能看到所报告数字背后的证据。
 
-## 3. Approach
+## 3. 方法
 
-1. **One project, one vehicle, one issuer reference, one token.** Separate accounting per project by construction.
-2. **Legal rights first.** A per-project Rights Document defines what a unit is. **[Assumption, D-1]** The default is a contractual economic right to 1 % of the project's distributable profit, not vehicle ownership.
-3. **Evidence, not claims.** Purchase, insurance, and operating documents are hashed and anchored. A hash shows a document is unchanged; it does not prove the document is genuine. Lifecycle changes are attestations by named roles.
-4. **Two-person rule** for reports, distributions, and project verification.
-5. **Restricted transfers** to eligible wallets, enforced in the token.
+1. **一个项目、一辆车、一个发行人引用、一种代币。** 从结构上实现各项目独立核算。
+2. **法律权益优先。** 每个项目的权益文件 (Rights Document) 定义一个单位的含义。**[假设，D-1]** 默认方案为获得项目可分配利润 1 % 的合同性经济权利，而非车辆所有权。
+3. **证据，而非声称。** 购车、保险和运营文件均经哈希处理并锚定。哈希只能表明文件未被更改，并不能证明文件真实。生命周期变更是由具名角色作出的声明/证明（attestation）。
+4. 报告、分配和项目核验适用**双人规则**。
+5. **限制转让**至合格钱包，并在代币中强制执行。
 
-## 4. Asset-interest structure
+## 4. 资产权益结构
 
 ```
-Investor ──holds──> RwaShareToken units (max 100, decimals 0)
-                        │ defined by
+投资人 ──持有──> RwaShareToken 单位（上限 100，小数位 0）
+                        │ 权利由其定义
                         ▼
-                  Rights Document (hash on-chain)
-                        │ issued by
+                  权益文件（哈希上链）
+                        │ 发行方
                         ▼
-              Issuing entity (SPV or equivalent) [Unverified: structure TBD by counsel]
-                        │ owns / operates under contract
+              发行主体（SPV 或同等主体）[未经核实：结构待律师确定]
+                        │ 拥有 / 按合同运营
                         ▼
-                     Vehicle (asset ID = salted hash of VIN)
+                     车辆（资产 ID = VIN 加盐哈希）
 ```
 
-Whether a vehicle may be deployed in a commercial Robotaxi network, on what terms, and with which platform operator, is **[Unverified]**. RoboShare has no partnership with Tesla, and no Tesla data API is assumed. Operating data is entered through a manual, reviewed reporting process.
+车辆能否部署在商业 Robotaxi 网络中、以何种条款、与哪家平台运营方合作，均**[未经核实]**。RoboShare 与 Tesla 不存在任何合作关系，也不假定可使用任何 Tesla 数据 API。运营数据通过人工录入并经审核的报告流程输入。
 
-## 5. Token issuance
+## 5. 代币发行
 
-- Authorized supply 100 units per project, immutable.
-- Sold through an offering with a fixed unit price in an allowlisted stablecoin, escrowed until settlement.
-- **[Assumption, D-4]** All-or-nothing: if 100 units are not subscribed by the deadline, all subscribers are refunded.
-- Units are minted at settlement to subscribers who are still eligible. Proceeds go to the issuer treasury.
-- See [TOKENOMICS.md](TOKENOMICS.md).
+- 每个项目授权供应量为 100 个单位，不可更改。
+- 通过募集以白名单内稳定币按固定单价出售，资金在结算前处于托管状态。
+- **[假设，D-4]** 全额或全无：若截止日前未认购满 100 个单位，则向所有认购人退款。
+- 单位在结算时铸造给仍具备投资资格的认购人。募集所得进入发行人金库。
+- 参见 [TOKENOMICS.md](TOKENOMICS.md)。
 
-## 6. Financial model
+## 6. 财务模型
 
-### 6.1 Distributable profit
-Revenue − operating costs − approved reserves − priority obligations (debt service, taxes, legal priorities) = distributable profit, per reporting period, as stated in a reviewed report. No revenue, cost, utilization, vehicle price or return figure is assumed in this paper. Any projection shown in the product is labelled **Projected** and kept separate from **Actual** figures.
+### 6.1 可分配利润
+按每个报告期，依据经审核的报告：收入 − 运营成本 − 已批准储备 − 优先义务（偿债、税款、法定优先事项）= 可分配利润。本文不假定任何收入、成本、利用率、车辆价格或回报数字。产品中展示的任何预测均标注为 **预测（Projected）**，并与 **实际（Actual）** 数字分开展示。
 
-### 6.2 Fee tiers (proposed)
-| Units held | Operator share of holder's allocation |
+### 6.2 费率档位（拟议）
+| 持有单位数 | 运营方在持有人分配额中所占比例 |
 |---|---|
 | 1–4 | 20 % |
 | 5–9 | 17.5 % |
@@ -59,39 +59,39 @@ Revenue − operating costs − approved reserves − priority obligations (debt
 | 20–49 | 12.5 % |
 | 50–100 | 10 % |
 
-Example: distributable profit 10 000, holder of 10 units → gross 1 000, operator 150, investor 850. This assumes equal economic rights per unit and no other priority allocations. These tiers are proposed business rules, not market standards.
+示例：可分配利润 10 000，持有 10 个单位的持有人 → 总额 1 000，运营方 150，投资者 850。此示例假定每个单位享有同等经济权利且不存在其他优先分配。这些档位是拟议的业务规则，并非市场标准。
 
-### 6.3 Distribution mechanics
-Snapshot at period end; allocation computed on-chain; holders claim; rounding dust carried forward; unclaimed amounts remain claimable and are not swept to the operator.
+### 6.3 分配机制
+在期末进行快照；在链上计算分配额；持有人自行领取；舍入产生的尾差（dust）结转至下期；未领取金额始终可领取，不会被划转给运营方。
 
-## 7. Technical architecture
+## 7. 技术架构
 
-- **Chain:** BNB Smart Chain (testnet first). Single-chain MVP.
-- **Contracts:** AssetRegistry, AuditRegistry, IdentityRegistry, ProjectFactory, and per project RwaShareToken, OfferingManager, RevenueDistributor. Non-upgradeable. OpenZeppelin-based.
-- **Off-chain:** NestJS API and workers, PostgreSQL, Redis, encrypted object storage, Next.js web app with wagmi/viem.
-- **Indexing:** confirmed-block indexer with reorg handling; scheduled reconciliation against contract state.
-- **DeFi:** read-only display of Aave V3 market data on BNB Smart Chain after address verification. Investor funds are never automatically deposited into Aave, and the RoboShare token is not assumed to be accepted as collateral anywhere.
-- Details: [ARCHITECTURE.md](ARCHITECTURE.md), [SMART_CONTRACT_SPEC.md](SMART_CONTRACT_SPEC.md).
+- **链：** BNB Smart Chain（BSC）（先上测试网）。单链 MVP。
+- **合约：** AssetRegistry、AuditRegistry、IdentityRegistry、ProjectFactory，以及每个项目各自的 RwaShareToken、OfferingManager、RevenueDistributor。不可升级。基于 OpenZeppelin。
+- **链下：** NestJS API 与工作进程、PostgreSQL、Redis、加密对象存储、使用 wagmi/viem 的 Next.js Web 应用。
+- **索引：** 基于已确认区块的索引器，可处理链重组（reorg）；定期与合约状态进行对账。
+- **DeFi：** 在地址核验后，只读展示 BNB Smart Chain（BSC）上的 Aave V3 市场数据。投资者资金绝不会被自动存入 Aave，也不假定 RoboShare 代币在任何地方被接受为抵押品。
+- 详情：[ARCHITECTURE.md](ARCHITECTURE.md)、[SMART_CONTRACT_SPEC.md](SMART_CONTRACT_SPEC.md)。
 
-## 8. Governance
+## 8. 治理
 
-- Governance multisig behind a timelock holds admin authority; a separate guardian multisig can only pause.
-- Operators submit; reviewers approve; the same key cannot do both.
-- No role can mint beyond the cap, take investor escrow, or rewrite records.
-- Changes to fee tiers or token logic apply only to new projects.
+- 位于时间锁之后的治理多签持有管理权限；另设一个独立的守护者（Guardian）多签，仅能执行暂停。
+- 运营方提交；审核人批准；同一密钥不能同时承担两者。
+- 任何角色都不能超出上限铸造、挪用投资者托管资金或改写记录。
+- 对费率档位或代币逻辑的变更仅适用于新项目。
 
-## 9. Compliance posture
+## 9. 合规立场
 
-Using a restricted token or a particular legal entity does **not** make the platform legally compliant. Offering, transfer, custody, tax, and data-protection obligations depend on jurisdiction and the instrument's legal classification, and must be determined by counsel before any offering. Eligibility checks will be performed by a third-party provider (TBD); development builds use a clearly marked TEST-ONLY mock.
+使用限制转让代币或特定法律实体**并不**能使平台在法律上合规。募集、转让、托管、税务和数据保护义务取决于司法管辖区及该工具的法律定性，必须在任何募集之前由律师确定。投资资格审核将由第三方服务商（待定）执行；开发构建使用明确标注的 TEST-ONLY 模拟。
 
-## 10. Risks
+## 10. 风险
 
-See [RISK_DISCLOSURES.md](RISK_DISCLOSURES.md). Principal risks: loss of capital, no guaranteed income, vehicle and operating risk, regulatory risk for autonomous vehicles and for tokenized interests, dependence on the operator and third-party platforms, illiquidity, smart contract risk, stablecoin risk, and key-management risk.
+参见 [RISK_DISCLOSURES.md](RISK_DISCLOSURES.md)。主要风险：本金损失、无保证收益、车辆与运营风险、自动驾驶车辆及代币化权益的监管风险、对运营方和第三方平台的依赖、流动性不足、智能合约风险、稳定币风险以及密钥管理风险。
 
-## 11. Roadmap
+## 11. 路线图
 
-Phase 1 architecture (this draft) → Phase 2 core contracts → Phase 3 backend → Phase 4 frontend → Phase 5 Aave read-only → Phase 6 security and testnet → external audit and legal sign-off → mainnet only on explicit approval. See [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md).
+Phase 1 架构（本草案）→ Phase 2 核心合约 → Phase 3 后端 → Phase 4 前端 → Phase 5 Aave 只读 → Phase 6 安全与测试网 → 外部审计与法律签核 → 仅在明确批准后上主网。参见 [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)。
 
-## 12. What this paper does not claim
+## 12. 本文不作的声明
 
-No Tesla partnership, no approved operating locations, no vehicle prices, no historical returns, no investor commitments, no guaranteed yields, no regulatory approval.
+无 Tesla 合作关系、无已获批的运营地点、无车辆价格、无历史回报、无投资者承诺、无保证收益、无监管批准。

@@ -1,92 +1,92 @@
-# RoboShare — Phase 1 Analysis (First Task Deliverable)
+# RoboShare — 第一阶段分析（首项任务交付物）
 
-Status: **DRAFT for review.** No code has been written, compiled, tested, or deployed. Nothing in this document has been reviewed by counsel, an auditor, or a regulator.
+状态：**供评审的草案。** 尚未编写、编译、测试或部署任何代码。本文档中的任何内容均未经过法律顾问、审计方或监管机构的审查。
 
-This document answers the ten "First Task" items. Each item is short and points to the detailed document that owns the topic.
+本文档回答“首项任务”的十个事项。每一项都保持简短，并指向负责该主题的详细文档。
 
-| # | Item | Detailed document |
+| # | 事项 | 详细文档 |
 |---|------|-------------------|
-| 1 | Product requirements analysis | this file §1 |
-| 2 | System architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| 3 | Smart contract interaction diagram | this file §3, [SMART_CONTRACT_SPEC.md](SMART_CONTRACT_SPEC.md) |
-| 4 | Project lifecycle state machine | this file §4, [SMART_CONTRACT_SPEC.md §2](SMART_CONTRACT_SPEC.md#2-assetregistry) |
-| 5 | Database ER design | this file §5, [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) |
-| 6 | Threat model | [THREAT_MODEL.md](THREAT_MODEL.md) |
-| 7 | Roadmap with milestones | [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) |
-| 8 | Assumptions and unresolved decisions | this file §8 |
-| 9 | Proposed repository structure | this file §9 |
-| 10 | Commands and tools to start | this file §10 |
+| 1 | 产品需求分析 | 本文件 §1 |
+| 2 | 系统架构 | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| 3 | 智能合约交互图 | 本文件 §3，[SMART_CONTRACT_SPEC.md](SMART_CONTRACT_SPEC.md) |
+| 4 | 项目生命周期状态机 | 本文件 §4，[SMART_CONTRACT_SPEC.md §3](SMART_CONTRACT_SPEC.md) |
+| 5 | 数据库 ER 设计 | 本文件 §5，[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) |
+| 6 | 威胁模型 | [THREAT_MODEL.md](THREAT_MODEL.md) |
+| 7 | 含里程碑的路线图 | [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) |
+| 8 | 假设与待决事项 | 本文件 §8 |
+| 9 | 建议的仓库结构 | 本文件 §9 |
+| 10 | 启动所需的命令与工具 | 本文件 §10 |
 
 ---
 
-## 0. Repository inspection
+## 0. 仓库检查
 
-- No repository is attached to this project and the shared project folder was empty when Phase 1 started. There is **no existing code, dependency manifest, or configuration** to reuse or reconcile.
-- Phase 1 output lives in the shared project folder under `roboshare/`. It is laid out as the proposed repository so it can be committed as-is once a GitHub repository is attached.
-- Foundry is **not** installed in the current workspace; Node 22 and pnpm are. No tool version below has been exercised yet.
+- 本项目未关联任何仓库，且第一阶段开始时共享项目文件夹为空。**不存在任何现有代码、依赖清单或配置**可供复用或需要协调。
+- 第一阶段的产出位于共享项目文件夹的 `roboshare/` 下。其布局即为建议的仓库结构，因此一旦关联 GitHub 仓库即可原样提交。
+- 当前工作区**未**安装 Foundry；已安装 Node 22 和 pnpm。下文列出的工具版本均尚未实际使用过。
 
-## 1. Product requirements analysis
+## 1. 产品需求分析
 
-### 1.1 What RoboShare is
+### 1.1 RoboShare 是什么
 
-A platform that issues, records, and services **legally defined investment interests** in individual Robotaxi vehicle projects. Each project is run through an issuing entity (SPV or other vehicle chosen by counsel). On-chain, each project gets:
+一个用于发行、记录和管理针对单个 Robotaxi 车辆项目的**具有法律定义的投资权益**的平台。每个项目通过一个发行主体（SPV（特殊目的载体）或由法律顾问选定的其他载体）运作。在链上，每个项目拥有：
 
-- a registry entry with document hashes and a lifecycle state,
-- one restricted-transfer token with a hard cap of **100 whole units (decimals = 0)**,
-- an offering that sells those units against a stablecoin,
-- a sequence of distribution batches, each tied to an approved financial report.
+- 一个登记条目，包含文档哈希和生命周期状态，
+- 一个限制转让的代币，硬上限为 **100 个整数单位（decimals = 0）**，
+- 一次以稳定币出售这些单位的募集，
+- 一系列分配批次，每个批次都与一份已批准的财务报告关联。
 
-Off-chain, the platform holds private documents, compliance data, financial report workflows, and an indexed mirror of chain state.
+在链下，平台保存私有文档、合规数据、财务报告工作流以及链上状态的索引镜像。
 
-### 1.2 Users and their jobs
+### 1.2 用户及其任务
 
-| Actor | Primary jobs | Trust level |
+| 参与者 | 主要任务 | 信任级别 |
 |---|---|---|
-| Public visitor | Browse projects, documents (public set), risks, whitepaper | Untrusted |
-| Investor (eligible wallet) | Pass eligibility, subscribe, hold, claim distributions, verify reports | Authenticated by wallet (SIWE) + off-chain eligibility |
-| Operator staff | Register projects, upload documents, submit financial reports, propose batches | Privileged, cannot approve own submissions |
-| Reviewer / finance approver | Approve or reject reports and batches | Privileged, separate from operator |
-| Compliance agent | Push eligibility status from a KYC provider | Privileged, scoped to identity registry |
-| Governance multisig (+ timelock) | Grant roles, configure offerings, recovery, unpause | Highest; no direct access to investor funds |
-| Pauser (guardian) | Emergency pause only | Narrow |
-| External auditor | Read reports, hashes, audit trail | Read-only |
+| 公众访客 | 浏览项目、文档（公开部分）、风险、白皮书 | 不受信任 |
+| 投资者（合格钱包） | 通过投资资格审核、认购、持有、领取分配、核验报告 | 通过钱包（SIWE）认证 + 链下投资资格 |
+| 运营方人员 | 登记项目、上传文档、提交财务报告、提议批次 | 特权角色，不能批准自己提交的内容 |
+| 审核人 / 财务批准人 | 批准或拒绝报告和批次 | 特权角色，与运营方分离 |
+| 合规代理 | 从 KYC 服务商推送投资资格状态 | 特权角色，范围限于身份登记 |
+| 治理多签（+ 时间锁） | 授予角色、配置募集、恢复、解除暂停 | 最高级别；不能直接动用投资者资金 |
+| 暂停者（守护者（Guardian）） | 仅限紧急暂停 | 范围窄 |
+| 外部审计方 | 阅读报告、哈希、审计轨迹 | 只读 |
 
-### 1.3 Functional requirements (condensed)
+### 1.3 功能需求（精简版）
 
-1. **Project registry**: unique project ID + asset ID, issuer reference, document hashes with versions, enforced lifecycle.
-2. **Offering**: configure before launch (price, cap = 100, min target, window, payment asset), escrow subscriptions, settle (mint + release funds) or refund.
-3. **Token**: ERC-20-compatible, decimals 0, immutable cap, mint only by the project's offering contract, transfers gated by eligibility and pause.
-4. **Identity / compliance**: per-wallet eligibility with expiry, revocation, jurisdiction/investor-class code, no PII on-chain.
-5. **Distributions**: per-period batches referencing an approved report hash, tiered operator fee computed per holder, pull claims, duplicate batch and duplicate claim prevention, explicit dust handling.
-6. **Audit registry**: append-only hashes of documents and reports with amendments linked to the record they supersede.
-7. **Aave adapter**: read-only market data from a verified Aave V3 deployment on BNB Smart Chain; no transactional path in the MVP.
-8. **Backend**: PostgreSQL schema, REST API with public / investor / admin visibility tiers, chain indexer with reorg handling, report workflow, reconciliation.
-9. **Frontend**: public pages, investor dashboard, project detail, admin console. Every control is wired to real logic.
-10. **Docs**: 15 documents listed in the master prompt (all delivered in `docs/` plus `README.md`).
+1. **项目登记**：唯一的项目 ID + 资产 ID、发行方引用、带版本的文档哈希、强制执行的生命周期。
+2. **募集**：上线前配置（价格、上限 = 100、最低目标、时间窗口、支付资产），托管认购资金，结算（铸造代币 + 释放资金）或退款。
+3. **代币**：兼容 ERC-20，decimals 为 0，上限不可更改，仅可由该项目的募集合约铸造，转让受投资资格和暂停状态约束。
+4. **身份 / 合规**：按钱包设置投资资格，含有效期、撤销、司法管辖区/投资者类别代码，链上不存储 PII。
+5. **分配**：按期间划分的分配批次，引用已批准报告的哈希，按每位持有人计算分档的运营方费用，主动领取（pull）模式，防止重复批次和重复领取，明确的尾差（dust）处理。
+6. **审计登记**：仅追加的文档和报告哈希，修订与其所取代的记录相关联。
+7. **Aave 适配器**：从 BNB Smart Chain（BSC）上经核实的 Aave V3 部署读取只读市场数据；MVP 中不提供交易路径。
+8. **后端**：PostgreSQL schema、具有公开 / 投资者 / 管理员可见性层级的 REST API、支持链重组（reorg）处理的链上索引器、报告工作流、对账。
+9. **前端**：公开页面、投资者仪表盘、项目详情、管理控制台。每个控件都接入真实逻辑。
+10. **文档**：需求说明（master prompt）中列出的 15 份文档（全部交付于 `docs/` 中，另加 `README.md`）。
 
-### 1.4 Non-functional requirements
+### 1.4 非功能需求
 
-- Security over speed; non-upgradeable contracts by default.
-- No secrets in source; environment-based config; no placeholder addresses in production config.
-- Every DB fact derived from chain must be reconcilable with chain state.
-- Privacy tiers enforced server-side, not just in the UI.
-- Accessibility (WCAG 2.1 AA target) and mobile responsiveness.
-- Honest labelling: mocks marked TEST-ONLY, projections never shown as actuals, manual data never labelled "audited".
+- 安全优先于速度；合约默认不可升级。
+- 源代码中不含任何密钥；配置基于环境变量；生产配置中不使用占位地址。
+- 数据库中源自链上的每一条事实都必须能与链上状态对账。
+- 隐私层级在服务端强制执行，而不只是在 UI 中。
+- 无障碍（目标 WCAG 2.1 AA）和移动端响应式。
+- 如实标注：模拟实现标注为 TEST-ONLY，预测数据绝不显示为实际数据，人工录入的数据绝不标注为“已审计”。
 
-### 1.5 Security-critical decisions surfaced by the analysis
+### 1.5 分析中发现的安全关键决策
 
-These shape contract code and are listed with defaults in §8:
+这些决策会影响合约代码，并在 §8 中连同默认方案一并列出：
 
-- Legal nature of the token (equity vs. contractual economic right vs. debt) — affects transfer rules, recovery, and disclosures.
-- Snapshot rule for fee tiers and distribution eligibility.
-- Recovery (forced transfer) of lost-key positions.
-- Partial-fill offerings vs. all-or-nothing (affects what "1 unit = 1%" means).
-- Who may hold funds and when (escrow → issuer treasury).
-- Payment stablecoin choice and its decimals on BNB Smart Chain.
+- 代币的法律性质（股权 vs. 合同性经济权利 vs. 债务）——影响转让规则、恢复和披露。
+- 费率档位和分配资格的快照规则。
+- 丢失密钥持仓的恢复（强制转让）。
+- 部分成交的募集 vs. 全有或全无（影响“1 单位 = 1%”的含义）。
+- 谁可以持有资金以及何时持有（托管 → 发行方金库）。
+- 支付稳定币的选择及其在 BNB Smart Chain（BSC）上的 decimals。
 
-## 2. System architecture (summary)
+## 2. 系统架构（摘要）
 
-Full detail: [ARCHITECTURE.md](ARCHITECTURE.md).
+完整内容：[ARCHITECTURE.md](ARCHITECTURE.md)。
 
 ```mermaid
 flowchart LR
@@ -123,12 +123,12 @@ flowchart LR
   C <--> SC
 ```
 
-Key choices:
-- **Backend: NestJS** (separate API and worker processes sharing modules) over Next.js server routes, because indexing, reconciliation and report processing are long-running jobs that should not live inside a request/edge runtime, and because NestJS gives guards/DI suited to the three visibility tiers.
-- **Redis is justified** for BullMQ job queues (indexer, report hashing, reconciliation, notifications) and short-TTL caching of public reads. It is never a source of truth.
-- **Monorepo** (pnpm workspaces + Turborepo) so ABIs and types are generated once and shared.
+关键选择：
+- **后端：NestJS**（独立的 API 进程和 worker 进程共享模块），而非 Next.js 服务端路由，原因是索引、对账和报告处理都是长时间运行的任务，不应放在请求/边缘运行时中，并且 NestJS 提供的 guard/依赖注入适合三个可见性层级。
+- **使用 Redis 是合理的**，用于 BullMQ 任务队列（索引器、报告哈希计算、对账、通知）以及公开读取的短 TTL 缓存。它绝不作为事实来源。
+- **Monorepo**（pnpm workspaces + Turborepo），使 ABI 和类型只生成一次并共享使用。
 
-## 3. Smart contract interaction diagram
+## 3. 智能合约交互图
 
 ```mermaid
 flowchart TB
@@ -177,43 +177,43 @@ flowchart TB
   AAV -.->|view calls| AAVEPOOL[Aave V3 Pool /<br/>DataProvider / Oracle]
 ```
 
-Main call sequences (subscription, settlement, distribution, claim) are in [SMART_CONTRACT_SPEC.md §9](SMART_CONTRACT_SPEC.md#9-interaction-sequences).
+主要调用序列（认购、结算、分配、领取）见 [SMART_CONTRACT_SPEC.md §9](SMART_CONTRACT_SPEC.md)。
 
-## 4. Project lifecycle state machine
+## 4. 项目生命周期状态机
 
 ```mermaid
 stateDiagram-v2
   [*] --> DRAFT: registerProject (OPERATOR)
   DRAFT --> VERIFIED: verifyProject (REVIEWER, ≠ registrant)
-  DRAFT --> CANCELLED: cancel (OPERATOR or GOV)
-  VERIFIED --> DRAFT: reopen for edits (REVIEWER)
+  DRAFT --> CANCELLED: cancel (OPERATOR 或 GOV)
+  VERIFIED --> DRAFT: 退回修改 (REVIEWER)
   VERIFIED --> OFFERING: OfferingManager.open() (GOV)
   VERIFIED --> CANCELLED: cancel (GOV)
-  OFFERING --> FUNDED: settle() after target met
-  OFFERING --> CANCELLED: deadline missed / cancelOffering (GOV) → refunds
-  FUNDED --> ACTIVE: activate (GOV, attests asset in service)
+  OFFERING --> FUNDED: 达到目标后 settle()
+  OFFERING --> CANCELLED: 截止未达标 / cancelOffering (GOV) → 退款
+  FUNDED --> ACTIVE: activate (GOV，声明车辆已投入运营)
   FUNDED --> TERMINATED: terminate (GOV)
-  ACTIVE --> SUSPENDED: suspend (GOV or PAUSER)
+  ACTIVE --> SUSPENDED: suspend (GOV 或 PAUSER)
   SUSPENDED --> ACTIVE: resume (GOV)
-  ACTIVE --> EXIT_PENDING: beginExit (GOV) sale/retirement
+  ACTIVE --> EXIT_PENDING: beginExit (GOV) 出售/退役
   SUSPENDED --> EXIT_PENDING: beginExit (GOV)
   ACTIVE --> TERMINATED: terminate (GOV)
   SUSPENDED --> TERMINATED: terminate (GOV)
-  EXIT_PENDING --> CLOSED: close (GOV) after final batch fully settled
-  TERMINATED --> CLOSED: close (GOV) after wind-down batch
+  EXIT_PENDING --> CLOSED: 最终批次完成后 close (GOV)
+  TERMINATED --> CLOSED: 清算批次完成后 close (GOV)
   CANCELLED --> [*]
   CLOSED --> [*]
 ```
 
-Rules (enforced on-chain by an explicit transition table):
-- A transition is an **attestation by an authorized role**, never proof that a vehicle was bought, insured, or licensed. Every transition carries a `reasonHash` pointing at the evidence document in the AuditRegistry.
-- `CANCELLED` and `CLOSED` are terminal. No transition re-enters `OFFERING` once left.
-- Token transfers are allowed in `FUNDED` and `ACTIVE` only. They are frozen in `SUSPENDED`, `EXIT_PENDING`, `TERMINATED` and `CLOSED` so the final holder set is stable (decision D-12).
-- Distributions can be proposed in `ACTIVE`, `EXIT_PENDING`, and `TERMINATED` (wind-down proceeds).
+规则（由链上显式的状态转换表强制执行）：
+- 状态转换是**授权角色作出的声明/证明（attestation）**，绝不能证明车辆已被购买、投保或取得牌照。每次转换都带有一个 `reasonHash`，指向 AuditRegistry 中的证据文档。
+- `CANCELLED` 和 `CLOSED` 为终止状态。一旦离开 `OFFERING`，任何转换都不能重新进入该状态。
+- 代币转让仅在 `FUNDED` 和 `ACTIVE` 状态下允许。在 `SUSPENDED`、`EXIT_PENDING`、`TERMINATED` 和 `CLOSED` 状态下冻结转让，以使最终持有人集合保持稳定（决策 D-12）。
+- 分配可在 `ACTIVE`、`EXIT_PENDING` 和 `TERMINATED`（清算收益）状态下提议。
 
-## 5. Database entity relationship design (summary)
+## 5. 数据库实体关系设计（摘要）
 
-Full schema with columns, keys, and indexes: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
+包含列、键和索引的完整 schema：[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)。
 
 ```mermaid
 erDiagram
@@ -246,76 +246,76 @@ erDiagram
   USER ||--o{ ADMIN_ACTION : performs
 ```
 
-Private compliance data (provider reference, jurisdiction, accreditation evidence pointer) is held in a separate `compliance` schema with column encryption and its own DB role; the public API process has no grant on it.
+私有合规数据（服务商引用、司法管辖区、合格投资者证明材料指针）保存在独立的 `compliance` schema 中，采用列级加密并拥有自己的数据库角色；公开 API 进程对其没有任何授权。
 
-## 6. Threat model (summary)
+## 6. 威胁模型（摘要）
 
-Full model: [THREAT_MODEL.md](THREAT_MODEL.md). Top risks, ranked:
+完整模型：[THREAT_MODEL.md](THREAT_MODEL.md)。主要风险（按优先级排序）：
 
-1. **Governance key compromise** → unauthorized role grants or recovery transfers. Mitigation: Safe multisig + timelock, role separation, no role can both propose and approve, monitoring of `RoleGranted`.
-2. **Fraudulent or wrong financial report** leading to wrong distributions. Mitigation: two-person rule (submitter ≠ reviewer, enforced on-chain), report hash anchored before batch, batch amount bounded by report's distributable figure, funds pulled only from an explicit funder.
-3. **Eligibility bypass** (transfer to non-eligible wallet, stale KYC). Mitigation: token `_update` hook checks IdentityRegistry for both parties incl. expiry; mint path checks too.
-4. **Distribution accounting bugs** (double claim, rounding, tier miscalc). Mitigation: on-chain allocation computed once at batch creation, `claimed` bitmap, invariant tests Σallocations + fees + dust = amount.
-5. **Escrow loss** in OfferingManager. Mitigation: per-subscription accounting, pull refunds, nonReentrant, SafeERC20, no admin withdraw before settlement.
-6. **Indexer divergence / reorgs** showing wrong balances. Mitigation: confirmation depth, block-hash parent check, rollback, scheduled reconciliation against `balanceOf`.
-7. **Off-chain data leak** (PII, private docs). Mitigation: separate schema, encryption, signed short-lived URLs, audit log on access.
-8. **Misrepresentation risk** (UI shows projections as actuals, implies vehicle ownership). Mitigation: typed `figureKind` (ACTUAL/PROJECTED) in schema, copy review, legal rights summary per project.
+1. **治理密钥被攻破** → 未经授权的角色授予或恢复转让。缓解措施：Safe 多签 + 时间锁、角色分离、任何角色都不能同时提议和批准、监控 `RoleGranted`。
+2. **欺诈性或错误的财务报告**导致错误分配。缓解措施：双人规则（提交人 ≠ 审核人，在链上强制执行）、报告哈希先于批次锚定、批次金额受报告中可分配数额的约束、资金仅从明确指定的出资方拉取。
+3. **绕过投资资格**（转让给不合格钱包、KYC 过期）。缓解措施：代币的 `_update` hook 对双方均查询 IdentityRegistry（包括有效期）；铸造路径同样检查。
+4. **分配记账缺陷**（重复领取、舍入、档位计算错误）。缓解措施：在创建批次时一次性在链上计算分配额、`claimed` 位图、不变量测试 Σ分配额 + 费用 + 尾差（dust）= 金额。
+5. OfferingManager 中的**托管资金损失**。缓解措施：按每笔认购记账、主动领取（pull）退款、nonReentrant、SafeERC20、结算前管理员不得提取资金。
+6. **索引器偏差 / 链重组（reorg）** 导致显示错误余额。缓解措施：确认深度、区块哈希父块检查、回滚、定期对照 `balanceOf` 对账。
+7. **链下数据泄露**（PII、私有文档）。缓解措施：独立 schema、加密、签名的短时效 URL、访问审计日志。
+8. **虚假陈述风险**（UI 将预测数据显示为实际数据、暗示拥有车辆所有权）。缓解措施：schema 中带类型的 `figureKind`（ACTUAL/PROJECTED）、文案审查、每个项目的法律权利摘要。
 
-## 7. Development roadmap (summary)
+## 7. 开发路线图（摘要）
 
-Full roadmap: [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md).
+完整路线图：[DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md)。
 
-| Milestone | Scope | Exit criteria |
+| 里程碑 | 范围 | 退出标准 |
 |---|---|---|
-| M0 Phase 1 | Docs, architecture, threat model | **This review** |
-| M1 Phase 2 | Core contracts + Foundry tests (unit, fuzz, invariant) | `forge test` green, coverage report, Slither triaged |
-| M2 Phase 3 | DB, API, indexer, report pipeline, reconciliation | API tests green; indexer survives simulated reorg on anvil |
-| M3 Phase 4 | Web app: public, investor, admin | Playwright E2E against local anvil + API |
-| M4 Phase 5 | Aave read-only adapter | Addresses verified against official sources; read tests against BSC fork |
-| M5 Phase 6 | Security pass, testnet deploy (chain 97), deployment guide | Testnet deployment verified on explorer; security review report |
-| M6 | External audit + legal sign-off | Outside this codebase; prerequisite for mainnet |
+| M0 第一阶段 | 文档、架构、威胁模型 | **本次评审** |
+| M1 第二阶段 | 核心合约 + Foundry 测试（单元、模糊、不变量） | `forge test` 全部通过、覆盖率报告、Slither 结果已分类处理 |
+| M2 第三阶段 | 数据库、API、索引器、报告流水线、对账 | API 测试全部通过；索引器能在 anvil 上经受模拟链重组（reorg） |
+| M3 第四阶段 | Web 应用：公开、投资者、管理员 | 针对本地 anvil + API 的 Playwright 端到端测试 |
+| M4 第五阶段 | Aave 只读适配器 | 地址已对照官方来源核实；针对 BSC 分叉的读取测试 |
+| M5 第六阶段 | 安全检查、测试网部署（链 97）、部署指南 | 测试网部署已在区块浏览器上验证；安全审查报告 |
+| M6 | 外部审计 + 法律签核 | 不在本代码库范围内；主网上线的前提条件 |
 
-## 8. Assumptions and unresolved decisions
+## 8. 假设与待决事项
 
-Legend: **[A]** assumption we build on, **[D]** decision needed, with the default we will implement unless told otherwise. Items marked ⚠ materially affect security or the legal meaning of the token.
+图例：**[A]** 表示我们据以构建的假设，**[D]** 表示需要作出的决策，并附上除非另有指示否则将实施的默认方案。标有 ⚠ 的事项会实质性影响安全性或代币的法律含义。
 
-### Assumptions
+### 假设
 
-- A-1 The operator will form an issuing entity per project (or a series entity). The contract stores only an opaque `issuerId` and a hash of the formation documents.
-- A-2 No authorized Tesla operating-data API is available. Operating data enters through **manual reporting** with a schema and a review step. No Tesla integration will be written.
-- A-3 Payment is in one allowlisted stablecoin per offering on BNB Smart Chain. Which one, and its decimals, is verified at configuration time (BEP-20 stablecoins on BSC commonly use 18 decimals, but this must be read from the token contract, not assumed).
-- A-4 Fewer than ~100 holders per project (cap is 100 whole units), which makes on-chain per-holder allocation affordable.
-- A-5 BNB Smart Chain testnet (chain ID 97) for development; mainnet (chain ID 56) only after audit and explicit approval.
-- A-6 Aave V3 is deployed on BNB Smart Chain. Pool, PoolDataProvider, Oracle addresses and listed assets will be taken from the official Aave address book and governance records and cross-checked on-chain before use. No address is hard-coded in this phase.
-- A-7 No vehicle prices, returns, locations, or Tesla relationships are known. All example numbers in docs are labelled illustrative.
+- A-1 运营方将为每个项目设立一个发行主体（或一个系列主体）。合约仅存储一个不透明的 `issuerId` 和设立文件的哈希。
+- A-2 不存在经授权的 Tesla 运营数据 API。运营数据通过带有 schema 和审核步骤的**人工报告**录入。不会编写任何 Tesla 集成。
+- A-3 每次募集在 BNB Smart Chain（BSC）上使用一种白名单内的稳定币支付。具体是哪一种及其 decimals 在配置时核实（BSC 上的 BEP-20 稳定币通常使用 18 位 decimals，但必须从代币合约中读取，不得假定）。
+- A-4 每个项目的持有人少于约 100 个（上限为 100 个整数单位），这使得在链上按持有人计算分配额的成本可以承受。
+- A-5 开发使用 BNB Smart Chain（BSC）测试网（链 ID 97）；主网（链 ID 56）仅在审计并获得明确批准后使用。
+- A-6 Aave V3 已部署在 BNB Smart Chain（BSC）上。Pool、PoolDataProvider、Oracle 地址及上架资产将取自官方 Aave 地址簿和治理记录，并在使用前于链上交叉核对。本阶段不硬编码任何地址。
+- A-7 车辆价格、收益、地点或与 Tesla 的关系均未知。文档中所有示例数字均标注为示意性数据。
 
-### Decisions (with defaults)
+### 决策（含默认方案）
 
-| ID | Question | Default we will implement | ⚠ |
+| ID | 问题 | 我们将实施的默认方案 | ⚠ |
 |---|---|---|---|
-| D-1 | Legal nature of the token: SPV equity, contractual economic right (profit participation), or debt? | **Contractual economic right to a share of the project's distributable profit**, defined by a per-project Rights Document whose hash is stored on-chain. No claim of vehicle ownership. | ⚠ |
-| D-2 | Token standard | **Restricted-transfer ERC-20 (OpenZeppelin v5) with an ERC-3643-inspired split** (token / IdentityRegistry / compliance checks), not full T-REX/ONCHAINID. Reason: smaller audited surface, standard ERC-20 interface, decimals 0; transfers revert when restricted, which is ERC-20-conformant behaviour but must be disclosed. Full ERC-3643 remains an option if a regulated transfer agent requires it. | ⚠ |
-| D-3 | One token per project, or one multi-token (ERC-1155) for all projects? | **One ERC-20 per project**, deployed by a factory (non-upgradeable). Separate accounting by construction; standard wallet display. | |
-| D-4 | Offering fill rule | **All-or-nothing for 100 units.** If fewer than 100 units are subscribed by the deadline, everyone is refunded. Keeps "1 unit = 1% of the pool" true. A configurable minimum < 100 is supported in code but disabled by default. | ⚠ |
-| D-5 | When are tokens minted? | **At settlement**, not at subscription. Subscriptions are escrowed stablecoin; eligibility is rechecked at settlement. | |
-| D-6 | Fee tier basis | **Per vehicle project**, based on the holder's balance **at the batch snapshot timepoint**. Not portfolio-wide. | |
-| D-7 | Snapshot timepoint | The **end of the reporting period** as a block number recorded when the batch is proposed (must be ≤ current block). Balances read from token checkpoints. Transfers during the period do not matter; only the snapshot balance. | ⚠ |
-| D-8 | Fee base | Operator fee applies to each holder's gross share of the **legally defined distributable profit** (after costs, reserves, priority obligations, taxes where applicable). Separate management fees, if any, are deducted off-chain before distributable profit and must be disclosed in the report. | ⚠ |
-| D-9 | Losses | No batch is created for a period with zero or negative distributable profit; operator fee is zero. Loss carry-forward is a legal/accounting rule to be defined; default: none assumed. | |
-| D-10 | Rounding | Per holder: `gross = floor(D·u/U)`, `fee = floor(gross·bps/10000)`, `net = gross − fee` (rounding favours investors on the fee split). Dust `D − Σgross` is **carried forward** to the project's next batch, recorded on-chain. On `CLOSED`, residual dust goes to the issuer treasury with an event. | |
-| D-11 | Distribution style | **On-chain computed, pull-claimed.** At proposal the operator passes the sorted holder list; the contract verifies Σ snapshot balances = snapshot supply, computes and stores allocations, then investors claim. Hybrid push (`claimFor` by operator, funds still go to the holder) supported for convenience. | |
-| D-12 | Transfers by lifecycle state | Allowed in `FUNDED` and `ACTIVE` only. Frozen in all other states. | |
-| D-13 | Claim eligibility | A holder's entitlement is fixed at snapshot. **Claiming requires the wallet not to be frozen** (sanctions/revocation); unclaimed amounts stay in the contract and are never swept to the operator. Expired-but-not-revoked eligibility may still claim. | ⚠ |
-| D-14 | Lost-key recovery | **Included, disabled by default**: `forcedTransfer` behind `RECOVERY_ROLE` held by the governance Safe through the timelock, requiring a recovery-evidence hash and emitting an event. Enable per project only if the Rights Document permits it. | ⚠ |
-| D-15 | Upgradeability | **Non-upgradeable** contracts. Fixes ship as new deployments with a documented migration (only possible for new projects; existing tokens remain). | |
-| D-16 | Governance | Safe multisig (threshold to be chosen, suggested ≥ 3-of-5) → OpenZeppelin `TimelockController` (suggested 48h) holds `DEFAULT_ADMIN_ROLE`. Separate guardian Safe holds `PAUSER_ROLE` only. Unpause requires governance. | ⚠ |
-| D-17 | Eligibility model | Wallet → `{status, investorClass, jurisdictionCode, expiresAt}`; no PII. Mock provider in dev is labelled **TEST-ONLY** and refuses to run when `CHAIN_ID=56`. Real provider TBD. | |
-| D-18 | Cross-chain | None in MVP. Token exposes no bridge mint. An `ICrossChainGateway` interface is documented only. | |
-| D-19 | Secondary trading | No marketplace in MVP. Peer-to-peer transfers between eligible wallets only (no DEX listing; DEX pools would fail eligibility checks anyway). | |
-| D-20 | Who funds a batch | An explicit `funder` address (issuer treasury Safe) approves the stablecoin; contract pulls exactly `amount`. Amount must be ≤ the approved report's `distributableAmount` minus prior batches for that report. | |
-| D-21 | What a pause blocks | Pause blocks subscriptions, settlement, transfers, claims **and refunds**, to stop drains during an exploit. Because this also blocks investor exits, counsel should confirm; the alternative is to leave refunds/claims open while paused. | ⚠ |
+| D-1 | 代币的法律性质：SPV（特殊目的载体）股权、合同性经济权利（利润参与），还是债务？ | **获得项目可分配利润份额的合同性经济权利**，由每个项目的权益文件（Rights Document）定义，其哈希存储于链上。不主张车辆所有权。 | ⚠ |
+| D-2 | 代币标准 | **采用 ERC-3643 启发式拆分的限制转让 ERC-20（OpenZeppelin v5）**（代币 / IdentityRegistry / 合规检查），而非完整的 T-REX/ONCHAINID。理由：需审计的范围更小、标准 ERC-20 接口、decimals 为 0；受限时转让会 revert，这符合 ERC-20 规范，但必须予以披露。如受监管的过户代理要求，仍可选择完整的 ERC-3643。 | ⚠ |
+| D-3 | 每个项目一个代币，还是所有项目共用一个多代币合约（ERC-1155）？ | **每个项目一个 ERC-20**，由工厂合约部署（不可升级）。在结构上即实现记账分离；钱包可标准显示。 | |
+| D-4 | 募集成交规则 | **100 个单位全有或全无。** 如截止时认购少于 100 个单位，则全部退款。以保证“1 单位 = 资金池的 1%”成立。代码支持可配置的 < 100 的最低额，但默认禁用。 | ⚠ |
+| D-5 | 代币何时铸造？ | **在结算时**，而非认购时。认购资金为托管的稳定币；结算时重新检查投资资格。 | |
+| D-6 | 费率档位依据 | **按车辆项目**，依据持有人**在批次快照时点**的余额。不按整个投资组合计算。 | |
+| D-7 | 快照时点 | **报告期末**，以提议批次时记录的区块号表示（必须 ≤ 当前区块）。余额从代币检查点（checkpoint）读取。期间内的转让无关紧要；只看快照余额。 | ⚠ |
+| D-8 | 费用基数 | 运营方费用适用于每位持有人在**法律定义的可分配利润**中的总份额（扣除成本、储备金、优先义务及适用的税费之后）。单独的管理费（如有）在计算可分配利润之前于链下扣除，并必须在报告中披露。 | ⚠ |
+| D-9 | 亏损 | 可分配利润为零或为负的期间不创建批次；运营方费用为零。亏损结转属于有待定义的法律/会计规则；默认方案：不假定存在结转。 | |
+| D-10 | 舍入 | 每位持有人：`gross = floor(D·u/U)`，`fee = floor(gross·bps/10000)`，`net = gross − fee`（在费用拆分上舍入有利于投资者）。尾差（dust）`D − Σgross` **结转**至该项目的下一个批次，并在链上记录。进入 `CLOSED` 时，剩余尾差转入发行方金库并发出事件。 | |
+| D-11 | 分配方式 | **链上计算，主动领取（pull）。** 提议时运营方传入已排序的持有人列表；合约核验 Σ快照余额 = 快照总供应量，计算并存储分配额，然后由投资者领取。为方便起见，支持混合推送（由运营方调用 `claimFor`，资金仍转给持有人）。 | |
+| D-12 | 按生命周期状态的转让规则 | 仅在 `FUNDED` 和 `ACTIVE` 状态下允许。在所有其他状态下冻结。 | |
+| D-13 | 领取资格 | 持有人的应得额在快照时确定。**领取要求钱包未被冻结**（制裁/撤销）；未领取的金额保留在合约中，绝不会被划转给运营方。投资资格已过期但未被撤销的钱包仍可领取。 | ⚠ |
+| D-14 | 丢失密钥恢复 | **包含该功能，默认禁用**：`forcedTransfer` 受 `RECOVERY_ROLE` 控制，该角色由治理 Safe 经时间锁持有，需提供恢复证据哈希并发出事件。仅当权益文件（Rights Document）允许时才针对单个项目启用。 | ⚠ |
+| D-15 | 可升级性 | 合约**不可升级**。修复以新部署的形式发布，并附有文档化的迁移方案（仅适用于新项目；现有代币保持不变）。 | |
+| D-16 | 治理 | Safe 多签（阈值待定，建议 ≥ 3-of-5）→ OpenZeppelin `TimelockController`（建议 48 小时）持有 `DEFAULT_ADMIN_ROLE`。独立的守护者（Guardian）Safe 仅持有 `PAUSER_ROLE`。解除暂停需要治理。 | ⚠ |
+| D-17 | 投资资格模型 | 钱包 → `{status, investorClass, jurisdictionCode, expiresAt}`；不含 PII。开发环境中的模拟服务商标注为 **TEST-ONLY**，并在 `CHAIN_ID=56` 时拒绝运行。真实服务商待定。 | |
+| D-18 | 跨链 | MVP 中不支持。代币不提供跨链桥铸造接口。仅在文档中描述 `ICrossChainGateway` 接口。 | |
+| D-19 | 二级交易 | MVP 中不提供交易市场。仅支持合格钱包之间的点对点转让（不在 DEX 上架；DEX 资金池无论如何都无法通过投资资格检查）。 | |
+| D-20 | 由谁为批次出资 | 由明确指定的 `funder` 地址（发行方金库 Safe）授权稳定币额度；合约精确拉取 `amount`。金额必须 ≤ 已批准报告的 `distributableAmount` 减去该报告此前各批次的金额。 | |
+| D-21 | 暂停阻止哪些操作 | 暂停会阻止认购、结算、转让、领取**以及退款**，以在漏洞利用期间阻止资金被耗尽。由于这同样会阻止投资者退出，应由法律顾问确认；替代方案是在暂停期间保持退款/领取开放。 | ⚠ |
 
-## 9. Proposed repository structure
+## 9. 建议的仓库结构
 
 ```text
 roboshare/
@@ -360,25 +360,25 @@ roboshare/
 └── turbo.json
 ```
 
-## 10. Commands and tools to start development
+## 10. 启动开发的命令与工具
 
-Versions are targets to pin at install time; none has been installed or run yet in this workspace.
+以下版本为安装时需要锁定的目标版本；在本工作区中均尚未安装或运行。
 
-| Tool | Purpose | Install |
+| 工具 | 用途 | 安装 |
 |---|---|---|
-| Foundry (forge, cast, anvil, chisel) | compile, test, fuzz, invariant, scripts, local chain | `curl -L https://foundry.paradigm.xyz \| bash && foundryup` (pin a release with `foundryup --install <version>`) |
-| Solidity 0.8.x (pinned exact, e.g. latest stable at start) | compiler | via `foundry.toml` `solc_version` |
-| OpenZeppelin Contracts 5.x (pinned tag) | AccessControl, ERC20, Pausable, ReentrancyGuard, SafeERC20, Checkpoints, TimelockController | `forge install OpenZeppelin/openzeppelin-contracts@v5.<x>.<y>` |
-| Node.js 22 LTS + pnpm 9+ | monorepo | already present in this workspace |
-| Docker + Compose | Postgres 16, Redis 7, MinIO, anvil | Docker Desktop / engine |
-| Slither (Python) | static analysis | `pipx install slither-analyzer` |
-| Aderyn (optional) | second static analyzer | `cargo install aderyn` or release binary |
-| solhint | Solidity lint | `pnpm add -D solhint` |
-| Prisma | ORM + migrations | `pnpm add -D prisma && pnpm add @prisma/client` |
-| Vitest, Testing Library, Playwright | frontend/API tests | `pnpm add -D vitest @testing-library/react @playwright/test` |
-| Safe{Wallet} + TimelockController | governance on testnet | UI + script |
+| Foundry（forge、cast、anvil、chisel） | 编译、测试、模糊测试、不变量测试、脚本、本地链 | `curl -L https://foundry.paradigm.xyz \| bash && foundryup`（使用 `foundryup --install <version>` 锁定某个发行版本） |
+| Solidity 0.8.x（锁定精确版本，例如启动时的最新稳定版） | 编译器 | 通过 `foundry.toml` 的 `solc_version` |
+| OpenZeppelin Contracts 5.x（锁定标签） | AccessControl、ERC20、Pausable、ReentrancyGuard、SafeERC20、Checkpoints、TimelockController | `forge install OpenZeppelin/openzeppelin-contracts@v5.<x>.<y>` |
+| Node.js 22 LTS + pnpm 9+ | monorepo | 本工作区中已具备 |
+| Docker + Compose | Postgres 16、Redis 7、MinIO、anvil | Docker Desktop / engine |
+| Slither（Python） | 静态分析 | `pipx install slither-analyzer` |
+| Aderyn（可选） | 第二个静态分析器 | `cargo install aderyn` 或发行版二进制文件 |
+| solhint | Solidity 代码检查 | `pnpm add -D solhint` |
+| Prisma | ORM + 迁移 | `pnpm add -D prisma && pnpm add @prisma/client` |
+| Vitest、Testing Library、Playwright | 前端/API 测试 | `pnpm add -D vitest @testing-library/react @playwright/test` |
+| Safe{Wallet} + TimelockController | 测试网上的治理 | UI + 脚本 |
 
-Bootstrap sequence for Phase 2 (to run after approval):
+第二阶段的初始化步骤（获批后执行）：
 
 ```bash
 mkdir -p roboshare && cd roboshare
@@ -392,7 +392,7 @@ forge test -vvv
 slither . --filter-paths "lib|test"
 ```
 
-Local stack (Phase 3+):
+本地技术栈（第三阶段及以后）：
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d   # postgres, redis, minio, anvil
@@ -405,4 +405,4 @@ pnpm --filter web dev
 
 ---
 
-**Next step after review:** approve or amend the decisions in §8 (especially D-1, D-2, D-4, D-7, D-13, D-14, D-16), then start Phase 2 with `forge init` and the AssetRegistry + IdentityRegistry + RwaShareToken core.
+**评审后的下一步：** 批准或修改 §8 中的决策（尤其是 D-1、D-2、D-4、D-7、D-13、D-14、D-16），然后通过 `forge init` 以及 AssetRegistry + IdentityRegistry + RwaShareToken 核心合约启动第二阶段。

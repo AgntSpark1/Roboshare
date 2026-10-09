@@ -1,43 +1,43 @@
-# RoboShare — Incident Response Plan
+# RoboShare — 事件响应计划
 
-Status: **DRAFT (Phase 1).** On-call tooling, contacts and vendors are not yet chosen.
+状态：**草案（第一阶段）。** 值班工具、联系人和供应商尚未确定。
 
-## 1. Severity
+## 1. 严重级别
 
-| Sev | Definition | Examples | Response |
+| 级别 | 定义 | 示例 | 响应 |
 |---|---|---|---|
-| SEV-1 | Funds at risk or actively lost; governance compromise | exploit draining distributor; unexpected `RoleGranted`; malicious timelock operation scheduled | immediate pause, all hands |
-| SEV-2 | Incorrect financial state, no confirmed loss | batch allocation mismatch; reconciliation money mismatch; relayer key misuse | block affected flows, within 1 hour |
-| SEV-3 | Degraded service | indexer lag, RPC outage, UI down | business hours |
-| SEV-4 | Minor | cosmetic, docs | backlog |
+| SEV-1 | 资金面临风险或正在损失；治理被攻破 | 漏洞利用正在耗尽分配合约资金；出现意外的 `RoleGranted`；已排期恶意的时间锁操作 | 立即暂停，全员响应 |
+| SEV-2 | 财务状态错误，但未确认有损失 | 批次分配额不一致；对账发现金额不符；中继者（relayer）密钥被滥用 | 1 小时内阻断受影响的流程 |
+| SEV-3 | 服务降级 | 索引器延迟、RPC 中断、UI 宕机 | 工作时间内处理 |
+| SEV-4 | 轻微 | 外观问题、文档 | 列入待办 |
 
-## 2. Roles
-Incident commander (IC), guardian signers (pause), governance signers, engineering lead, compliance lead, communications lead, legal counsel.
+## 2. 角色
+事件指挥官（IC）、守护者（Guardian）签名人（负责暂停）、治理签名人、工程负责人、合规负责人、沟通负责人、法律顾问。
 
-## 3. SEV-1 playbook
-1. **Detect**: alert (monitoring, reconciliation, user report, auditor).
-2. **Contain** (minutes): guardian Safe signs `pause()` on affected contracts. If a malicious timelock operation is pending, guardian cancels it. Revoke compromised relayer role via governance if possible; disable relayer in the backend immediately.
-3. **Assess**: identify affected contracts, projects, holders, amounts. Preserve evidence (tx hashes, logs, DB snapshot).
-4. **Communicate**: status page + in-app banner with facts only; no speculation; legal review for regulator/investor notifications as required by jurisdiction.
-5. **Remediate**: fix, test, and deploy replacement contracts for new projects; for affected projects, decide migration per SECURITY_MODEL §5. Unpause only via governance after review.
-6. **Recover**: reconcile, publish a post-mortem with timeline, impact and corrective actions.
+## 3. SEV-1 应对手册
+1. **发现**：告警（监控、对账、用户报告、审计方）。
+2. **遏制**（数分钟内）：守护者（Guardian）Safe 对受影响合约签署 `pause()`。如有待执行的恶意时间锁操作，由守护者取消。尽可能通过治理撤销被攻破的中继者角色；立即在后端禁用该中继者。
+3. **评估**：确定受影响的合约、项目、持有人和金额。保全证据（交易哈希、日志、数据库快照）。
+4. **沟通**：通过状态页和应用内横幅仅发布事实；不作猜测；按司法管辖区要求，对向监管机构/投资者发出的通知进行法律审查。
+5. **修复**：为新项目修复、测试并部署替代合约；对受影响的项目，按 SECURITY_MODEL §5 决定迁移方案。仅在审查后通过治理解除暂停。
+6. **恢复**：完成对账，发布包含时间线、影响和纠正措施的事后复盘报告。
 
-## 4. Specific scenarios
+## 4. 具体场景
 
-| Scenario | First actions |
+| 场景 | 首要行动 |
 |---|---|
-| Wrong batch allocation proposed | Reviewer rejects batch; operator investigates holder list/snapshot; no funds have moved |
-| Wrong batch already approved | Pause distributor; compute correct allocations; governance decides on corrective batch funded by issuer; disclose |
-| Fraudulent report discovered | Freeze further batches for the project (suspend); preserve evidence; submit amendment; legal escalation |
-| Compliance relayer key leaked | Disable relayer; governance revokes `COMPLIANCE_AGENT_ROLE`; review all eligibility changes since compromise; freeze wallets wrongly marked eligible; rotate key |
-| Governance signer key lost/compromised | Remaining signers rotate Safe owners; review pending timelock ops; guardian ready to cancel |
-| Stablecoin depeg or issuer freeze | Pause offerings/distributions in that token; disclose; governance decides on payment asset for future batches |
-| Chain halt / deep reorg | Stop indexer confirmations; mark data stale in UI; resume after chain recovers and reconcile |
-| Data breach (PII) | Contain access, rotate credentials, assess scope, legal notification duties, inform affected users |
-| Phishing campaign | Publish warnings, report domains, reinforce official addresses in UI |
+| 提议了错误的批次分配额 | 审核人拒绝该批次；运营方调查持有人列表/快照；尚无资金移动 |
+| 错误的批次已获批准 | 暂停分配合约；计算正确的分配额；由治理决定由发行方出资的纠正批次；进行披露 |
+| 发现欺诈性报告 | 冻结该项目的后续批次（暂停项目，suspend）；保全证据；提交修订；升级至法务 |
+| 合规中继者密钥泄露 | 禁用中继者；治理撤销 `COMPLIANCE_AGENT_ROLE`；审查自泄露以来的所有投资资格变更；冻结被错误标记为合格的钱包；轮换密钥 |
+| 治理签名人密钥丢失/被攻破 | 其余签名人轮换 Safe 所有者；审查待执行的时间锁操作；守护者做好取消准备 |
+| 稳定币脱锚或稳定币发行方冻结 | 暂停以该代币进行的募集/分配；进行披露；由治理决定后续批次的支付资产 |
+| 链停止出块 / 深度链重组（reorg） | 停止索引器确认；在 UI 中将数据标记为过期；待链恢复后继续并对账 |
+| 数据泄露（PII） | 控制访问、轮换凭据、评估范围、履行法定通知义务、告知受影响用户 |
+| 钓鱼攻击活动 | 发布警告、举报域名、在 UI 中强化展示官方地址 |
 
-## 5. Pause semantics (current default, under review)
-While paused: subscriptions, settlement, transfers, claims and refunds are blocked. This stops drains during an exploit but also blocks investor exits; the pause should be held only as long as needed and the governance decision to unpause is time-critical. See THREAT_MODEL T-14.
+## 5. 暂停语义（当前默认方案，审查中）
+暂停期间：认购、结算、转让、领取和退款均被阻止。这可以在漏洞利用期间阻止资金被耗尽，但也会阻止投资者退出；暂停应仅维持必要的时长，且解除暂停的治理决策具有时间紧迫性。参见 THREAT_MODEL T-14。
 
-## 6. After every incident
-Post-mortem within 5 business days; tracked corrective actions; update THREAT_MODEL and tests to cover the failure.
+## 6. 每次事件之后
+5 个工作日内完成事后复盘；跟踪纠正措施；更新 THREAT_MODEL 和测试以覆盖该故障。

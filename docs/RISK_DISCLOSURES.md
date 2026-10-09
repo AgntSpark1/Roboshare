@@ -1,51 +1,51 @@
-# RoboShare — Risk Disclosures (Draft)
+# RoboShare — 风险披露（草案）
 
-**Draft for legal review. Not final investor-facing language.** Counsel must adapt this to the instrument's legal classification and each offering jurisdiction.
+**供法律审查的草案。并非面向投资者的最终措辞。** 律师必须根据该工具的法律定性及各募集所在司法管辖区对本文进行调整。
 
-You could lose some or all of the money you invest. Read the project's Rights Document and offering terms before subscribing.
+您可能损失部分或全部投资款项。认购前请阅读该项目的权益文件 (Rights Document) 和募集条款。
 
-## 1. Nature of the interest
-- A unit represents only the rights stated in that project's Rights Document. Unless the document expressly says so, **you do not own the vehicle or any part of it**, and you have no claim on the operator or on other projects.
-- The legal classification of the interest (contractual right, equity, debt, or other) affects your rights, priority in insolvency, and tax treatment.
+## 1. 权益性质
+- 一个单位仅代表该项目权益文件 (Rights Document) 中所载明的权利。除非该文件明确规定，否则**您并不拥有车辆或其任何部分**，并且您对运营方或其他项目不享有任何请求权。
+- 该权益的法律定性（合同权利、股权、债权或其他）会影响您的权利、破产清偿顺位及税务处理。
 
-## 2. No guaranteed returns
-- Distributions depend on actual distributable profit after costs, reserves, priority obligations and fees. Periods with no profit produce no distribution.
-- Any projection is an estimate, labelled as such, and may be wrong.
+## 2. 无保证回报
+- 分配取决于扣除成本、储备、优先义务和费用后的实际可分配利润。没有利润的期间不会产生分配。
+- 任何预测均为估计，并已如实标注，且可能有误。
 
-## 3. Vehicle and operating risk
-- Accidents, damage, theft, downtime, maintenance costs, depreciation, battery degradation, insurance gaps or price increases.
-- Autonomous-driving software, availability of a commercial ride-hailing network, platform fees and policies are controlled by third parties and may change or be unavailable.
-- Autonomous vehicle operation is subject to evolving regulation; permits may be denied, restricted or revoked.
-- RoboShare has no partnership with Tesla unless and until one is documented.
+## 3. 车辆与运营风险
+- 事故、损坏、盗窃、停运、维护成本、折旧、电池衰减、保险缺口或保费上涨。
+- 自动驾驶软件、商业网约车网络的可用性、平台费用及政策均由第三方控制，可能发生变化或无法获得。
+- 自动驾驶车辆的运营受不断变化的法规约束；许可可能被拒绝、限制或撤销。
+- 除非且直至有书面记录，RoboShare 与 Tesla 不存在任何合作关系。
 
-## 4. Operator and issuer risk
-- The operator controls operations and financial reporting. Reports are operator-submitted and reviewer-approved; unless marked otherwise they are **not independently audited**.
-- Fraud, error, insolvency or key-person risk at the operator or issuing entity.
-- Fees reduce your returns. The operator's share depends on your holding tier (20 % to 10 % of your allocation under the proposed tiers).
+## 4. 运营方与发行人风险
+- 运营方控制运营和财务报告。报告由运营方提交、经审核人批准；除另有标注外，报告**未经独立审计**。
+- 运营方或发行主体存在欺诈、差错、破产或关键人员风险。
+- 费用会减少您的回报。运营方所占比例取决于您的持有档位（按拟议档位为您分配额的 20 % 至 10 %）。
 
-## 5. Liquidity and transfer risk
-- Units can only be transferred to eligible wallets and only in certain project states. There is no official secondary market. You may be unable to sell.
-- Transfers may be frozen during suspension, exit, termination, or emergencies.
+## 5. 流动性与转让风险
+- 单位只能转让给合格钱包，且仅限于特定项目状态下。不存在官方二级市场。您可能无法出售。
+- 在暂停、退出、终止或紧急情况期间，转让可能被冻结。
 
-## 6. Technology risk
-- Smart contracts may contain bugs despite testing and audits. Contracts are non-upgradeable; fixing a bug may require a migration.
-- Blockchain congestion, reorganizations, RPC outages, or wallet software bugs.
-- Losing your private key may mean losing access to your units and distributions. Recovery is only possible if the project's Rights Document allows it, and then only through a governance process.
-- Phishing: only interact with published contract addresses and the official domain.
+## 6. 技术风险
+- 尽管经过测试和审计，智能合约仍可能存在缺陷。合约不可升级；修复缺陷可能需要进行迁移。
+- 区块链拥堵、链重组（reorg）、RPC 中断或钱包软件缺陷。
+- 丢失私钥可能意味着失去对您的单位及分配的访问权。仅在项目权益文件 (Rights Document) 允许的情况下才可能恢复，且只能通过治理流程进行。
+- 网络钓鱼：仅与已公布的合约地址和官方域名交互。
 
-## 7. Stablecoin and payment risk
-- Subscriptions and distributions use a third-party stablecoin. It may lose its peg, be frozen by its issuer, or be blacklisted at the contract level.
+## 7. 稳定币与支付风险
+- 认购和分配使用第三方稳定币。该稳定币可能脱锚、被其发行方冻结，或在合约层面被列入黑名单。
 
-## 8. Governance and administrative powers
-- Governance (a multisig behind a timelock) can pause contracts, change roles, and, where enabled, perform recovery transfers. A guardian can pause. These powers exist for safety but could be misused or compromised.
+## 8. 治理与管理权限
+- 治理（位于时间锁之后的多签）可以暂停合约、变更角色，并在已启用的情况下执行恢复转让。守护者（Guardian）可以执行暂停。这些权限出于安全目的而设，但可能被滥用或遭到攻破。
 
-## 9. Regulatory and tax risk
-- Laws on securities, tokenized assets, autonomous vehicles, data protection and taxation may change and could restrict or end a project.
-- Use of a restricted token or a particular legal entity does not by itself ensure legal compliance.
-- You are responsible for your own tax obligations.
+## 9. 监管与税务风险
+- 有关证券、代币化资产、自动驾驶车辆、数据保护及税收的法律可能发生变化，并可能限制或终止某一项目。
+- 使用限制转让代币或特定法律实体本身并不能确保法律合规。
+- 您须自行承担您的纳税义务。
 
-## 10. Exit risk
-- On sale, retirement, or termination, proceeds may be lower than your investment and may take time to distribute.
+## 10. 退出风险
+- 在出售、报废或终止时，所得款项可能低于您的投资额，且分配可能需要一定时间。
 
-## 11. DeFi display
-- Aave market data shown in the app is informational. RoboShare does not deposit your funds into Aave, and your units are not accepted as collateral on Aave.
+## 11. DeFi 展示
+- 应用中展示的 Aave 市场数据仅供参考。RoboShare 不会将您的资金存入 Aave，您的单位也不被 Aave 接受为抵押品。

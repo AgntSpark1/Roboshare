@@ -1,49 +1,49 @@
-# RoboShare — Testing Guide
+# RoboShare — 测试指南
 
-Status: **DRAFT (Phase 1).** Test plan only. No tests exist or have been run yet. When tests are written, this guide will record the exact commands and the CI jobs that run them.
+状态：**草案（DRAFT，Phase 1）。** 仅为测试计划。目前尚无任何测试，也未运行过任何测试。编写测试后，本指南将记录确切的命令及运行这些测试的 CI 作业。
 
-## 1. Layers
+## 1. 测试层级
 
-| Layer | Tool | Location |
+| 层级 | 工具 | 位置 |
 |---|---|---|
-| Contract unit / integration | Foundry `forge test` | `contracts/test/unit`, `contracts/test/integration` |
-| Contract fuzz | Foundry fuzzing | `contracts/test/fuzz` |
-| Contract invariants | Foundry invariant tests with handlers | `contracts/test/invariant` |
-| Fork tests (Aave) | `forge test --fork-url $BSC_RPC_URL` | `contracts/test/fork` |
-| Static analysis | Slither, solhint (optionally Aderyn) | CI |
-| Shared TS (fee math) | Vitest + fast-check; cross-checked with vectors exported from Solidity tests | `packages/shared` |
-| API | Jest/Vitest + supertest against a test Postgres | `apps/api/test` |
-| Worker | Vitest + anvil (reorg simulation via `anvil_reorg` / snapshot-revert) | `apps/worker/test` |
-| Frontend components | Vitest + Testing Library + axe | `apps/web` |
-| E2E | Playwright against anvil + API + web | `e2e/` |
-| Dependencies / secrets | `pnpm audit`, OSV-Scanner, gitleaks | CI |
+| 合约单元/集成测试 | Foundry `forge test` | `contracts/test/unit`、`contracts/test/integration` |
+| 合约模糊测试 | Foundry 模糊测试 | `contracts/test/fuzz` |
+| 合约不变量测试 | 带 handler 的 Foundry 不变量测试 | `contracts/test/invariant` |
+| 分叉测试（Aave） | `forge test --fork-url $BSC_RPC_URL` | `contracts/test/fork` |
+| 静态分析 | Slither、solhint（可选 Aderyn） | CI |
+| 共享 TS（费用计算） | Vitest + fast-check；与从 Solidity 测试导出的向量交叉核对 | `packages/shared` |
+| API | Jest/Vitest + supertest，针对测试用 Postgres | `apps/api/test` |
+| 工作进程 | Vitest + anvil（通过 `anvil_reorg` / 快照回滚模拟链重组（reorg）） | `apps/worker/test` |
+| 前端组件 | Vitest + Testing Library + axe | `apps/web` |
+| 端到端（E2E） | Playwright，针对 anvil + API + web | `e2e/` |
+| 依赖/机密信息 | `pnpm audit`、OSV-Scanner、gitleaks | CI |
 
-## 2. Required contract tests (from the master prompt)
+## 2. 必需的合约测试（源自需求说明）
 
-| # | Case | Test sketch |
+| # | 用例 | 测试要点 |
 |---|---|---|
-| 1 | Unauthorized minting | non-minter `mint` reverts; minter bound only once |
-| 2 | Supply above cap | settle when sold would exceed 100 impossible; direct mint beyond cap reverts; fuzz units |
-| 3 | Duplicate project registration | same projectId or assetId reverts |
-| 4 | Unauthorized transfers | to ineligible, from frozen, to frozen, class not allowed, wrong state; via `transfer` and `transferFrom` |
-| 5 | Expired eligibility | `vm.warp` past `expiresAt` → subscribe/transfer revert; claim still allowed unless frozen (D-13) |
-| 6 | Duplicate distribution batches | second batch beyond report amount reverts; second proposal while one pending reverts |
-| 7 | Incorrect allocations | table-driven vectors incl. master-prompt example (10 units, 15 %, D=10 000 → 850) and TOKENOMICS §4.4 |
-| 8 | Rounding dust | fuzz D, holder sets; assert Σnet+Σfee+dust == pool, dust < holders, dust carried |
-| 9 | Empty / zero batches | `amount == 0` reverts; empty holders reverts; holders summing < supply reverts |
-| 10 | Invalid lifecycle transitions | exhaustive pairwise test over all states against the table |
-| 11 | Unauthorized administration | every privileged function called by every non-authorized role reverts |
-| 12 | Paused behaviour | each pausable function reverts when paused; unpause only by admin |
-| 13 | Invalid Aave config | wrong chain ID, mismatched pool/oracle, non-allowlisted asset revert |
-| 14 | Unexpected approvals/spending | contracts never pull more than computed; fee-on-transfer mock rejected; leftover allowance unused |
-| 15 | Malformed/unverified reports | batch referencing SUBMITTED, REJECTED, SUPERSEDED, other project, wrong token reverts; self-approval reverts |
-| 16 | Reentrancy / attack paths | malicious ERC-20 mock re-entering `claim`, `claimRefund`, `subscribe`; unsorted/duplicate holders; snapshot in future |
+| 1 | 未授权铸造 | 非铸造者调用 `mint` 回滚；铸造者只能绑定一次 |
+| 2 | 供应量超过上限 | 已售数量将超过 100 时无法结算；超出上限的直接铸造回滚；对单位数进行模糊测试 |
+| 3 | 重复登记项目 | 相同的 projectId 或 assetId 回滚 |
+| 4 | 未授权转让 | 转给不合格方、从已冻结方转出、转给已冻结方、类别不被允许、状态错误；分别通过 `transfer` 和 `transferFrom` |
+| 5 | 投资资格过期 | `vm.warp` 超过 `expiresAt` → 认购/转让回滚；除非被冻结，否则仍允许领取（D-13） |
+| 6 | 重复分配批次 | 超出报告金额的第二个批次回滚；已有一个待处理批次时提出第二个提案回滚 |
+| 7 | 分配额错误 | 表驱动向量，包括需求说明中的示例（10 个单位，15 %，D=10 000 → 850）及 TOKENOMICS §4.4 |
+| 8 | 舍入尾差（dust） | 对 D 和持有人集合进行模糊测试；断言 Σnet+Σfee+dust == pool、dust < 持有人数、尾差被结转 |
+| 9 | 空批次/零批次 | `amount == 0` 回滚；持有人为空回滚；持有人合计 < 供应量回滚 |
+| 10 | 无效的生命周期转换 | 依据转换表对所有状态进行穷举两两测试 |
+| 11 | 未授权管理操作 | 每个特权函数由每个未授权角色调用时均回滚 |
+| 12 | 暂停行为 | 每个可暂停函数在暂停时回滚；仅管理员可解除暂停 |
+| 13 | 无效的 Aave 配置 | 错误的链 ID、不匹配的 pool/oracle、非白名单资产回滚 |
+| 14 | 意外的授权/支出 | 合约拉取的金额绝不超过计算值；转账收费（fee-on-transfer）模拟被拒绝；剩余授权额度不被使用 |
+| 15 | 格式错误/未经核实的报告 | 引用 SUBMITTED、REJECTED、SUPERSEDED、其他项目或错误代币的批次回滚；自我批准回滚 |
+| 16 | 重入/攻击路径 | 恶意 ERC-20 模拟重入 `claim`、`claimRefund`、`subscribe`；未排序/重复的持有人；未来区块的快照 |
 
-## 3. Invariants
+## 3. 不变量
 
-From [SMART_CONTRACT_SPEC.md §12](SMART_CONTRACT_SPEC.md#12-invariants-to-be-tested-with-foundry-invariant-tests). Handlers randomly: set/revoke eligibility, subscribe, warp time, settle/fail, transfer, propose/approve/reject batches, claim, pause/unpause.
+源自 [SMART_CONTRACT_SPEC.md §12](SMART_CONTRACT_SPEC.md)。Handler 随机执行：设置/撤销投资资格、认购、推进时间、结算/失败、转让、提出/批准/驳回批次、领取、暂停/解除暂停。
 
-## 4. Foundry profiles (planned)
+## 4. Foundry 配置（计划中）
 
 ```toml
 [profile.default]
@@ -55,7 +55,7 @@ fuzz = { runs = 10000 }
 invariant = { runs = 256, depth = 128 }
 ```
 
-## 5. Commands (once code exists)
+## 5. 命令（代码就绪后）
 
 ```bash
 cd contracts
@@ -69,8 +69,8 @@ pnpm -r test
 pnpm --filter web exec playwright test
 ```
 
-## 6. Rules
+## 6. 规则
 
-- A test is "passing" only after it has been executed and its output captured; phase summaries quote the actual output.
-- Never skip or disable a test to get green.
-- Mocks are named `Mock*`/`TestOnly*` and live under test directories.
+- 只有在测试已实际执行且其输出已被记录后，才能称其为"通过"；各阶段总结须引用实际输出。
+- 绝不为了让结果变绿而跳过或禁用测试。
+- 模拟组件命名为 `Mock*`/`TestOnly*`，并置于测试目录下。

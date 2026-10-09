@@ -1,76 +1,76 @@
-# RoboShare — Security Model
+# RoboShare — 安全模型
 
-Status: **DRAFT (Phase 1).** Design-level controls. None have been implemented or tested yet. An independent external audit is required before mainnet; internal tests and this document do not substitute for it.
+状态：**草案（DRAFT，Phase 1）。** 设计层面的控制措施。目前尚无任何一项已实现或经过测试。上主网前必须进行独立的外部审计；内部测试和本文件均不能替代外部审计。
 
-## 1. Authority structure
+## 1. 权限结构
 
 ```mermaid
 flowchart TB
-  GS[Governance Safe<br/>suggested 3-of-5, hardware wallets] --> TL[TimelockController<br/>suggested 48h delay]
-  TL -->|DEFAULT_ADMIN_ROLE, RECOVERY_ROLE| C[All RoboShare contracts]
-  GUARD[Guardian Safe<br/>suggested 2-of-3] -->|PAUSER_ROLE| C
-  OPS[Operator Safe or EOA] -->|OPERATOR_ROLE| C
-  REVS[Reviewer Safe] -->|REVIEWER_ROLE| C
-  REL[Compliance relayer<br/>KMS-held key] -->|COMPLIANCE_AGENT_ROLE| IR[IdentityRegistry]
+  GS[治理 Safe<br/>建议 3-of-5，硬件钱包] --> TL[TimelockController<br/>建议 48 小时延迟]
+  TL -->|DEFAULT_ADMIN_ROLE, RECOVERY_ROLE| C[所有 RoboShare 合约]
+  GUARD[守护者 Guardian Safe<br/>建议 2-of-3] -->|PAUSER_ROLE| C
+  OPS[运营方 Safe 或 EOA] -->|OPERATOR_ROLE| C
+  REVS[审核人 Safe] -->|REVIEWER_ROLE| C
+  REL[合规中继器<br/>KMS 托管密钥] -->|COMPLIANCE_AGENT_ROLE| IR[IdentityRegistry]
 ```
 
-- Deployment EOA grants roles, transfers `DEFAULT_ADMIN_ROLE` to the timelock, and renounces everything in the same script. A post-deploy check asserts no EOA retains admin.
-- The timelock's canceller role is held by the guardian Safe so a malicious scheduled operation can be cancelled during the delay.
-- Signer sets for governance, guardian, operator and reviewer must not overlap beyond what is documented.
+- 部署 EOA 在同一脚本中授予各角色、将 `DEFAULT_ADMIN_ROLE` 转移给时间锁，并放弃自身所有权限。部署后检查会断言没有任何 EOA 保留管理权限。
+- 时间锁的取消者（canceller）角色由守护者（Guardian）Safe 持有，以便在延迟期内取消恶意的已排期操作。
+- 治理、守护者、运营方和审核人的签名者集合不得存在文档记录以外的重叠。
 
-## 2. Least privilege matrix
+## 2. 最小权限矩阵
 
-See [SMART_CONTRACT_SPEC.md §2](SMART_CONTRACT_SPEC.md#2-roles-and-authority). Key properties:
+参见 [SMART_CONTRACT_SPEC.md §2](SMART_CONTRACT_SPEC.md)。关键属性：
 
-- No role can withdraw escrow except to the configured treasury via `settle`, or to subscribers via refunds.
-- No role can withdraw distribution funds except to holders (claims), the fee recipient (computed fee), or the treasury (dust, only after `CLOSED`).
-- No role can edit or delete an audit record; amendments append.
-- No role can raise the supply cap.
-- Two-person rule for reports, batches, and project verification, enforced with `msg.sender != submitter/proposer/registrant`. Because two keys controlled by one person would defeat this, operator and reviewer roles should be Safes with disjoint signers.
+- 任何角色都不能提取托管资金，除非是通过 `settle` 转入已配置的金库，或通过退款返还给认购人。
+- 任何角色都不能提取分配资金，除非是转给持有人（领取）、费用接收方（按计算所得费用）或金库（尾差（dust），且仅在 `CLOSED` 之后）。
+- 任何角色都不能编辑或删除审计记录；修订以追加方式进行。
+- 任何角色都不能提高供应上限。
+- 报告、批次和项目核验适用双人规则，通过 `msg.sender != submitter/proposer/registrant` 强制执行。由于同一人控制的两个密钥会使该规则失效，运营方和审核人角色应为签名者互不重叠的 Safe。
 
-## 3. Contract-level controls
+## 3. 合约层控制
 
-| Control | Where |
+| 控制措施 | 适用范围 |
 |---|---|
-| Role-based access (`AccessControl`) | all |
-| Pausable (pause by guardian, unpause by governance) | token, offering, distributor, identity writes |
-| ReentrancyGuard + checks-effects-interactions | offering, distributor |
-| SafeERC20 + balance-delta verification on pulls | offering, distributor |
-| Integer math only (Solidity ≥0.8 checked arithmetic, `Math.mulDiv` where products could overflow) | distributor |
-| Input validation (non-zero ids, sorted unique holders, bounded arrays, time windows) | all |
-| Replay / duplicate protection (recordId uniqueness, period cap, one pending batch, claimed flags) | audit registry, distributor |
-| Supply cap + immutable minter | token |
-| Restricted transfers in `_update` | token |
-| Explicit state machine | asset registry |
-| Events for every state change | all |
-| No upgradeability (no proxies) | all |
-| Chain ID + address verification | AaveReader |
+| 基于角色的访问控制（`AccessControl`） | 全部 |
+| 可暂停（由守护者暂停，由治理解除暂停） | 代币、募集、分配合约、身份写入 |
+| ReentrancyGuard + 检查-生效-交互（checks-effects-interactions）模式 | 募集、分配合约 |
+| SafeERC20 + 拉取资金时的余额差额校验 | 募集、分配合约 |
+| 仅使用整数运算（Solidity ≥0.8 的溢出检查算术，乘积可能溢出处使用 `Math.mulDiv`） | 分配合约 |
+| 输入校验（非零 id、已排序且唯一的持有人、有界数组、时间窗口） | 全部 |
+| 重放/重复保护（recordId 唯一性、期间上限、仅允许一个待处理批次、已领取标记） | 审计登记合约、分配合约 |
+| 供应上限 + 不可变的铸造者 | 代币 |
+| 在 `_update` 中实施限制转让 | 代币 |
+| 显式状态机 | 资产登记合约 |
+| 每次状态变更均发出事件 | 全部 |
+| 不可升级（无代理合约） | 全部 |
+| 链 ID + 地址校验 | AaveReader |
 
-## 4. Off-chain controls
+## 4. 链下控制
 
-- **Secrets**: never in git; `.env.example` holds names only; CI uses OIDC to cloud secret store; gitleaks in CI.
-- **Keys**: governance/guardian/reviewer keys are hardware wallets inside Safes. The only server signer (compliance relayer) uses a KMS-backed signer, has only `COMPLIANCE_AGENT_ROLE`, and is rate-limited.
-- **API**: SIWE with domain + chain binding; httpOnly SameSite=strict cookies; CSRF tokens on mutations; strict CSP; input validation with zod; per-tier DTOs; rate limiting; audit log for every admin mutation.
-- **Data**: separate `compliance` schema and DB role; pgcrypto/KMS envelope encryption for sensitive columns; private bucket with SSE-KMS, versioning, object lock for anchored files; pre-signed URLs ≤ 5 minutes; access logs.
-- **Supply chain**: pinned versions, lockfiles committed, `forge install` pinned to tags, Dependabot/Renovate with review, `pnpm audit` + OSV-Scanner, Slither (and optionally Aderyn) in CI.
-- **Mocks**: TEST-ONLY mocks live under `test/` or `apps/*/src/dev/`, are excluded from production builds, and refuse to run when `CHAIN_ID == 56`.
+- **机密信息**：绝不进入 git；`.env.example` 仅包含变量名；CI 通过 OIDC 访问云端机密存储；CI 中运行 gitleaks。
+- **密钥**：治理/守护者/审核人密钥为 Safe 中的硬件钱包。唯一的服务器签名者（合规中继器）使用 KMS 支持的签名器，仅拥有 `COMPLIANCE_AGENT_ROLE`，并受限流约束。
+- **API**：SIWE 绑定 domain + 链；httpOnly SameSite=strict Cookie；修改操作使用 CSRF 令牌；严格的 CSP；使用 zod 进行输入校验；按层级区分 DTO；限流；每次管理端修改操作均记入审计日志。
+- **数据**：独立的 `compliance` schema 和数据库角色；敏感列使用 pgcrypto/KMS 信封加密；私有存储桶启用 SSE-KMS、版本控制，并对已锚定文件启用对象锁定；预签名 URL ≤ 5 分钟；访问日志。
+- **供应链**：固定版本、提交 lockfile、`forge install` 固定到标签、Dependabot/Renovate 并经审查、`pnpm audit` + OSV-Scanner、CI 中运行 Slither（可选 Aderyn）。
+- **模拟组件**：TEST-ONLY 模拟位于 `test/` 或 `apps/*/src/dev/` 下，不包含在生产构建中，并在 `CHAIN_ID == 56` 时拒绝运行。
 
-## 5. Upgrade and migration policy
+## 5. 升级与迁移策略
 
-Contracts are non-upgradeable. If a vulnerability is found:
-1. Guardian pauses affected contracts.
-2. Governance assesses; for funds at risk, the runbook in [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) applies.
-3. Fixed contracts deploy for **new** projects. Existing projects continue on their contracts if safe; otherwise a migration (snapshot + new token minted 1:1 to the same eligible holders, old token permanently paused) requires governance approval, investor notice, and must be permitted by the Rights Document.
+合约不可升级。若发现漏洞：
+1. 守护者暂停受影响的合约。
+2. 治理进行评估；若资金面临风险，适用 [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) 中的处置手册。
+3. 修复后的合约用于**新**项目部署。现有项目在安全的前提下继续使用其原合约；否则进行迁移（快照 + 按 1:1 向相同的合格持有人铸造新代币，旧代币永久暂停），迁移需经治理批准、通知投资者，且必须为权益文件 (Rights Document) 所允许。
 
-## 6. Monitoring
+## 6. 监控
 
-Alert on: any `RoleGranted/RoleRevoked`, `CallScheduled` on the timelock, `Paused`, `ForcedTransfer`, `WalletFrozen`, batch proposals above a threshold, reconciliation mismatches, indexer lag > N blocks, failed relayer txs, unusual eligibility-update volume.
+对以下情况发出告警：任何 `RoleGranted/RoleRevoked`、时间锁上的 `CallScheduled`、`Paused`、`ForcedTransfer`、`WalletFrozen`、超过阈值的批次提案、对账不一致、索引器延迟 > N 个区块、中继交易失败、投资资格更新量异常。
 
-## 7. Required reviews before mainnet
+## 7. 上主网前必须完成的审查
 
-- Full Foundry suite green with coverage report; invariant runs at high depth.
-- Slither findings triaged and documented.
-- Independent smart contract audit with all high/medium findings resolved or accepted in writing.
-- Legal review of Rights Document, offering terms, risk disclosures, and UI copy.
-- Testnet dress rehearsal of the full lifecycle including a pause and a rejected batch.
-- Explicit written mainnet deployment approval.
+- 完整的 Foundry 测试套件全部通过并附覆盖率报告；以高深度运行不变量测试。
+- Slither 发现项已分级处理并记录。
+- 独立的智能合约审计，所有高/中危发现项均已修复或以书面形式接受。
+- 对权益文件 (Rights Document)、募集条款、风险披露和 UI 文案进行法律审查。
+- 在测试网上对完整生命周期进行彩排，包括一次暂停和一次被驳回的批次。
+- 明确的书面主网部署批准。
