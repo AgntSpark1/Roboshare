@@ -17,6 +17,7 @@
 | `IdentityRegistry` | 1 | 钱包投资资格（状态、类别、司法管辖区、到期时间）、冻结 |
 | `ProjectFactory` | 1 | 部署并连接每个项目的三件套合约；在 `AssetRegistry` 中建立关联 |
 | `RwaShareToken` | 每个项目 1 个 | 限制转让的 ERC-20，decimals 为 0，上限 100，余额检查点 |
+| `SubscriptionRouter` | 1（单例） | 统一认购入口：用户只需对它授权一次 USDT，之后在任何项目中直接按份额购买（D-23） |
 | `OfferingManager` | 每个项目 1 个 | 托管认购、结算（铸造 + 释放资金）、退款 |
 | `RevenueDistributor` | 每个项目 1 个 | 与报告绑定的批次、分档费率分配、主动领取（pull）、尾差（dust） |
 | `AaveReader` | 1（第 5 阶段） | 从经过验证的 Aave V3 市场进行只读读取 |
@@ -36,7 +37,7 @@
 | `OPERATOR_ROLE` | 运营方 Safe 或运维 EOA | 注册项目、提交文档/报告、提议批次、调用 `settle`、`claimFor` | 批准自己提交的内容、铸造、变更角色 |
 | `REVIEWER_ROLE` | 财务/审核 Safe | 验证项目、批准/驳回报告与批次 | 批准任何由其自身提交的内容（通过 `msg.sender != submitter` 强制执行） |
 | `COMPLIANCE_AGENT_ROLE` | 合规中继器（热密钥，链下限速） | 设置/续期/撤销投资资格、冻结/解冻 | `IdentityRegistry` 之外的任何操作 |
-| `PAUSER_ROLE` | 守护者（Guardian）Safe | 对代币、募集、分配合约、身份写入执行 `pause()`；`suspend` 项目 | 解除暂停、转账、变更配置 |
+| `PAUSER_ROLE` | 守护者（Guardian）Safe | 对代币、募集、认购入口、分配合约、身份写入执行 `pause()`；`suspend` 项目 | 解除暂停、转账、变更配置 |
 | `MINTER`（不是角色，而是不可变绑定） | 该项目的 `OfferingManager` | 在上限内铸造 | — |
 | `FACTORY_ROLE` | `ProjectFactory` | 一次性关联各项目合约 | 重新关联、变更状态 |
 
@@ -214,7 +215,7 @@ ERC-20 一致性：接口与事件均为标准形式。当限制条件生效时�
 
 ```solidity
 struct OfferingConfig {
-    IERC20  paymentToken;   // allowlisted stablecoin; decimals read on-chain at configure time
+    IERC20  paymentToken;   // must equal SubscriptionRouter.USDT (USDT BEP20, D-22); decimals read on-chain
     uint256 unitPrice;      // payment-token base units per unit
     uint32  maxUnits;       // must equal token CAP (100)
     uint32  minUnits;       // 1..maxUnits, set per offering by governance (partial fill allowed, D-4)
@@ -239,7 +240,8 @@ uint32 unitsSold;
 
 | 函数 | 访问权限 | 规则 |
 |---|---|---|
-| `subscribe(units)` | 合格钱包 | 状态为 OFFERING，`startTime ≤ now < endTime`，`units > 0`，`unitsSold + units ≤ maxUnits`，`unitsOf + units ≤ perWalletMax`，类别被允许，未暂停，nonReentrant。使用 `SafeERC20.safeTransferFrom` 拉取 `units × unitPrice`，并检查实际收到的余额变化等于预期金额（拒绝转账收费型代币）。 |
+| `quote(units) → cost` | 只读 | `units × unitPrice` |
+| `subscribeFor(investor, units, cost)` | 仅 `SubscriptionRouter`（构造时不可变绑定） | 状态为 OFFERING，`startTime ≤ now < endTime`，`units > 0`，`unitsSold + units ≤ maxUnits`，`unitsOf + units ≤ perWalletMax`，`investor` 具备投资资格且类别被允许，未暂停，nonReentrant。`cost == quote(units)`，并核验本合约 USDT 余额比已记账托管总额正好多出 `cost`（拒绝转账收费型代币或少转）。任一检查失败则整笔交易回滚，USDT 转账一并撤销。 |
 | `excludeSubscriber(wallet, reasonHash)` | GOV | 结算之前；标记为 `REFUNDABLE`，减少 `unitsSold`（针对已失去投资资格的认购人） |
 | `settle()` | OPERATOR | `unitsSold ≥ minUnits` 且（`now ≥ endTime` 或 `unitsSold == maxUnits`）；每个 `ESCROWED` 认购人必须仍具备投资资格，否则以 `SubscriberIneligible(wallet)` 回滚（需先由 GOV 排除）；为每位认购人铸造；将募集款转入 `treasury`；注册表 → FUNDED |
 | `finalizeFailed()` | 任何人 | `now ≥ endTime` 且 `unitsSold < minUnits`；所有 `ESCROWED` → `REFUNDABLE`；注册表 → CANCELLED |
@@ -249,6 +251,34 @@ uint32 unitsSold;
 除 `settle`（转入已配置的金库）和 `claimRefund`（转给认购人）外，没有任何函数允许任何角色提取托管资金。默认不支持在募集窗口期内撤回认购；如需冷静期权利，属于法律层面的决策（见 PHASE1_ANALYSIS §8）。
 
 事件：`OfferingConfigured`、`OfferingOpened`、`Subscribed(wallet, units, amount)`、`SubscriberExcluded`、`OfferingSettled(unitsSold, proceeds, treasury)`、`OfferingFailed`、`OfferingCancelled`、`RefundClaimed(wallet, amount)`。
+
+### 7.3 SubscriptionRouter（统一认购入口，D-23）
+
+目的：用户在第一次购买时对 `SubscriptionRouter` 授权一次 USDT，之后在 DApp 中只需选择项目和份额，一笔交易完成认购，无需每次重新授权。
+
+```solidity
+contract SubscriptionRouter {
+    IERC20 public immutable USDT;            // USDT BEP20, verified on-chain at deployment (D-22)
+    IAssetRegistry public immutable registry;
+    function subscribe(bytes32 projectId, uint32 units, uint256 maxCost) external; // nonReentrant, whenNotPaused
+}
+```
+
+`subscribe(projectId, units, maxCost)` 流程：
+1. 从 `AssetRegistry` 读取该项目已关联的 `OfferingManager`（由工厂关联，不能由调用者指定地址）；未关联则回滚。
+2. `cost = offering.quote(units)`；要求 `cost ≤ maxCost`（防止选错项目或价格与界面显示不符）。
+3. `USDT.safeTransferFrom(msg.sender, offering, cost)`：资金**直接**从用户钱包转入该项目的托管合约，路由合约本身从不持有资金。
+4. `offering.subscribeFor(msg.sender, units, cost)`：由 OfferingManager 完成全部资格与额度检查，失败则整笔回滚。
+
+安全约束（第 2 阶段测试必须覆盖）：
+- 路由合约**只会**从 `msg.sender` 本人拉取资金，任何人（包括治理）都无法动用其他用户的授权额度。
+- 资金只能流向 `AssetRegistry` 中已关联的 `OfferingManager`，且只在一次认购中拉取 `quote(units)` 的精确金额。
+- 没有提款、没有管理员转账函数、不可升级；唯一的管理操作是守护者 `pause()`（治理 `unpause()`），暂停后所有认购停止。
+- 由于用户授权的是这一个单例合约，它是全平台风险最集中的位置，需在外部审计中重点审查。
+
+授权额度（DApp 行为，D-23）：首次购买时检测 `allowance(user, router)`，不足时引导用户授权。授权额度由用户在 DApp 中填写，预填本次购买金额，用户可调高为自己的投资预算；默认不提供无限授权。之后只要剩余额度足够，购买即为一笔交易。DApp 显示当前剩余授权额度，并提供"撤销授权"（授权为 0）按钮。
+
+USDT 不假定支持 EIP-2612 `permit`；如经核实支持，可作为后续优化。
 
 ## 8. RevenueDistributor
 
@@ -326,13 +356,16 @@ sequenceDiagram
   participant Inv as 投资者
   participant OM as OfferingManager
   participant IR as IdentityRegistry
-  participant SC as 稳定币
+  participant SC as USDT
   participant T as RwaShareToken
   participant AR as AssetRegistry
-  Inv->>SC: approve(OM, units*price)
-  Inv->>OM: subscribe(units)
+  participant R as SubscriptionRouter
+  Inv->>SC: approve(R, 用户设定的额度)（仅首次或额度不足时）
+  Inv->>R: subscribe(projectId, units, maxCost)
+  R->>OM: quote(units)
+  R->>SC: transferFrom(inv, OM, cost)
+  R->>OM: subscribeFor(inv, units, cost)
   OM->>IR: isEligible(inv), classOf(inv)
-  OM->>SC: transferFrom(inv, OM, amount)
   Note over OM: 已托管
   participant Op as 运营方
   Op->>OM: settle()
@@ -354,7 +387,7 @@ sequenceDiagram
   participant AUD as AuditRegistry
   participant RD as RevenueDistributor
   participant T as RwaShareToken
-  participant SC as 稳定币
+  participant SC as USDT
   participant Inv as 投资者
   Op->>AUD: submitRecord(FINANCIAL_REPORT, hash, period, distributable)
   Rev->>AUD: approve(reportId)
@@ -371,7 +404,7 @@ sequenceDiagram
 ## 10. AaveReader（第 5 阶段，只读）
 
 - 构造函数接收 `expectedChainId` 和 Aave V3 `PoolAddressesProvider`。若 `block.chainid != expectedChainId` 则回滚。
-- `pool()`、`oracle()`、`dataProvider()` 通过 provider 解析，并与配置值比对；不匹配 → `MarketConfigMismatch`。
+- `pool()`、`oracle()`、`dataProvider()` 通过 provider 解析，并与配置值比对；不匹配 → `MarketConfigMismatch`、`OfferingNotLinked`、`CostAboveMax`、`OnlyRouter`。
 - `reserveList()`、`reserveConfig(asset)`、`reserveRates(asset)` 仅适用于显式白名单中的资产。
 - 不存在 `approve`、`supply`、`borrow` 或 `withdraw` 函数。任何交易型适配器都将是一个独立的未来合约，需经过明确审查。
 - 大多数读取路径将在链下 worker 中（viem `readContract`）针对同一组经过验证的地址执行；链上读取合约的存在是为了让其他合约无需为获取 Aave 数据而信任后端。是否确实需要链上读取合约由第 5 阶段决定。
@@ -385,7 +418,7 @@ sequenceDiagram
 
 1. `token.totalSupply() ≤ 100` 始终成立；只有已绑定的铸造方能增加该值。
 2. 每个非零余额都属于在收到单位时具备投资资格的地址。
-3. `OfferingManager` 稳定币余额 == 处于 `ESCROWED` 或 `REFUNDABLE` 状态的认购人已付款项之和。
+3. `OfferingManager` USDT 余额 == 处于 `ESCROWED` 或 `REFUNDABLE` 状态的认购人已付款项之和。
 4. 结算后，`token.totalSupply() == Σ units of SETTLED subscribers`（即 SETTLED 认购人的单位数之和）。
 5. 对每个批次：`Σnet + Σfee + dustOut == pool`；`Σ 已领取净额 ≤ Σ net`。
 6. 分配合约稳定币余额 == CLAIMABLE 批次中未领取净额之和 + 结转的尾差（dust）。
@@ -393,7 +426,8 @@ sequenceDiagram
 8. `distributedForPeriod[p] ≤ approvedReport(p).distributableAmount`。
 9. 项目状态只能按照状态转换表变化。
 10. 部署脚本执行完成后，除时间锁外没有任何地址持有 `DEFAULT_ADMIN_ROLE`。
+11. `SubscriptionRouter` 的 USDT 余额始终为 0；它只从 `msg.sender` 拉取资金，且只转入已关联的 `OfferingManager`。
 
 ## 13. 自定义错误（示意）
 
-`ProjectExists`、`AssetAlreadyRegistered`、`InvalidTransition(from,to)`、`NotEligible(wallet)`、`WalletFrozen(wallet)`、`ClassNotAllowed`、`CapExceeded`、`TransfersDisabledInState(state)`、`OfferingNotOpen`、`OfferingWindowClosed`、`PerWalletLimit`、`UnexpectedTransferAmount`、`SubscriberIneligible`、`ReportNotApproved`、`AmountExceedsReport`、`BatchPending`、`HoldersNotSorted`、`HolderSetIncomplete`、`SnapshotOutOfRange`、`AlreadyClaimed`、`NothingToClaim`、`SelfApproval`、`MarketConfigMismatch`。
+`ProjectExists`、`AssetAlreadyRegistered`、`InvalidTransition(from,to)`、`NotEligible(wallet)`、`WalletFrozen(wallet)`、`ClassNotAllowed`、`CapExceeded`、`TransfersDisabledInState(state)`、`OfferingNotOpen`、`OfferingWindowClosed`、`PerWalletLimit`、`UnexpectedTransferAmount`、`SubscriberIneligible`、`ReportNotApproved`、`AmountExceedsReport`、`BatchPending`、`HoldersNotSorted`、`HolderSetIncomplete`、`SnapshotOutOfRange`、`AlreadyClaimed`、`NothingToClaim`、`SelfApproval`、`MarketConfigMismatch`、`OfferingNotLinked`、`CostAboveMax`、`OnlyRouter`。

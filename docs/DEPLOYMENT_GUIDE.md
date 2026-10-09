@@ -17,7 +17,7 @@
 - 目标链的 RPC 端点（两个提供商），通过环境变量提供，绝不提交到代码库。
 - 部署者密钥：仅用于部署的全新密钥，仅充值足以支付 gas 的 BNB。在主网上，优先使用硬件钱包（`--ledger`）或通过 Safe 进行部署。
 - 在目标链上为治理、守护者（Guardian）、运营方、审核人创建 Safe 多签；签名人地址记录在部署配置中。
-- 目标链的白名单稳定币地址，从发行方官方文档获取并在 BscScan 上核对；decimals 从链上读取。
+- 目标链的 USDT（BEP20）地址（D-22）：主网从官方来源获取并在 BscScan 上核对，部署脚本从链上读取 `symbol` 和 `decimals` 并与预期比对，不一致则拒绝部署。测试网部署标注 TEST-ONLY 的模拟 USDT。
 - 用于合约验证的 BscScan API 密钥（仅限环境变量）。
 
 ## 3. 配置
@@ -33,7 +33,7 @@
   "reviewerSafe": "0x…",
   "complianceRelayer": "0x…",
   "timelockDelaySeconds": 86400,
-  "allowedPaymentTokens": ["0x…"]
+  "usdt": "0x…"
 }
 ```
 

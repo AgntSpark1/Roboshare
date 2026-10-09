@@ -63,6 +63,7 @@ flowchart TB
 - 使用 wagmi + viem 连接钱包（注入式钱包、WalletConnect）。链白名单来自配置：开发/测试环境为 97，仅生产构建使用 56。
 - 路由分组：`(public)`、`(investor)`（需要 SIWE 会话）、`(admin)`（SIWE + 服务器端角色校验）。
 - 服务器组件从 API 获取数据；客户端组件处理钱包操作。每个写操作按钮要么通过 wagmi 调用合约（先执行 `simulateContract`，以便用户看到诸如"钱包不具备投资资格"之类的回滚原因），要么调用经过身份验证的 API 端点。
+- 购买流程（D-23）：首次购买时检测用户对 `SubscriptionRouter` 的 USDT 授权额度，不足时引导授权（额度由用户填写，预填本次金额，可调高，默认无无限授权）；之后用户只需选择项目和份额，一笔交易完成认购。界面显示剩余授权额度，并提供撤销授权按钮。
 - 需要治理的管理操作会生成一个 **Safe 交易提案**（通过 Safe Transaction Service API），而不是从浏览器密钥直接发送。
 - 图表：Recharts 或 visx，并以明确的 `ACTUAL` / `PROJECTED` 样式和标签区分。
 

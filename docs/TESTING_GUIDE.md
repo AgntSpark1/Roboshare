@@ -38,6 +38,7 @@
 | 14 | 意外的授权/支出 | 合约拉取的金额绝不超过计算值；转账收费（fee-on-transfer）模拟被拒绝；剩余授权额度不被使用 |
 | 15 | 格式错误/未经核实的报告 | 引用 SUBMITTED、REJECTED、SUPERSEDED、其他项目或错误代币的批次回滚；自我批准回滚 |
 | 16 | 重入/攻击路径 | 恶意 ERC-20 模拟重入 `claim`、`claimRefund`、`subscribe`；未排序/重复的持有人；未来区块的快照 |
+| 17 | SubscriptionRouter 授权安全 | 攻击者调用 `subscribe` 无法动用他人授权；只能转入已关联的 OfferingManager；`cost > maxCost` 回滚；任何检查失败时 USDT 转账一并回滚；路由余额始终为 0；授权额度不足时回滚；暂停后认购全部停止 |
 
 ## 3. 不变量
 

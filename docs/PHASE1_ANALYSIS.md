@@ -33,7 +33,7 @@
 
 - 一个登记条目，包含文档哈希和生命周期状态，
 - 一个限制转让的代币，硬上限为 **100 个整数单位（decimals = 0）**，
-- 一次以稳定币出售这些单位的募集，
+- 一次以 USDT（BEP20）出售这些单位的募集，
 - 一系列分配批次，每个批次都与一份已批准的财务报告关联。
 
 在链下，平台保存私有文档、合规数据、财务报告工作流以及链上状态的索引镜像。
@@ -151,7 +151,7 @@ flowchart TB
     RDIS[RevenueDistributor]
   end
   AAV[AaveReader<br/>view-only]
-  STB[(Allowlisted stablecoin)]
+  STB[(USDT BEP20)]
 
   GOV -->|roles, config| AR & IR & F & T & OM & RDIS
   PAUSER -->|pause| T & OM & RDIS & IR
@@ -162,8 +162,11 @@ flowchart TB
   F -->|deploys + wires| T & OM & RDIS
   F -->|links project → contracts| AR
 
-  INV -->|subscribe / claimRefund| OM
-  OM -->|transferFrom| STB
+  INV -->|approve 一次| STB
+  INV -->|subscribe projectId, units| ROUTER[SubscriptionRouter]
+  ROUTER -->|transferFrom 用户 → OM| STB
+  ROUTER -->|subscribeFor| OM
+  INV -->|claimRefund| OM
   OM -->|mint at settlement| T
   OM -->|state FUNDED / CANCELLED| AR
   T -->|canTransfer?| IR
@@ -283,7 +286,7 @@ erDiagram
 
 - A-1 运营方将为每个项目设立一个发行主体（或一个系列主体）。合约仅存储一个不透明的 `issuerId` 和设立文件的哈希。
 - A-2 不存在经授权的 Tesla 运营数据 API。运营数据通过带有 schema 和审核步骤的**人工报告**录入。不会编写任何 Tesla 集成。
-- A-3 每次募集在 BNB Smart Chain（BSC）上使用一种白名单内的稳定币支付。具体是哪一种及其 decimals 在配置时核实（BSC 上的 BEP-20 稳定币通常使用 18 位 decimals，但必须从代币合约中读取，不得假定）。
+- A-3 所有项目统一使用 BSC 上的 USDT（BEP20）入金和分配（D-22）。合约地址与 decimals 在部署时从链上核实，不在代码中假定。
 - A-4 每个项目的持有人少于约 100 个（上限为 100 个整数单位），这使得在链上按持有人计算分配额的成本可以承受。
 - A-5 开发使用 BNB Smart Chain（BSC）测试网（链 ID 97）；主网（链 ID 56）仅在审计并获得明确批准后使用。
 - A-6 Aave V3 已部署在 BNB Smart Chain（BSC）上。Pool、PoolDataProvider、Oracle 地址及上架资产将取自官方 Aave 地址簿和治理记录，并在使用前于链上交叉核对。本阶段不硬编码任何地址。
@@ -314,6 +317,8 @@ erDiagram
 | D-19 | 二级交易 | MVP 中不提供交易市场。仅支持合格钱包之间的点对点转让（不在 DEX 上架；DEX 资金池无论如何都无法通过投资资格检查）。 | |
 | D-20 | 由谁为批次出资 | 由明确指定的 `funder` 地址（发行方金库 Safe）授权稳定币额度；合约精确拉取 `amount`。金额必须 ≤ 已批准报告的 `distributableAmount` 减去该报告此前各批次的金额。 | |
 | D-21 | 暂停阻止哪些操作 | ✅ 已确认（2026-10-09）：暂停会阻止认购、结算、转让、领取**以及退款**，以在漏洞利用期间阻止资金被耗尽。由于这同样会阻止投资者退出，暂停应只维持必要的时间，并建议由法律顾问复核。 | ⚠ |
+| D-22 | 入金币种 | ✅ 已确认（2026-10-09）：**所有项目统一使用 USDT（BEP20）** 认购、退款和分配。BSC 主网 USDT 合约（常用地址 `0x55d398326f99059fF775485246999027B3197955`，名称 Binance-Peg BSC-USD）及其 decimals 必须在部署前于链上和 BscScan 核实后才写入配置；本环境暂时无法访问 BSC 节点，尚未核实。BSC 测试网没有官方 USDT，测试网使用标注 **TEST-ONLY** 的模拟 USDT。 | ⚠ |
+| D-23 | 一次授权、直接购买 | ✅ 已确认（2026-10-09）：新增单例 `SubscriptionRouter`：用户首次购买时对它授权一次 USDT，之后在任何项目中只需选择份额，一笔交易完成认购。路由合约只从调用者本人拉取精确金额，直接转入该项目托管合约，自身不持有资金。授权额度由用户填写（预填本次金额，可调高），默认不提供无限授权，并提供撤销授权按钮。 | ⚠ |
 
 ## 9. 建议的仓库结构
 
@@ -334,6 +339,7 @@ roboshare/
 │   │   ├── identity/IdentityRegistry.sol
 │   │   ├── token/RwaShareToken.sol
 │   │   ├── offering/OfferingManager.sol
+│   │   ├── offering/SubscriptionRouter.sol
 │   │   ├── distribution/RevenueDistributor.sol
 │   │   ├── factory/ProjectFactory.sol
 │   │   ├── defi/AaveReader.sol          # Phase 5, view-only
