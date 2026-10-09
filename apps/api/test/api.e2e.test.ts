@@ -180,6 +180,21 @@ describe("public", () => {
   });
 });
 
+describe("aave (read-only)", () => {
+  it("returns 503 until a verified read exists, then the latest snapshot", async () => {
+    const none = await http().get("/api/v1/aave/markets").expect(503);
+    expect(none.body.error.code).toBe("CHAIN_UNAVAILABLE");
+    await prisma.aaveMarketSnapshot.create({
+      data: {
+        chainId: 56, blockNumber: 100n, blockHash: "0xaa", blockTime: new Date(), source: "test",
+        addresses: { pool: ADDR(1) }, reserves: [{ symbol: "USDT", supplyAprBps: 500 }],
+      },
+    });
+    const r = await http().get("/api/v1/aave/markets").expect(200);
+    expect(r.body).toMatchObject({ chainId: 56, blockNumber: "100", readOnly: true, stale: false, reserves: [{ symbol: "USDT", supplyAprBps: 500 }] });
+  });
+});
+
 describe("auth", () => {
   it("rejects investor routes without a session", async () => {
     const r = await http().get("/api/v1/me/portfolio").expect(401);

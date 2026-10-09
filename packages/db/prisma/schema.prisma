@@ -494,3 +494,22 @@ model ComplianceCase {
   @@map("compliance_case")
   @@schema("compliance")
 }
+
+// ---------------------------------------------------------------- Aave (read-only market data, Phase 5)
+
+/// One verified read of allowlisted Aave V3 reserves, pinned to a block. Never used to move funds.
+model AaveMarketSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  chainId     Int
+  blockNumber BigInt
+  blockHash   String
+  blockTime   DateTime
+  readAt      DateTime @default(now())
+  source      String
+  addresses   Json
+  reserves    Json
+
+  @@index([chainId, blockNumber])
+  @@map("aave_market_snapshot")
+  @@schema("chain")
+}
