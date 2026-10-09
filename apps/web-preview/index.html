@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body style="margin:0">
+<title>RoboShare DApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: night-shift fleet dispatch console. One live city map in the hero, quiet panels below, bottom tab bar on phones. */
+:root{
+  color-scheme: dark;
+  --night:#0A1020; --panel:#111A2E; --panel2:#17223B; --line:#243150; --line2:#30406A;
+  --ink:#E9EEF8; --mute:#8E9BB8; --dim:#5D6A88;
+  --amber:#F6B53D; --amber-ink:#1B1406; --lidar:#4FE3D2;
+  --good:#47D68A; --warn:#FF8F4D; --bad:#FF5D6E; --info:#7AA7FF;
+  --f-display:"Chakra Petch","Noto Sans SC",system-ui,sans-serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:14px; --r-s:9px;
+  --step-0:clamp(.88rem,.85rem + .15vw,.95rem); --step-1:1.06rem; --step-2:clamp(1.25rem,1.1rem + .7vw,1.55rem);
+  --step-3:clamp(1.6rem,1.3rem + 1.5vw,2.3rem); --step-4:clamp(2.1rem,1.5rem + 3.2vw,3.7rem);
+}
+*{box-sizing:border-box}
+html{background:var(--night)}
+body{background:var(--night);color:var(--ink);font-family:var(--f-body);font-size:var(--step-0);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.2}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--lidar);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-family:var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.eyebrow{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:max(16px,3vw)}
+.muted{color:var(--mute)}
+
+/* demo ribbon */
+.ribbon{background:repeating-linear-gradient(-45deg,#2A1F08 0 12px,#211806 12px 24px);color:var(--amber);font-size:.78rem;text-align:center;padding:6px 16px;border-bottom:1px solid #3A2C0E}
+.ribbon b{font-weight:700}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:color-mix(in srgb,var(--night) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:18px;height:62px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-display);font-weight:700;font-size:1.15rem;letter-spacing:.02em}
+.brand svg{flex:none}
+.brand small{display:block;font-family:var(--f-mono);font-weight:400;font-size:.62rem;color:var(--mute);letter-spacing:.12em}
+.nav{display:flex;gap:4px;margin-left:12px}
+.nav a{text-decoration:none;padding:7px 12px;border-radius:999px;color:var(--mute);font-size:.9rem;transition:color .2s,background .2s}
+.nav a:hover{color:var(--ink)}
+.nav a.on{color:var(--ink);background:var(--panel2)}
+.spacer{flex:1}
+.chip-net{display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:.72rem;color:var(--mute);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 0 var(--amber);animation:ping 2.2s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(246,181,61,.6)}80%,100%{box-shadow:0 0 0 8px rgba(246,181,61,0)}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line2);background:var(--panel2);padding:10px 16px;border-radius:999px;font-weight:600;font-size:.9rem;text-decoration:none;transition:transform .15s,background .2s,border-color .2s;white-space:nowrap}
+.btn:hover{border-color:var(--mute)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.btn.primary:hover{background:#FFC55A}
+.btn.ghost{background:transparent}
+.btn.lidar{background:transparent;border-color:var(--lidar);color:var(--lidar)}
+.btn.danger{background:transparent;border-color:var(--bad);color:var(--bad)}
+.btn.sm{padding:6px 12px;font-size:.8rem}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.wallet .addr{font-family:var(--f-mono);font-size:.82rem}
+.avatar{width:18px;height:18px;border-radius:50%;background:conic-gradient(from 40deg,var(--amber),var(--lidar),#7A5CFF,var(--amber))}
+
+/* bottom tabs (phone) */
+.tabs{display:none}
+@media (max-width:820px){
+  .nav,.chip-net{display:none}
+  .tabs{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:45;background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+  .tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:var(--dim);font-size:.68rem;padding:4px 0}
+  .tabs a svg{width:22px;height:22px}
+  .tabs a.on{color:var(--amber)}
+  main{padding-bottom:84px}
+  .top .wrap{height:56px}
+}
+
+/* views */
+.view{display:none;animation:rise .45s cubic-bezier(.2,.7,.2,1)}
+.view.on{display:block}
+@keyframes rise{from{opacity:.0;transform:translateY(10px)}to{opacity:1;transform:none}}
+section{padding-block:clamp(36px,6vw,72px)}
+.sec-h{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.sec-h h2{font-size:var(--step-3);font-weight:900}
+.sec-h p{color:var(--mute);max-width:52ch}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line);padding-block:0}
+.hero canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,var(--night) 0%,rgba(10,16,32,.86) 38%,rgba(10,16,32,.15) 75%,rgba(10,16,32,.35) 100%),linear-gradient(0deg,var(--night) 0%,transparent 30%);pointer-events:none}
+@media (max-width:820px){.hero::after{background:linear-gradient(180deg,rgba(10,16,32,.35) 0%,rgba(10,16,32,.72) 45%,rgba(10,16,32,.55) 75%,var(--night) 100%)}}
+.hero .wrap{position:relative;z-index:2;padding-block:clamp(48px,9vw,110px) clamp(40px,7vw,80px)}
+.hero h1{font-size:var(--step-4);font-weight:900;letter-spacing:-.01em;max-width:13em}
+.hero h1 em{font-style:normal;color:var(--amber);font-family:var(--f-display)}
+.hero .lead{margin-top:18px;color:#C3CCE0;font-size:var(--step-1);max-width:34em}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.hero .hud{display:flex;gap:10px;flex-wrap:wrap;margin-top:34px}
+.hud .h{border:1px solid var(--line2);background:rgba(17,26,46,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:var(--r-s);padding:9px 14px;min-width:132px}
+.hud .h .num{font-size:1.35rem;font-weight:700}
+.hud .h .eyebrow{font-size:.62rem}
+.scanline{position:absolute;left:0;right:0;height:120px;top:-120px;z-index:1;background:linear-gradient(180deg,transparent,rgba(79,227,210,.06),transparent);animation:scan 7s linear infinite;pointer-events:none}
+@keyframes scan{to{top:110%}}
+.hero .word{display:inline-block;animation:wordin .8s cubic-bezier(.2,.7,.2,1) both}
+@keyframes wordin{from{opacity:.0;transform:translateY(.4em);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;counter-reset:s}
+@media (max-width:900px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.steps{grid-template-columns:1fr}}
+.step{position:relative;padding:20px 18px 18px;border-top:2px solid var(--line2)}
+.step::before{counter-increment:s;content:"0" counter(s);font-family:var(--f-display);font-weight:700;color:var(--amber);font-size:.95rem;display:block;margin-bottom:10px}
+.step h3{font-size:1.05rem;font-weight:700;margin-bottom:6px}
+.step p{color:var(--mute);font-size:.88rem}
+.step .bar{position:absolute;top:-2px;left:0;height:2px;width:0;background:var(--amber);animation:fill 1.2s cubic-bezier(.2,.7,.2,1) forwards}
+.step:nth-child(2) .bar{animation-delay:.25s}.step:nth-child(3) .bar{animation-delay:.5s}.step:nth-child(4) .bar{animation-delay:.75s}
+@keyframes fill{to{width:100%}}
+
+/* project cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px}
+.pcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;text-decoration:none;display:flex;flex-direction:column;transition:transform .25s,border-color .25s}
+.pcard:hover{transform:translateY(-4px);border-color:var(--line2)}
+.pcard .art{position:relative;aspect-ratio:16/8;max-width:100%;background:radial-gradient(120% 90% at 70% 10%,#1C2A4C,#0D1528)}
+.pcard .art svg{position:absolute;inset:0;width:100%;height:100%}
+.pcard .body{padding:16px 18px 18px;display:grid;gap:12px}
+.pcard .t{display:flex;justify-content:space-between;align-items:start;gap:8px}
+.pcard h3{font-size:1.08rem;font-weight:700}
+.code{font-family:var(--f-mono);font-size:.72rem;color:var(--mute);letter-spacing:.08em}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.kv div span{display:block;font-size:.72rem;color:var(--mute)}
+.kv div b{font-family:var(--f-display);font-weight:600;font-size:1rem;font-variant-numeric:tabular-nums}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;letter-spacing:.04em}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.s-OFFERING{color:var(--amber)} .s-ACTIVE{color:var(--good)} .s-FUNDED{color:var(--lidar)} .s-VERIFIED{color:var(--info)} .s-CANCELLED{color:var(--dim)} .s-SUSPENDED{color:var(--warn)}
+.s-OFFERING::before{animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+
+.progress{height:8px;border-radius:99px;background:var(--panel2);position:relative;overflow:hidden}
+.progress i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:linear-gradient(90deg,#C9861C,var(--amber));transition:width 1s cubic-bezier(.2,.7,.2,1)}
+.progress i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);transform:translateX(-100%);animation:sheen 2.4s infinite}
+@keyframes sheen{to{transform:translateX(100%)}}
+.progress .min{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.7}
+.prog-l{display:flex;justify-content:space-between;font-size:.75rem;color:var(--mute);margin-top:6px}
+
+/* filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.filters button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 14px;font-size:.84rem;color:var(--mute)}
+.filters button.on{border-color:var(--amber);color:var(--amber)}
+
+/* tiers */
+.tiers{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.tiers{grid-template-columns:1fr}}
+.tier-rows{display:grid;gap:8px}
+.tier-row{display:grid;grid-template-columns:90px 1fr 64px;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-s);border:1px solid transparent;transition:background .3s,border-color .3s}
+.tier-row.on{background:var(--panel2);border-color:var(--amber)}
+.tier-row .u{font-family:var(--f-display);font-weight:600}
+.tier-row .b{height:8px;border-radius:99px;background:var(--panel2);position:relative;overflow:hidden}
+.tier-row .b i{position:absolute;inset:0 auto 0 0;background:var(--lidar);opacity:.85;border-radius:99px}
+.tier-row .p{text-align:right;font-family:var(--f-display);font-weight:600}
+.calc{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:16px}
+input[type=range]{width:100%;accent-color:var(--amber)}
+.split{display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--panel2)}
+.split i{display:block;transition:width .4s}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--mute)}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;background:var(--c)}
+
+/* trust */
+.trust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+@media (max-width:820px){.trust{grid-template-columns:1fr}}
+.trust div{background:var(--night);padding:22px 20px}
+.trust h3{font-size:1rem;margin:10px 0 6px}
+.trust p{color:var(--mute);font-size:.86rem}
+.trust svg{color:var(--lidar)}
+
+.notice{border:1px solid #4A3410;background:#1A1408;color:#E9D3A8;border-radius:var(--r);padding:16px 18px;font-size:.86rem;display:grid;gap:6px}
+.notice b{color:var(--amber)}
+
+/* detail */
+.crumb{font-size:.82rem;color:var(--mute);margin-bottom:14px}
+.crumb a{text-decoration:none}
+.dhead{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:900px){.dhead{grid-template-columns:1fr}}
+.dart{position:relative;aspect-ratio:16/8;max-width:100%;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:radial-gradient(120% 90% at 70% 10%,#1C2A4C,#0D1528)}
+.dart svg{position:absolute;inset:0;width:100%;height:100%}
+.dart .tag{position:absolute;left:12px;bottom:10px;font-size:.7rem;color:var(--mute);background:rgba(10,16,32,.7);padding:3px 8px;border-radius:6px}
+.title-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:18px 0 6px}
+.title-row h1{font-size:var(--step-3);font-weight:900}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:18px}
+@media (max-width:560px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.facts div{background:var(--panel);padding:12px 14px}
+.facts span{display:block;font-size:.72rem;color:var(--mute)}
+.facts b{font-family:var(--f-display);font-weight:600;font-size:1.05rem}
+.buy{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:16px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
+.ring{display:flex;gap:16px;align-items:center}
+.ring svg{flex:none}
+.stepper{display:grid;grid-template-columns:44px 1fr 44px;border:1px solid var(--line2);border-radius:var(--r-s);overflow:hidden}
+.stepper button{background:var(--panel2);border:0;font-size:1.3rem;height:46px}
+.stepper input{background:transparent;border:0;text-align:center;font-family:var(--f-display);font-size:1.3rem;font-weight:700;color:var(--ink);width:100%;min-width:0}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:4px 10px;font-size:.78rem;color:var(--mute)}
+.line{display:flex;justify-content:space-between;gap:10px;font-size:.86rem}
+.line b{font-family:var(--f-display);font-weight:600}
+.line.total{font-size:1rem;border-top:1px dashed var(--line2);padding-top:10px}
+.line.total b{font-size:1.3rem;color:var(--amber)}
+.approval{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--mute)}
+.approval .st{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.approval.ok .st{background:var(--good)}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.panel h3{font-size:1.05rem;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cols2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.cols2{grid-template-columns:1fr}}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th{font-weight:500;color:var(--mute);text-align:left;font-size:.74rem;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.r,th.r{text-align:right}
+.hash{font-family:var(--f-mono);font-size:.75rem;color:var(--lidar)}
+.lab{display:inline-block;font-size:.68rem;padding:2px 7px;border-radius:5px;background:var(--panel2);color:var(--mute);border:1px solid var(--line2)}
+.lab.ok{color:var(--good);border-color:#1F5A3C}
+.lab.pend{color:var(--amber);border-color:#5A4214}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--mute);font-family:var(--f-mono);font-size:10px}
+
+/* dashboard */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.tiles{grid-template-columns:1fr}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.tile .num{font-size:var(--step-3);font-weight:700;display:block;margin-top:4px}
+.tile.hl{border-color:#5A4214;background:linear-gradient(160deg,#1E1A10,var(--panel) 60%)}
+.tile.hl .num{color:var(--amber)}
+.hold{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.hold:last-child{border-bottom:0}
+.hold .ic{width:46px;height:46px;border-radius:12px;background:var(--panel2);display:grid;place-items:center}
+.hold h4{margin:0;font-size:.98rem}
+.hold small{color:var(--mute);font-size:.76rem}
+.hold .r{text-align:right}
+.claim{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid var(--line2);border-radius:var(--r-s);background:var(--panel2)}
+.claim + .claim{margin-top:10px}
+.breakdown{font-size:.76rem;color:var(--mute)}
+.timeline{display:grid;gap:0;position:relative}
+.tl{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;padding:10px 0;font-size:.85rem}
+.tl i{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--line2);box-shadow:0 0 0 3px var(--panel)}
+.tl.new i{background:var(--amber)}
+.empty{text-align:center;padding:40px 20px;display:grid;gap:14px;justify-items:center}
+
+/* admin */
+.roles{display:flex;gap:6px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);padding:5px;border-radius:999px;width:max-content;max-width:100%}
+.roles button{border:0;background:transparent;border-radius:999px;padding:7px 14px;font-size:.84rem;color:var(--mute)}
+.roles button.on{background:var(--amber);color:var(--amber-ink);font-weight:700}
+.q{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.q:last-child{border-bottom:0}
+.q h4{margin:0 0 3px;font-size:.95rem}
+.q small{color:var(--mute);font-size:.76rem;display:block}
+.sigs{display:flex;gap:4px;margin-top:6px}
+.sigs span{width:22px;height:6px;border-radius:3px;background:var(--line2)}
+.sigs span.y{background:var(--lidar)}
+.health{display:grid;gap:8px}
+.health div{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;padding:8px 0;border-bottom:1px dashed var(--line)}
+.ok-t{color:var(--good)} .warn-t{color:var(--warn)}
+
+/* risk */
+.risk-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.risk-list{grid-template-columns:1fr}}
+.risk-list details{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px}
+.risk-list summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.risk-list summary::after{content:"+";color:var(--amber);font-family:var(--f-display)}
+.risk-list details[open] summary::after{content:"–"}
+.risk-list ul{margin:10px 0 0;padding-left:18px;color:var(--mute);font-size:.86rem;display:grid;gap:6px}
+
+/* modal */
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(4,7,15,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:grid;place-items:end center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));animation:fade .2s}
+@media (min-width:640px){.scrim{place-items:center}}
+@keyframes fade{from{opacity:0}}
+.modal{width:min(480px,100%);max-height:calc(100% - 20px);overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:18px;padding:22px;display:grid;gap:16px;animation:pop .3s cubic-bezier(.2,.8,.2,1.1)}
+@keyframes pop{from{transform:translateY(30px) scale(.97);opacity:0}}
+.modal h3{font-size:1.15rem;font-weight:900}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.x{border:0;background:var(--panel2);width:32px;height:32px;border-radius:50%;font-size:1.1rem;line-height:1}
+.wallets{display:grid;gap:8px}
+.wallets button{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px 14px;text-align:left}
+.wallets button:hover{border-color:var(--amber)}
+.wl{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;color:#0A1020}
+.check{display:flex;gap:10px;align-items:start;font-size:.84rem;color:#D6DDEC}
+.check input{margin-top:4px;accent-color:var(--amber);width:16px;height:16px;flex:none}
+.radio{display:grid;gap:8px}
+.radio label{display:flex;gap:10px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.84rem;cursor:pointer}
+.radio label:has(input:checked){border-color:var(--amber);background:#1C180E}
+.radio input{accent-color:var(--amber);margin-top:4px}
+.txsteps{display:grid;gap:10px}
+.txs{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:center;font-size:.88rem;color:var(--dim);transition:color .3s}
+.txs .ic{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-size:.75rem}
+.txs.run{color:var(--ink)} .txs.run .ic{border-color:var(--amber);border-top-color:transparent;animation:spin .8s linear infinite}
+.txs.done{color:var(--ink)} .txs.done .ic{border-color:var(--good);background:var(--good);color:#06150C}
+@keyframes spin{to{transform:rotate(360deg)}}
+.success{text-align:center;display:grid;gap:10px;justify-items:center}
+.success svg .c{stroke-dasharray:160;stroke-dashoffset:160;animation:draw .7s .1s forwards}
+.success svg .k{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .4s .7s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.burst{position:fixed;pointer-events:none;z-index:80;inset:0}
+
+/* toast */
+.toasts{position:fixed;z-index:90;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 70px);display:grid;gap:8px;width:min(420px,calc(100% - 32px))}
+.toast{background:var(--panel2);border:1px solid var(--line2);border-left:3px solid var(--good);border-radius:10px;padding:10px 14px;font-size:.85rem;animation:pop .3s;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast .hash{display:block;margin-top:2px}
+
+footer{border-top:1px solid var(--line);padding-block:28px;color:var(--dim);font-size:.78rem}
+footer .wrap{display:grid;gap:8px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
+  .scanline{display:none}
+}
+</style>
+
+<div class="ribbon"><b>演示版本</b> · 合约尚未部署，页面中的项目、收益与交易全部为示例数据，不构成任何要约或收益承诺</div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#home" aria-label="RoboShare 首页">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="9" fill="#17223B" stroke="#30406A"/><path d="M8 21.5c0-3 1.6-5.6 4-6.6l2.2-3.4h6l2.4 3.4c2.4 1 3.9 3.6 3.9 6.6v1.5H8z" fill="#F6B53D"/><circle cx="12.3" cy="23.4" r="2.2" fill="#0A1020" stroke="#F6B53D" stroke-width="1.4"/><circle cx="21.7" cy="23.4" r="2.2" fill="#0A1020" stroke="#F6B53D" stroke-width="1.4"/><circle cx="17" cy="9" r="1.8" fill="#4FE3D2"/></svg>
+      <span>RoboShare<small>ROBOTAXI · RWA</small></span>
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a href="#home" data-r="home">首页</a>
+      <a href="#projects" data-r="projects">车辆项目</a>
+      <a href="#portfolio" data-r="portfolio">我的资产</a>
+      <a href="#admin" data-r="admin">运营后台</a>
+      <a href="#risk" data-r="risk">风险披露</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="chip-net"><span class="dot"></span>BSC 测试网 · 97</span>
+    <button class="btn primary wallet" id="walletBtn">连接钱包</button>
+  </div>
+</header>
+
+<main>
+<!-- HOME -->
+<div class="view" id="v-home">
+  <section class="hero">
+    <canvas id="city" aria-hidden="true"></canvas>
+    <div class="scanline"></div>
+    <div class="wrap">
+      <div class="eyebrow" style="color:var(--lidar)">BNB SMART CHAIN · USDT BEP20 · 每车 100 份</div>
+      <h1 style="margin-top:14px"><span class="word">把一辆</span> <span class="word" style="animation-delay:.12s"><em>Robotaxi</em></span><br><span class="word" style="animation-delay:.24s">拆成</span> <span class="word" style="animation-delay:.36s"><em>100</em> 份</span></h1>
+      <p class="lead">按份额认购单辆自动驾驶网约车的利润分配权。运营报告哈希上链、审核人批准后才能分配，收益以 USDT 发放到你的钱包，自己领取。</p>
+      <div class="cta">
+        <a class="btn primary" href="#projects">浏览车辆项目</a>
+        <a class="btn ghost" href="#p-rs001">查看正在募集的 RS-001</a>
+      </div>
+      <div class="hud">
+        <div class="h"><span class="eyebrow">示例车队在线</span><div class="num" id="hudCars">—</div></div>
+        <div class="h"><span class="eyebrow">今日示例订单</span><div class="num" id="hudTrips">—</div></div>
+        <div class="h"><span class="eyebrow">链上区块</span><div class="num mono" id="hudBlock" style="font-family:var(--f-mono);font-size:1.1rem">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-h"><h2>四步完成一次认购</h2><p>只用 USDT。授权一次之后，每次买入都只需要选择份数，一笔交易完成。</p></div>
+      <div class="steps">
+        <div class="step"><div class="bar"></div><h3>连接钱包并完成投资资格认证</h3><p>KYC 由第三方服务商完成，链上只记录钱包是否具备资格，不存个人信息。</p></div>
+        <div class="step"><div class="bar"></div><h3>授权一次 USDT</h3><p>向平台认购合约授权一次（默认不限额），授权前会展示风险提示，可随时撤销。</p></div>
+        <div class="step"><div class="bar"></div><h3>选择份数认购</h3><p>募集截止时达到最低份数就结算发币；未达到则全额退款。未售出的份额永不发行。</p></div>
+        <div class="step"><div class="bar"></div><h3>按期领取 USDT</h3><p>运营方提交报告，审核人批准后生成分配批次。你在“我的资产”里一键领取。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-h"><h2>车辆项目</h2><a class="btn sm ghost" href="#projects">全部项目 →</a></div>
+      <div class="grid" id="homeCards"></div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-h"><h2>持有越多，运营方分成越低</h2><p>运营方不另收管理费，只按你在该项目快照时持有的份数分档抽成。拖动滑块看看示例分配。</p></div>
+      <div class="tiers">
+        <div class="tier-rows" id="tierRows"></div>
+        <div class="calc">
+          <div class="line"><span class="muted">持有份数（同一项目）</span><b id="calcU">12 份</b></div>
+          <input type="range" id="calcRange" min="1" max="100" value="12" aria-label="持有份数">
+          <div class="line"><span class="muted">示例：本期项目可分配利润 D</span><b>880.00 USDT</b></div>
+          <div class="split" aria-hidden="true"><i id="spNet" style="background:var(--amber)"></i><i id="spFee" style="background:var(--lidar)"></i></div>
+          <div class="legend"><span style="--c:var(--amber)">你的净额</span><span style="--c:var(--lidar)">运营方分成</span></div>
+          <div class="line"><span class="muted">你的毛额</span><b id="calcG">—</b></div>
+          <div class="line"><span class="muted">运营方分成</span><b id="calcF">—</b></div>
+          <div class="line total"><span>你领取的净额</span><b id="calcN">—</b></div>
+          <p class="muted" style="font-size:.74rem">计算：毛额 = D × 持有份数 ÷ 已发行份数（示例为 100）；分成按档位向下取整，取整偏向投资者。示例数字，不代表任何真实收益。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="sec-h"><h2>规则写在合约里</h2></div>
+      <div class="trust">
+        <div><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><h3>2/3 多签 + 24 小时时间锁</h3><p>资金相关的治理操作需要 3 位签名人中的 2 位同意，并在执行前公示 24 小时。治理无法转走你的份额。</p></div>
+        <div><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 13h5M10 17h5"/></svg><h3>报告哈希上链</h3><p>每期财务报告的哈希写入链上审计登记合约。标注“运营方提交”“审核人批准”，只有真正外部审计过的才会标“已审计”。</p></div>
+        <div><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg><h3>合约不可升级</h3><p>项目合约部署后逻辑不可更改。转让只在合格钱包之间进行，没有官方二级市场。</p></div>
+      </div>
+      <div class="notice" style="margin-top:18px"><b>请先阅读风险</b><span>你可能损失部分或全部投资。份额不是车辆所有权，也不保证任何回报；丢失私钥无法找回。RoboShare 与 Tesla 不存在任何合作关系。<a href="#risk" style="color:var(--amber)">阅读完整风险披露</a></span></div>
+    </div>
+  </section>
+</div>
+
+<!-- PROJECTS -->
+<div class="view" id="v-projects">
+  <section>
+    <div class="wrap">
+      <div class="sec-h"><h2>车辆项目</h2><p>每个项目对应一辆车、一个独立的份额代币和独立的分配合约。所有项目均为示例。</p></div>
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="allCards"></div>
+    </div>
+  </section>
+</div>
+
+<!-- DETAIL -->
+<div class="view" id="v-detail"><section><div class="wrap" id="detail"></div></section></div>
+
+<!-- PORTFOLIO -->
+<div class="view" id="v-portfolio"><section><div class="wrap" id="portfolio"></div></section></div>
+
+<!-- ADMIN -->
+<div class="view" id="v-admin"><section><div class="wrap" id="admin"></div></section></div>
+
+<!-- RISK -->
+<div class="view" id="v-risk">
+  <section>
+    <div class="wrap">
+      <div class="sec-h"><h2>风险披露</h2><p>草案，供律师审查，最终措辞以每个项目的权益文件和募集条款为准。</p></div>
+      <div class="notice" style="margin-bottom:18px"><b>你可能损失部分或全部投资款项。</b><span>认购前请阅读该项目的权益文件 (Rights Document) 和募集条款。</span></div>
+      <div class="risk-list" id="riskList"></div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer><div class="wrap">
+  <span>RoboShare 演示原型 · 链 ID 97（BSC 测试网）· 测试网使用仅供测试的模拟 USDT</span>
+  <span>本页面所有项目、车辆、收益、地址与交易哈希均为示例数据。RoboShare 与 Tesla 不存在任何合作关系。</span>
+</div></footer>
+
+<nav class="tabs" aria-label="底部导航">
+  <a href="#home" data-r="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>首页</a>
+  <a href="#projects" data-r="projects"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16v3H5z"/><circle cx="8" cy="16" r="1.4"/><circle cx="16" cy="16" r="1.4"/></svg>项目</a>
+  <a href="#portfolio" data-r="portfolio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12.5h2M3 10h18"/></svg>资产</a>
+  <a href="#admin" data-r="admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="16" r="3"/></svg>后台</a>
+  <a href="#risk" data-r="risk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>风险</a>
+</nav>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="modalRoot"></div>
+<canvas class="burst" id="burst" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt=(n,d=2)=>Number(n).toLocaleString('zh-CN',{minimumFractionDigits:d,maximumFractionDigits:d});
+const NOW=Date.now(), H=3600e3, D=24*H;
+const rhex=n=>{let s='0x';for(let i=0;i<n;i++)s+='0123456789abcdef'[Math.random()*16|0];return s};
+const short=h=>h.slice(0,8)+'…'+h.slice(-6);
+
+/* ---------- sample data (all illustrative) ---------- */
+const STATE_ZH={OFFERING:'募集中',ACTIVE:'运营中',FUNDED:'已募满 · 待投运',VERIFIED:'已审核 · 即将开放',CANCELLED:'已取消 · 已退款'};
+const P=[
+ {id:'rs001',code:'RS-001',name:'星港 01 号',area:'示例城市 A · 滨海新区',state:'OFFERING',price:520,sold:63,min:60,end:NOW+4*D+7*H,hue:38,model:'纯电自动驾驶轿车（示例车型）',vin:'LSV••••••••••3017',ins:'商业车险 + 第三者责任险（示例）',plate:'示例牌照 · 待上牌'},
+ {id:'rs002',code:'RS-002',name:'星港 02 号',area:'示例城市 A · 高新区',state:'ACTIVE',price:500,sold:100,min:70,hue:150,model:'纯电自动驾驶轿车（示例车型）',vin:'LSV••••••••••2964',ins:'商业车险 + 第三者责任险（示例）',plate:'示例牌照 A·D2••8',
+  hist:[{m:'2026-04',d:612},{m:'2026-05',d:705},{m:'2026-06',d:688},{m:'2026-07',d:791},{m:'2026-08',d:860}],proj:[{m:'2026-09',d:880},{m:'2026-10',d:900},{m:'2026-11',d:870}]},
+ {id:'rs003',code:'RS-003',name:'星港 03 号',area:'示例城市 B · 东湖片区',state:'FUNDED',price:480,sold:80,min:60,hue:175,model:'纯电自动驾驶 SUV（示例车型）',vin:'LSV••••••••••5520',ins:'投保中（示例）',plate:'示例牌照 · 上牌中'},
+ {id:'rs004',code:'RS-004',name:'星港 04 号',area:'示例城市 B · 会展中心',state:'VERIFIED',price:550,sold:0,min:50,end:NOW+21*D,hue:220,model:'纯电自动驾驶轿车（示例车型）',vin:'LSV••••••••••7781',ins:'待投保（示例）',plate:'—'},
+ {id:'rs005',code:'RS-005',name:'星港 05 号',area:'示例城市 C · 老城区',state:'CANCELLED',price:500,sold:41,min:60,hue:260,model:'纯电自动驾驶轿车（示例车型）',vin:'LSV••••••••••1109',ins:'—',plate:'—'}
+];
+const byId=id=>P.find(p=>p.id===id);
+const TIERS=[{a:1,b:4,bps:2000},{a:5,b:9,bps:1750},{a:10,b:19,bps:1500},{a:20,b:49,bps:1250},{a:50,b:100,bps:1000}];
+const tierOf=u=>TIERS.find(t=>u>=t.a&&u<=t.b)||TIERS[0];
+
+const S={wallet:null,approved:false,usdt:25000,holdings:{rs002:12,rs003:5},
+ claims:[{id:'c5',pid:'rs002',batch:5,period:'2026-08',D:860,U:100}],
+ claimed:[{pid:'rs002',batch:4,period:'2026-07',net:80.68,tx:rhex(64),t:NOW-34*D},{pid:'rs002',batch:3,period:'2026-06',net:70.18,tx:rhex(64),t:NOW-64*D}],
+ activity:[],role:'op',filter:'all',block:44871236,paused:false,
+ reports:[{id:'r1',pid:'rs002',period:'2026-09',D:880,by:'运营方 · 0x3B1c…a91E',st:'SUBMITTED',hash:rhex(64)},{id:'r0',pid:'rs002',period:'2026-08',D:860,by:'运营方 · 0x3B1c…a91E',st:'APPROVED',hash:rhex(64)}],
+ safe:[{id:'s1',title:'RS-003 状态变更 FUNDED → ACTIVE',sub:'车辆投运声明，附运营证明文件哈希',sig:2,eta:NOW+13*H+22*60e3},{id:'s2',title:'RS-004 开启募集',sub:'open(minUnits = 50, 截止 2026-10-30, 单价 550 USDT)',sig:1,eta:null}]
+};
+function calc(D,u,U){const g=Math.floor(D*100*u/U)/100;const f=Math.floor(g*tierOf(u).bps/100)/100;return{g,f:f,n:+(g-f).toFixed(2)}}
+
+/* ---------- car art (svg) ---------- */
+function carArt(p,big){
+  const h=p.hue, c1=`hsl(${h} 70% 62%)`, glow=`hsl(${h} 90% 65%)`;
+  const id='g'+p.id+(big?'b':'');
+  return `<svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+   <defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" stop-color="${glow}" stop-opacity="0"/><stop offset=".5" stop-color="${glow}" stop-opacity=".55"/><stop offset="1" stop-color="${glow}" stop-opacity="0"/></linearGradient>
+   <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A3757"/><stop offset="1" stop-color="#121B31"/></linearGradient></defs>
+   <g opacity=".35" stroke="#30406A" stroke-width="1">${Array.from({length:9},(_,i)=>`<line x1="${i*50}" y1="0" x2="${i*50-60}" y2="200"/>`).join('')}</g>
+   <rect x="0" y="152" width="400" height="48" fill="#0B1222"/>
+   <g class="lane">${Array.from({length:10},(_,i)=>`<rect x="${i*48}" y="174" width="24" height="3" rx="1.5" fill="#F6B53D" opacity=".55"/>`).join('')}</g>
+   <ellipse cx="200" cy="158" rx="120" ry="9" fill="${glow}" opacity=".22"/>
+   <g class="car">
+    <path d="M86 140 q4-22 34-30 l34-24 q10-6 26-6 h52 q18 0 30 9 l34 23 q30 6 36 26 v10 q0 6-6 6 H92 q-6 0-6-6z" fill="url(#${id}b)" stroke="${c1}" stroke-width="1.5"/>
+    <path d="M160 92 q8-6 22-6 h46 q14 0 24 7 l26 18 H138z" fill="#0B1222" stroke="#3A4A70"/>
+    <path d="M205 86 v26" stroke="#3A4A70"/>
+    <rect x="186" y="74" width="30" height="8" rx="3" fill="#1C2742" stroke="${c1}"/>
+    <circle cx="201" cy="74" r="3" fill="#4FE3D2"><animate attributeName="opacity" values="1;.3;1" dur="1.6s" repeatCount="indefinite"/></circle>
+    <path d="M300 128 h14" stroke="#FFE6A8" stroke-width="4" stroke-linecap="round"/>
+    <path d="M90 128 h10" stroke="#FF5D6E" stroke-width="4" stroke-linecap="round"/>
+    <g><circle cx="135" cy="150" r="17" fill="#0A1020" stroke="${c1}" stroke-width="2"/><circle cx="135" cy="150" r="6" fill="#2A3757"/></g>
+    <g><circle cx="275" cy="150" r="17" fill="#0A1020" stroke="${c1}" stroke-width="2"/><circle cx="275" cy="150" r="6" fill="#2A3757"/></g>
+    <text x="232" y="126" font-family="JetBrains Mono,monospace" font-size="9" fill="${c1}" letter-spacing="1">${p.code}</text>
+   </g>
+   <rect class="sweep" x="-160" y="20" width="160" height="150" fill="url(#${id})" opacity=".5"/>
+  </svg>`;
+}
+
+/* ---------- cards ---------- */
+function card(p){
+  const pct=Math.round(p.sold/100*100);
+  let mid='';
+  if(p.state==='OFFERING'){mid=`<div><div class="progress"><i style="width:${pct}%"></i><span class="min" style="left:${p.min}%"></span></div><div class="prog-l"><span>已认购 ${p.sold}/100 份</span><span>最低 ${p.min} 份 · 剩 <span data-cd="${p.end}" class="mono"></span></span></div></div>`}
+  else if(p.state==='ACTIVE'){const last=p.hist[p.hist.length-1];mid=`<div class="line"><span class="muted">${last.m} 每份可分配（示例）</span><b>${fmt(last.d/p.sold)} USDT</b></div>`}
+  else if(p.state==='FUNDED'){mid=`<div class="line"><span class="muted">部分募集成功（最低 ${p.min} 份）</span><b>已发行 ${p.sold} 份</b></div>`}
+  else if(p.state==='VERIFIED'){mid=`<div class="line"><span class="muted">预计开放募集</span><b>待治理执行</b></div>`}
+  else {mid=`<div class="line"><span class="muted">截止仅 ${p.sold} 份，未达最低 ${p.min} 份</span><b>已全额退款</b></div>`}
+  return `<a class="pcard" href="#p-${p.id}"><div class="art">${carArt(p)}</div><div class="body">
+   <div class="t"><div><div class="code">${p.code}</div><h3>${p.name}</h3></div><span class="pill s-${p.state}">${STATE_ZH[p.state]}</span></div>
+   <div class="kv"><div><span>每份价格</span><b>${p.price} USDT</b></div><div><span>运营区域</span><b style="font-family:var(--f-body);font-size:.84rem;font-weight:500">${p.area}</b></div></div>
+   ${mid}</div></a>`;
+}
+function renderCards(){
+  $('#homeCards').innerHTML=P.filter(p=>p.state!=='CANCELLED').slice(0,3).map(card).join('');
+  const F=[['all','全部'],['OFFERING','募集中'],['ACTIVE','运营中'],['FUNDED','待投运'],['VERIFIED','即将开放'],['CANCELLED','已取消']];
+  $('#filters').innerHTML=F.map(([k,v])=>`<button data-f="${k}" class="${S.filter===k?'on':''}">${v}</button>`).join('');
+  $('#allCards').innerHTML=P.filter(p=>S.filter==='all'||p.state===S.filter).map(card).join('');
+  tickCountdowns();
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b){S.filter=b.dataset.f;renderCards()}});
+
+/* ---------- countdown ---------- */
+function cd(t){let s=Math.max(0,(t-Date.now())/1000|0);const d=s/86400|0;s%=86400;const h=s/3600|0;s%=3600;const m=s/60|0;s%=60;return (d?d+'天 ':'')+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function tickCountdowns(){$$('[data-cd]').forEach(el=>el.textContent=cd(+el.dataset.cd))}
+setInterval(tickCountdowns,1000);
+
+/* ---------- tiers ---------- */
+function renderTiers(u){
+  const t=tierOf(u);
+  $('#tierRows').innerHTML=TIERS.map(x=>`<div class="tier-row ${x===t?'on':''}"><span class="u">${x.a}–${x.b} 份</span><span class="b"><i style="width:${x.bps/2000*100}%"></i></span><span class="p">${x.bps/100}%</span></div>`).join('');
+  const r=calc(880,u,100);
+  $('#calcU').textContent=u+' 份';$('#calcG').textContent=fmt(r.g)+' USDT';$('#calcF').textContent='− '+fmt(r.f)+' USDT（'+t.bps/100+'%）';$('#calcN').textContent=fmt(r.n)+' USDT';
+  $('#spNet').style.width=(r.n/r.g*100)+'%';$('#spFee').style.width=(r.f/r.g*100)+'%';
+}
+$('#calcRange').addEventListener('input',e=>renderTiers(+e.target.value));
+
+/* ---------- chart ---------- */
+function chart(p){
+  const W=560,Hh=220,pl=44,pr=12,pt=14,pb=28;
+  const all=[...p.hist.map(x=>({...x,a:1})),...p.proj.map(x=>({...x,a:0}))];
+  const max=1000,x=i=>pl+i*(W-pl-pr)/(all.length-1),y=v=>pt+(1-v/max)*(Hh-pt-pb);
+  let g='';[0,250,500,750,1000].forEach(v=>{g+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="#243150" stroke-width="1"/><text x="${pl-8}" y="${y(v)+3}" text-anchor="end">${v}</text>`});
+  const ap=p.hist.map((d,i)=>`${x(i)},${y(d.d)}`).join(' ');
+  const li=p.hist.length-1;
+  const pp=[`${x(li)},${y(p.hist[li].d)}`,...p.proj.map((d,i)=>`${x(li+1+i)},${y(d.d)}`)].join(' ');
+  const area=`M${x(0)},${y(0)} L${ap.split(' ').join(' L')} L${x(li)},${y(0)} Z`;
+  const labels=all.map((d,i)=>`<text x="${x(i)}" y="${Hh-8}" text-anchor="middle">${d.m.slice(5)}月</text>`).join('');
+  const dots=p.hist.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.d)}" r="${i===li?5:3}" fill="${i===li?'#F6B53D':'#0A1020'}" stroke="#F6B53D" stroke-width="2"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="RS-002 每月可分配利润：实际与预测（示例）">
+   <defs><linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6B53D" stop-opacity=".35"/><stop offset="1" stop-color="#F6B53D" stop-opacity="0"/></linearGradient></defs>
+   ${g}<rect x="${x(li)}" y="${pt}" width="${W-pr-x(li)}" height="${Hh-pt-pb}" fill="#4FE3D2" opacity=".04"/>
+   <path d="${area}" fill="url(#ar)"/>
+   <polyline points="${ap}" fill="none" stroke="#F6B53D" stroke-width="2.5" stroke-linejoin="round" class="drawline"/>
+   <polyline points="${pp}" fill="none" stroke="#4FE3D2" stroke-width="2" stroke-dasharray="5 5"/>
+   ${p.proj.map((d,i)=>`<circle cx="${x(li+1+i)}" cy="${y(d.d)}" r="3" fill="#0A1020" stroke="#4FE3D2" stroke-width="2"/>`).join('')}
+   ${dots}<text x="${x(li)}" y="${y(p.hist[li].d)-12}" text-anchor="middle" style="fill:#E9EEF8;font-weight:600">${p.hist[li].d}</text>
+   <text x="${x(li)+8}" y="${pt+12}" style="fill:#4FE3D2">PROJECTED 预测</text><text x="${pl+6}" y="${pt+12}" style="fill:#F6B53D">ACTUAL 实际</text>
+   ${labels}</svg>`;
+}
+
+/* ---------- detail ---------- */
+function ringSvg(p){const r=40,c=2*Math.PI*r,pct=p.sold/100;const mn=p.min/100;
+  return `<svg width="104" height="104" viewBox="0 0 104 104"><circle cx="52" cy="52" r="${r}" stroke="#17223B" stroke-width="10" fill="none"/>
+  <circle cx="52" cy="52" r="${r}" stroke="#F6B53D" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c}" transform="rotate(-90 52 52)"><animate attributeName="stroke-dashoffset" from="${c}" to="${c*(1-pct)}" dur="1.2s" fill="freeze" calcMode="spline" keySplines=".2 .7 .2 1" keyTimes="0;1"/></circle>
+  <line x1="${52+Math.sin(mn*2*Math.PI)*30}" y1="${52-Math.cos(mn*2*Math.PI)*30}" x2="${52+Math.sin(mn*2*Math.PI)*50}" y2="${52-Math.cos(mn*2*Math.PI)*50}" stroke="#E9EEF8" stroke-width="2"/>
+  <text x="52" y="52" text-anchor="middle" font-family="Chakra Petch,sans-serif" font-weight="700" font-size="22" fill="#E9EEF8">${p.sold}</text><text x="52" y="68" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#8E9BB8">/ 100 份</text></svg>`}
+function renderDetail(id){
+  const p=byId(id);if(!p){location.hash='#projects';return}
+  const left=100-p.sold;
+  let buy='';
+  if(p.state==='OFFERING'){
+    buy=`<div class="buy" id="buyBox">
+      <div class="ring">${ringSvg(p)}<div style="display:grid;gap:4px"><span class="eyebrow">募集进度</span><b style="font-size:1.05rem">剩余 ${left} 份</b><span class="muted" style="font-size:.8rem">最低 ${p.min} 份即可成功结算<br>截止倒计时 <span class="mono" data-cd="${p.end}"></span></span></div></div>
+      <div><label class="eyebrow" for="units">认购份数</label>
+      <div class="stepper" style="margin-top:6px"><button id="minus" aria-label="减少">−</button><input id="units" inputmode="numeric" value="5" aria-label="认购份数"><button id="plus" aria-label="增加">+</button></div>
+      <div class="quick" style="margin-top:8px"><button data-q="1">1 份</button><button data-q="5">5 份</button><button data-q="10">10 份</button><button data-q="20">20 份</button><button data-q="${left}">剩余全部</button></div></div>
+      <div style="display:grid;gap:6px">
+       <div class="line"><span class="muted">单价</span><b>${p.price} USDT</b></div>
+       <div class="line"><span class="muted">对应运营方分成档位</span><b id="bTier">—</b></div>
+       <div class="line total"><span>应付合计</span><b id="bTotal">—</b></div>
+      </div>
+      <button class="btn primary" id="buyBtn" style="width:100%;padding:13px">—</button>
+      <div class="approval ${S.approved?'ok':''}" id="apprLine"><span class="st"></span><span id="apprTxt"></span></div>
+      <p class="muted" style="font-size:.72rem">未达最低份数时，募集取消并全额退回 USDT。结算成功后才会发行份额代币。</p>
+    </div>`;
+  } else {
+    const msg={ACTIVE:'该项目已募满并投入运营，目前没有官方二级市场，份额只能在合格钱包之间转让。',FUNDED:'募集已结算：最低 '+p.min+' 份，实际售出 '+p.sold+' 份。未售出的 '+left+' 份永不发行，分配按已发行的 '+p.sold+' 份计算。',VERIFIED:'项目资料已通过审核，等待治理多签执行“开启募集”。',CANCELLED:'募集截止时未达到最低份数，已取消。认购者可在“我的资产”里领取全额退款。'}[p.state];
+    buy=`<div class="buy"><span class="pill s-${p.state}" style="justify-self:start">${STATE_ZH[p.state]}</span><p style="font-size:.9rem">${msg}</p>${S.holdings[p.id]?`<div class="line"><span class="muted">你持有</span><b>${S.holdings[p.id]} 份</b></div><a class="btn" href="#portfolio">去我的资产</a>`:''}</div>`;
+  }
+  const reports=p.state==='ACTIVE'?`<div class="panel"><h3>财务报告与分配记录 <span class="lab">链上锚定</span></h3><div class="table-wrap"><table>
+     <tr><th>期间</th><th class="r">可分配利润 D</th><th>状态</th><th>报告哈希</th></tr>
+     ${[...p.hist].reverse().map((h,i)=>`<tr><td>${h.m}</td><td class="r num">${fmt(h.d)}</td><td><span class="lab ok">审核人批准</span></td><td class="hash">${short(rhex(64))}</td></tr>`).join('')}
+     </table></div><p class="muted" style="font-size:.74rem;margin-top:10px">“运营方提交”“审核人批准”均非外部审计。示例数据。</p></div>`:'';
+  const ch=p.state==='ACTIVE'?`<div class="panel chart"><h3>每月可分配利润（USDT）<span class="lab">示例数据</span></h3>${chart(p)}</div>`:'';
+  $('#detail').innerHTML=`<div class="crumb"><a href="#projects">车辆项目</a> / ${p.code}</div>
+   <div class="dhead"><div>
+     <div class="dart">${carArt(p,1)}<span class="tag">示意插画，非真实车辆照片</span></div>
+     <div class="title-row"><h1>${p.name}</h1><span class="pill s-${p.state}">${STATE_ZH[p.state]}</span></div>
+     <div class="muted">${p.code} · ${p.area}</div>
+     <div class="facts"><div><span>每份价格</span><b>${p.price} USDT</b></div><div><span>总份额</span><b>100 份</b></div><div><span>已发行/认购</span><b>${p.sold} 份</b></div><div><span>最低成团</span><b>${p.min} 份</b></div></div>
+     <div style="display:grid;gap:16px;margin-top:18px">
+      <div class="panel"><h3>车辆与文件</h3><div class="table-wrap"><table>
+        <tr><td class="muted">车型</td><td>${p.model}</td></tr>
+        <tr><td class="muted">车架号</td><td class="mono">${p.vin}</td></tr>
+        <tr><td class="muted">保险</td><td>${p.ins}</td></tr>
+        <tr><td class="muted">牌照</td><td>${p.plate}</td></tr>
+        <tr><td class="muted">权益文件哈希</td><td class="hash">${short(rhex(64))}</td></tr>
+        <tr><td class="muted">份额代币合约</td><td class="hash">${short(rhex(40))}</td></tr>
+      </table></div><p class="muted" style="font-size:.74rem;margin-top:10px">份额代表该项目可分配利润的按比例分配权，不是车辆所有权。完整文件仅对合格投资者开放。</p></div>
+      ${ch}${reports}
+     </div>
+   </div>${buy}</div>`;
+  if(p.state==='OFFERING')wireBuy(p);
+  tickCountdowns();
+}
+function wireBuy(p){
+  const inp=$('#units'),left=100-p.sold;
+  const clamp=v=>Math.max(1,Math.min(left,v|0||1));
+  const upd=()=>{const u=clamp(+inp.value);inp.value=u;const t=tierOf((S.holdings[p.id]||0)+u);
+    $('#bTier').textContent=t.bps/100+'%（持有 '+((S.holdings[p.id]||0)+u)+' 份）';$('#bTotal').textContent=fmt(u*p.price)+' USDT';
+    const b=$('#buyBtn');b.textContent=!S.wallet?'连接钱包后认购':(!S.approved?'授权 USDT 并认购':'认购 '+u+' 份');
+    $('#apprTxt').textContent=!S.wallet?'未连接钱包':(S.approved?'已授权认购合约使用 USDT（不限额） · 可在“我的资产”撤销':'尚未授权 USDT，首次认购需要授权一次');
+    $('#apprLine').className='approval'+(S.approved?' ok':'');};
+  $('#minus').onclick=()=>{inp.value=clamp(+inp.value-1);upd()};$('#plus').onclick=()=>{inp.value=clamp(+inp.value+1);upd()};
+  inp.oninput=()=>{if(inp.value!=='')upd()};inp.onblur=upd;
+  $$('[data-q]').forEach(b=>b.onclick=()=>{inp.value=clamp(+b.dataset.q);upd()});
+  $('#buyBtn').onclick=()=>{const u=clamp(+inp.value);if(!S.wallet)return openConnect(()=>{upd()});if(!S.approved)return openApprove(()=>{upd();openBuy(p,u)});openBuy(p,u)};
+  upd();
+}
+
+/* ---------- modals ---------- */
+function modal(html,onClose){const r=$('#modalRoot');r.innerHTML=`<div class="scrim" id="scrim"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+  const close=()=>{r.innerHTML='';onClose&&onClose()};$('#scrim').addEventListener('click',e=>{if(e.target.id==='scrim'||e.target.closest('.x'))close()});return close}
+function openConnect(after){
+  const close=modal(`<div class="mhead"><h3>连接钱包</h3><button class="x" aria-label="关闭">×</button></div>
+   <p class="muted" style="font-size:.84rem">演示模式：不会真的连接你的钱包，也不会请求签名。</p>
+   <div class="wallets"><button data-w="MetaMask"><span class="wl" style="background:#F6A04D">M</span><span><b>MetaMask</b><br><small class="muted">浏览器插件 / 手机 App</small></span></button>
+   <button data-w="Trust Wallet"><span class="wl" style="background:#4FA3FF">T</span><span><b>Trust Wallet</b><br><small class="muted">手机 App</small></span></button>
+   <button data-w="WalletConnect"><span class="wl" style="background:#7AA7FF">W</span><span><b>WalletConnect</b><br><small class="muted">扫码连接其他钱包</small></span></button></div>
+   <p class="muted" style="font-size:.74rem">只在官方域名上连接钱包。网络：BSC 测试网（链 ID 97）。</p>`);
+  $$('[data-w]').forEach(b=>b.onclick=()=>{b.innerHTML+=`<span style="margin-left:auto" class="mono muted">连接中…</span>`;setTimeout(()=>{S.wallet='0x7a3F'+'e2b1c09d4f8a6e7d5c3b2a1f0e9d8c'+'9c21';close();renderWallet();toast('钱包已连接 · '+b.dataset.w);after&&after();route()},700)});
+}
+function openApprove(after){
+  const close=modal(`<div class="mhead"><h3>授权 USDT 给认购合约</h3><button class="x" aria-label="关闭">×</button></div>
+   <p style="font-size:.88rem">首次认购需要授权一次。授权后，每次买入只需选择份数，认购合约只会从你自己发起的交易中扣款。</p>
+   <div class="radio">
+    <label><input type="radio" name="amt" id="amtU" value="u" checked><span><b>不限额授权（默认）</b><br><span class="muted">以后认购无需再次授权</span></span></label>
+    <label><input type="radio" name="amt" id="amtE" value="e"><span><b>只授权本次金额</b><br><span class="muted">更安全，但每次认购前都要再授权</span></span></label>
+   </div>
+   <div class="notice" style="padding:12px 14px"><b>风险提示</b><span>授权在你撤销前一直有效。如果在仿冒网站授权，或认购合约存在未知漏洞，你钱包里的全部 USDT 都可能受损。请核对合约地址，并可随时在“我的资产”撤销授权。</span></div>
+   <div class="line"><span class="muted">认购合约</span><span class="hash">0x5Ub5…R0UT（示例）</span></div>
+   <label class="check"><input type="checkbox" id="ack"><span>我已阅读并理解上述风险</span></label>
+   <button class="btn primary" id="doAppr" disabled style="padding:13px">在钱包中确认授权</button>`);
+  $('#ack').onchange=e=>$('#doAppr').disabled=!e.target.checked;
+  $('#doAppr').onclick=()=>txFlow('授权 USDT',()=>{S.approved=true;S.activity.unshift({t:Date.now(),txt:'授权认购合约使用 USDT（不限额）'});after&&after()});
+}
+function txFlow(label,done,detail){
+  const tx=rhex(64);
+  $('.modal').innerHTML=`<div class="mhead"><h3>${label}</h3></div>${detail||''}
+   <div class="txsteps"><div class="txs" data-i="0"><span class="ic"></span><span>等待钱包签名</span></div><div class="txs" data-i="1"><span class="ic"></span><span>广播到 BSC 测试网</span></div><div class="txs" data-i="2"><span class="ic"></span><span>等待区块确认 <span class="mono" id="conf">0/15</span></span></div></div>
+   <div class="hash" style="text-align:center">${short(tx)}</div>`;
+  const st=$$('.txs'),dur=reduce?[50,50,50]:[900,800,1600];
+  const go=i=>{if(i>=3){setTimeout(()=>{$('#modalRoot').innerHTML='';toast(label+' 成功',tx);done&&done()},300);return}
+    st[i].classList.add('run');
+    if(i===2){let c=0;const iv=setInterval(()=>{c++;const el=$('#conf');if(el)el.textContent=c+'/15';if(c>=15)clearInterval(iv)},dur[2]/15)}
+    setTimeout(()=>{st[i].classList.remove('run');st[i].classList.add('done');st[i].querySelector('.ic').textContent='✓';go(i+1)},dur[i])};
+  go(0);
+}
+function openBuy(p,u){
+  const total=u*p.price;
+  const close=modal(`<div class="mhead"><h3>确认认购</h3><button class="x" aria-label="关闭">×</button></div>
+   <div style="display:grid;gap:8px">
+    <div class="line"><span class="muted">项目</span><b>${p.code} ${p.name}</b></div>
+    <div class="line"><span class="muted">份数</span><b>${u} 份</b></div>
+    <div class="line"><span class="muted">单价</span><b>${p.price} USDT</b></div>
+    <div class="line total"><span>支付</span><b>${fmt(total)} USDT</b></div>
+    <div class="line"><span class="muted">钱包 USDT 余额（测试币）</span><b>${fmt(S.usdt)}</b></div>
+   </div>
+   <p class="muted" style="font-size:.76rem">交易前会先模拟执行；若钱包不具备投资资格，会在这里直接提示原因。USDT 进入募集托管，结算成功后才发行份额。</p>
+   <button class="btn primary" id="doBuy" style="padding:13px">在钱包中确认</button>`);
+  $('#doBuy').onclick=()=>txFlow('认购 '+u+' 份',()=>{
+    p.sold+=u;S.usdt-=total;S.holdings[p.id]=(S.holdings[p.id]||0)+u;S.activity.unshift({t:Date.now(),txt:`认购 ${p.code} ${u} 份 · 支付 ${fmt(total)} USDT（托管中）`});
+    successModal(`认购成功`,`${u} 份 ${p.code} 已进入募集托管。<br>募集结算后份额会发到你的钱包。`);burst();renderDetail(p.id);renderCards()});
+}
+function successModal(t,s){modal(`<div class="success"><svg width="84" height="84" viewBox="0 0 84 84"><circle class="c" cx="42" cy="42" r="25" fill="none" stroke="#47D68A" stroke-width="4" transform="rotate(-90 42 42)"/><path class="k" d="M31 43l8 8 15-16" fill="none" stroke="#47D68A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><h3>${t}</h3><p class="muted">${s}</p><a class="btn primary" href="#portfolio" id="goP">查看我的资产</a></div>`);
+  $('#goP').addEventListener('click',()=>$('#modalRoot').innerHTML='')}
+
+/* ---------- toasts & burst ---------- */
+function toast(t,tx){const el=document.createElement('div');el.className='toast';el.innerHTML=t+(tx?`<span class="hash">${short(tx)} · 在 BscScan 查看（示例）</span>`:'');$('#toasts').appendChild(el);setTimeout(()=>{el.style.transition='opacity .4s';el.style.opacity=0;setTimeout(()=>el.remove(),400)},3200)}
+function burst(){if(reduce)return;const c=$('#burst'),x=c.getContext('2d'),dpr=devicePixelRatio||1;c.width=innerWidth*dpr;c.height=innerHeight*dpr;x.scale(dpr,dpr);
+  const cols=['#F6B53D','#4FE3D2','#47D68A','#E9EEF8'],ps=Array.from({length:90},()=>({x:innerWidth/2,y:innerHeight*.42,vx:(Math.random()-.5)*12,vy:-Math.random()*11-3,r:Math.random()*4+2,c:cols[Math.random()*4|0],a:1,s:Math.random()>.5}));
+  let f=0;(function tick(){x.clearRect(0,0,innerWidth,innerHeight);ps.forEach(p=>{p.vy+=.32;p.x+=p.vx;p.y+=p.vy;p.a-=.012;x.globalAlpha=Math.max(0,p.a);x.fillStyle=p.c;if(p.s)x.fillRect(p.x,p.y,p.r*1.6,p.r*.7);else{x.beginPath();x.arc(p.x,p.y,p.r/1.4,0,7);x.fill()}});if(++f<110)requestAnimationFrame(tick);else x.clearRect(0,0,innerWidth,innerHeight)})()}
+
+/* ---------- wallet button ---------- */
+function renderWallet(){const b=$('#walletBtn');if(S.wallet){b.className='btn wallet';b.innerHTML=`<span class="avatar"></span><span class="addr">${S.wallet.slice(0,6)}…${S.wallet.slice(-4)}</span>`}else{b.className='btn primary wallet';b.textContent='连接钱包'}}
+$('#walletBtn').onclick=()=>{if(!S.wallet)openConnect();else location.hash='#portfolio'};
+
+/* ---------- portfolio ---------- */
+function renderPortfolio(){
+  const el=$('#portfolio');
+  if(!S.wallet){el.innerHTML=`<div class="sec-h"><h2>我的资产</h2></div><div class="panel empty"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#4FE3D2" stroke-width="1.2"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12.5h2M3 10h18"/></svg><h3>连接钱包查看持仓与可领取收益</h3><p class="muted" style="max-width:36ch">演示模式会载入一个示例钱包：持有 RS-002 12 份、RS-003 5 份，有一笔 8 月分配待领取。</p><button class="btn primary" id="pc">连接示例钱包</button></div>`;$('#pc').onclick=()=>openConnect();return}
+  const cost=Object.entries(S.holdings).reduce((s,[k,u])=>s+u*byId(k).price,0);
+  const claimable=S.claims.reduce((s,c)=>s+calc(c.D,S.holdings[c.pid]||0,c.U).n,0);
+  const claimedSum=S.claimed.reduce((s,c)=>s+c.net,0);
+  el.innerHTML=`<div class="sec-h"><div><div class="eyebrow">示例钱包 · ${S.wallet.slice(0,6)}…${S.wallet.slice(-4)}</div><h2 style="margin-top:6px">我的资产</h2></div><span class="lab ok">投资资格：已认证（示例）</span></div>
+   <div class="tiles">
+    <div class="tile hl"><span class="eyebrow">可领取</span><span class="num" data-count="${claimable}">0</span><span class="muted" style="font-size:.78rem">USDT</span></div>
+    <div class="tile"><span class="eyebrow">累计已领取</span><span class="num" data-count="${claimedSum}">0</span><span class="muted" style="font-size:.78rem">USDT</span></div>
+    <div class="tile"><span class="eyebrow">持仓（按认购价）</span><span class="num" data-count="${cost}">0</span><span class="muted" style="font-size:.78rem">USDT · 非市场估值</span></div>
+   </div>
+   <div class="cols2" style="margin-top:16px">
+    <div class="panel"><h3>可领取分配</h3>${S.claims.length?S.claims.map(c=>{const p=byId(c.pid),u=S.holdings[c.pid],r=calc(c.D,u,c.U),t=tierOf(u);return `<div class="claim"><div><b>${p.code} · 第 ${c.batch} 批 · ${c.period}</b><div class="breakdown">D ${fmt(c.D)} × ${u}/${c.U} = 毛额 ${fmt(r.g)} − 分成 ${t.bps/100}% ${fmt(r.f)}</div><div class="num" style="font-size:1.25rem;color:var(--amber)">${fmt(r.n)} USDT</div></div><button class="btn primary" data-claim="${c.id}">领取</button></div>`}).join(''):`<p class="muted">暂时没有可领取的分配。下一期报告批准后会出现在这里。</p>`}</div>
+    <div class="panel"><h3>持仓</h3>${Object.entries(S.holdings).map(([k,u])=>{const p=byId(k),t=tierOf(u);return `<a class="hold" href="#p-${k}" style="text-decoration:none"><span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="hsl(${p.hue} 70% 62%)" stroke-width="1.6"><path d="M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16v3H5z"/><circle cx="8" cy="16" r="1.4"/><circle cx="16" cy="16" r="1.4"/></svg></span><span><h4>${p.code} ${p.name}</h4><small><span class="pill s-${p.state}" style="font-size:.62rem;padding:1px 7px">${STATE_ZH[p.state]}</span> · 分成档位 ${t.bps/100}%</small></span><span class="r"><b class="num" style="font-size:1.15rem">${u} 份</b><br><small class="muted">${(u/p.sold*100).toFixed(2)}% 份额</small></span></a>`}).join('')}</div>
+   </div>
+   <div class="cols2" style="margin-top:16px">
+    <div class="panel"><h3>USDT 授权 <span class="lab ${S.approved?'pend':''}">${S.approved?'不限额 · 生效中':'未授权'}</span></h3>
+      <p class="muted" style="font-size:.84rem;margin-bottom:12px">${S.approved?'认购合约可以在你发起认购时扣款。不再认购时建议撤销。':'首次认购时会提示你授权。'}</p>
+      ${S.approved?`<button class="btn danger" id="revoke">撤销授权</button>`:`<button class="btn" disabled>无需操作</button>`}</div>
+    <div class="panel"><h3>最近记录</h3><div class="timeline">${[...S.activity.map(a=>({...a,n:1})),...S.claimed.map(c=>({t:c.t,txt:`领取 ${byId(c.pid).code} 第 ${c.batch} 批 · ${fmt(c.net)} USDT`}))].sort((a,b)=>b.t-a.t).slice(0,6).map(a=>`<div class="tl ${a.n?'new':''}"><i></i><span>${a.txt}</span><span class="muted mono" style="font-size:.72rem">${new Date(a.t).toLocaleDateString('zh-CN')}</span></div>`).join('')}</div></div>
+   </div>`;
+  countUp();
+  $$('[data-claim]').forEach(b=>b.onclick=()=>{const c=S.claims.find(x=>x.id===b.dataset.claim),p=byId(c.pid),r=calc(c.D,S.holdings[c.pid],c.U);
+    modal('<div></div>');txFlow('领取 '+p.code+' 第 '+c.batch+' 批',()=>{S.claims=S.claims.filter(x=>x!==c);S.usdt+=r.n;S.claimed.unshift({pid:c.pid,batch:c.batch,period:c.period,net:r.n,tx:rhex(64),t:Date.now()});renderPortfolio();burst();successModal('已领取 '+fmt(r.n)+' USDT','USDT 已到账你的钱包。')},`<div class="line"><span class="muted">到账</span><b style="color:var(--amber)">${fmt(r.n)} USDT</b></div>`)});
+  const rv=$('#revoke');if(rv)rv.onclick=()=>{modal('<div></div>');txFlow('撤销 USDT 授权',()=>{S.approved=false;S.activity.unshift({t:Date.now(),txt:'撤销认购合约的 USDT 授权'});renderPortfolio()})};
+}
+function countUp(){$$('[data-count]').forEach(el=>{const to=+el.dataset.count,t0=performance.now(),d=reduce?1:900;(function f(t){const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=fmt(to*e);if(k<1)requestAnimationFrame(f)})(t0)})}
+
+/* ---------- admin ---------- */
+function renderAdmin(){
+  const R={op:'运营方',rev:'审核人',gov:'治理签名人'};
+  const el=$('#admin');
+  const reps=S.reports.map(r=>{const p=byId(r.pid);let act='';
+    if(r.st==='SUBMITTED')act=S.role==='rev'?`<div style="display:flex;gap:6px"><button class="btn sm danger" data-rej="${r.id}">驳回</button><button class="btn sm primary" data-appr="${r.id}">批准</button></div>`:`<span class="lab pend">待审核人批准</span>`;
+    else if(r.st==='APPROVED')act=S.role==='op'&&!r.batch?`<button class="btn sm lidar" data-batch="${r.id}">提议分配批次</button>`:`<span class="lab ok">${r.batch?'批次已提议':'审核人批准'}</span>`;
+    else act=`<span class="lab">已驳回</span>`;
+    return `<div class="q"><div><h4>${p.code} · ${r.period} 财务报告</h4><small>可分配利润 D = ${fmt(r.D)} USDT · ${r.by}</small><small class="hash">${short(r.hash)}</small></div>${act}</div>`}).join('');
+  const safe=S.safe.map(s=>{const ready=s.sig>=2;const eta=s.eta;return `<div class="q"><div><h4>${s.title}</h4><small>${s.sub}</small><div class="sigs">${[0,1,2].map(i=>`<span class="${i<s.sig?'y':''}"></span>`).join('')}</div><small>${s.sig}/3 签名 · ${ready?(eta?'时间锁剩余 <span class="mono" data-cd="'+eta+'"></span>':'已排入时间锁'):'还需 '+(2-s.sig)+' 个签名'}</small></div>${S.role==='gov'&&!ready?`<button class="btn sm primary" data-sign="${s.id}">签名</button>`:`<span class="lab ${ready?'pend':''}">${ready?'时间锁中':'待签名'}</span>`}</div>`}).join('');
+  el.innerHTML=`<div class="sec-h"><div><div class="eyebrow">管理控制台 · 演示</div><h2 style="margin-top:6px">运营后台</h2></div><div class="roles" role="tablist">${Object.entries(R).map(([k,v])=>`<button data-role="${k}" class="${S.role===k?'on':''}" role="tab" aria-selected="${S.role===k}">${v}</button>`).join('')}</div></div>
+   <p class="muted" style="margin:-8px 0 18px;font-size:.84rem">切换身份看看不同角色能做什么。真实系统里，每个角色都需要链上权限 + 员工账户两步验证；资金相关操作必须由 2/3 多签发起。</p>
+   <div class="tiles" style="margin-bottom:16px">
+    <div class="tile"><span class="eyebrow">管理车辆</span><span class="num">5</span><span class="muted" style="font-size:.78rem">1 辆运营中 · 1 辆募集中</span></div>
+    <div class="tile"><span class="eyebrow">募集托管中</span><span class="num">${fmt(byId('rs001').sold*520,0)}</span><span class="muted" style="font-size:.78rem">USDT · RS-001</span></div>
+    <div class="tile"><span class="eyebrow">待领取分配余额</span><span class="num">${fmt(S.claims.length?740.6:654.6)}</span><span class="muted" style="font-size:.78rem">USDT · 分配合约</span></div>
+   </div>
+   <div class="cols2">
+    <div class="panel"><h3>财务报告 <span class="lab">审核人 ≠ 提交人</span></h3>${reps}${S.role==='op'?`<button class="btn sm" style="margin-top:12px" id="newRep">＋ 起草 RS-002 2026-10 报告</button>`:''}</div>
+    <div class="panel"><h3>多签提案 <span class="lab">Safe 2/3 · 24h 时间锁</span></h3>${safe}</div>
+   </div>
+   <div class="cols2" style="margin-top:16px">
+    <div class="panel"><h3>链上对账</h3><div class="health">
+      <div><span>RS-002 份额总量 vs 数据库持仓</span><span class="ok-t">一致 ✓</span></div>
+      <div><span>RS-001 募集托管余额 vs 认购记录</span><span class="ok-t">一致 ✓</span></div>
+      <div><span>分配合约余额 vs 未领取 + 尾差</span><span class="ok-t">一致 ✓</span></div>
+      <div><span>索引进度</span><span class="mono">#<span id="adminBlock">${S.block}</span> · 落后 15 块</span></div>
+    </div></div>
+    <div class="panel"><h3>紧急暂停 <span class="lab ${S.paused?'pend':''}">${S.paused?'已暂停':'正常运行'}</span></h3>
+     <p class="muted" style="font-size:.84rem;margin-bottom:12px">暂停后，认购、转让、退款和领取都会停止。守护者可以立即暂停；恢复需要治理多签。</p>
+     <div id="pauseZone"><button class="btn danger" id="pauseBtn" ${S.role==='op'?'disabled':''}>${S.paused?'提议恢复（需多签）':'暂停全部合约'}</button>${S.role==='op'?'<p class="muted" style="font-size:.74rem;margin-top:8px">运营方没有暂停权限。</p>':''}</div>
+    </div>
+   </div>`;
+  tickCountdowns();
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-role],[data-appr],[data-rej],[data-batch],[data-sign],#newRep,#pauseBtn,#pauseYes,#pauseNo');if(!t||!$('#v-admin').classList.contains('on'))return;
+  if(t.dataset.role){S.role=t.dataset.role;renderAdmin();return}
+  if(t.dataset.appr){const r=S.reports.find(x=>x.id===t.dataset.appr);modal('<div></div>');txFlow('批准报告（AuditRegistry）',()=>{r.st='APPROVED';renderAdmin()});return}
+  if(t.dataset.rej){const r=S.reports.find(x=>x.id===t.dataset.rej);r.st='REJECTED';toast('已驳回，运营方会收到原因');renderAdmin();return}
+  if(t.dataset.batch){const r=S.reports.find(x=>x.id===t.dataset.batch);modal('<div></div>');txFlow('提议分配批次 · '+byId(r.pid).code+' '+r.period,()=>{r.batch=1;toast('批次已提议，等待审核人批准后开放领取');renderAdmin()},`<div class="line"><span class="muted">分配总额 D</span><b>${fmt(r.D)} USDT</b></div><div class="line"><span class="muted">快照</span><b>期末区块</b></div>`);return}
+  if(t.dataset.sign){const s=S.safe.find(x=>x.id===t.dataset.sign);modal('<div></div>');txFlow('Safe 签名',()=>{s.sig++;if(s.sig>=2)s.eta=Date.now()+24*H;renderAdmin()});return}
+  if(t.id==='newRep'){S.reports.unshift({id:'r'+Date.now(),pid:'rs002',period:'2026-10',D:905,by:'运营方 · 0x3B1c…a91E',st:'SUBMITTED',hash:rhex(64)});toast('报告已提交，哈希写入审计登记');renderAdmin();return}
+  if(t.id==='pauseBtn'){$('#pauseZone').innerHTML=`<p style="font-size:.86rem;margin-bottom:10px">确定${S.paused?'提议恢复':'暂停全部合约'}吗？这会影响所有投资者。</p><div style="display:flex;gap:8px"><button class="btn" id="pauseNo">取消</button><button class="btn danger" id="pauseYes">确认</button></div>`;return}
+  if(t.id==='pauseNo'){renderAdmin();return}
+  if(t.id==='pauseYes'){S.paused=!S.paused;toast(S.paused?'已暂停：认购、转让、退款、领取全部停止':'已提交恢复提案，等待多签');renderAdmin()}
+});
+
+/* ---------- risk ---------- */
+const RISKS=[
+ ['权益性质',['一个单位只代表权益文件中载明的权利。除非文件明确规定，你并不拥有车辆或其任何部分。','法律定性（合同权利、股权、债权等）会影响你的权利、清偿顺位和税务处理。']],
+ ['没有保证回报',['分配取决于扣除成本、储备、优先义务和费用后的实际可分配利润。没有利润的期间不会分配。','任何预测都只是估计，已明确标注，可能有误。']],
+ ['车辆与运营',['事故、损坏、盗窃、停运、维护、折旧、电池衰减、保险缺口或保费上涨。','自动驾驶软件、网约车平台及其费用由第三方控制，可能变化或无法获得。','自动驾驶运营受法规约束，许可可能被拒绝、限制或撤销。','RoboShare 与 Tesla 不存在任何合作关系。']],
+ ['运营方与发行人',['运营方控制运营和财务报告。报告由运营方提交、审核人批准，除另有标注外未经独立审计。','运营方分成按持有档位，占你分配额的 20% 至 10%。']],
+ ['流动性与转让',['份额只能转给合格钱包，且只在特定项目状态下允许。没有官方二级市场，你可能无法出售。','暂停、退出或紧急情况下，转让可能被冻结。']],
+ ['技术风险',['智能合约可能存在缺陷，合约不可升级，修复可能需要迁移。','丢失私钥将永久失去份额和分配，平台不提供任何找回功能。','只与官方公布的合约地址和域名交互，谨防钓鱼。']],
+ ['稳定币与授权',['认购和分配使用 BSC 上的 USDT（BEP20），可能脱锚或被发行方冻结。','DApp 默认请求不限额授权，在撤销前一直有效。在仿冒网站授权或合约存在漏洞时，钱包内全部 USDT 都可能受损。']],
+ ['治理与管理权限',['治理多签（2/3 + 24 小时时间锁）可以暂停合约、变更角色，但无法转走你的份额。','这些权限出于安全目的而设，但可能被滥用或被攻破。']],
+ ['监管与税务',['证券、代币化资产、自动驾驶和税收相关法律可能变化，并可能限制或终止项目。','你需要自行承担纳税义务。']],
+ ['退出风险',['车辆出售、报废或终止时，所得可能低于你的投资额，分配可能需要一段时间。']]
+];
+$('#riskList').innerHTML=RISKS.map(([h,l],i)=>`<details ${i<2?'open':''}><summary>${h}</summary><ul>${l.map(x=>`<li>${x}</li>`).join('')}</ul></details>`).join('');
+
+/* ---------- router ---------- */
+function route(){
+  let h=(location.hash||'#home').slice(1);let v=h,arg=null;
+  if(h.startsWith('p-')){v='detail';arg=h.slice(2)}
+  if(!['home','projects','detail','portfolio','admin','risk'].includes(v))v='home';
+  $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+  const nav=v==='detail'?'projects':v;$$('[data-r]').forEach(a=>a.classList.toggle('on',a.dataset.r===nav));
+  if(v==='detail')renderDetail(arg);if(v==='portfolio')renderPortfolio();if(v==='admin')renderAdmin();if(v==='projects'||v==='home')renderCards();
+  window.scrollTo({top:0,behavior:'instant'in window?'instant':'auto'});
+}
+addEventListener('hashchange',route);
+
+/* ---------- hero city canvas ---------- */
+function city(){
+  const c=$('#city');if(!c)return;const x=c.getContext('2d');let W,Hh,dpr,cell,cols,rows,cars=[],pins=[],t0=performance.now();
+  function size(){dpr=Math.min(2,devicePixelRatio||1);W=c.clientWidth;Hh=c.clientHeight;c.width=W*dpr;c.height=Hh*dpr;x.setTransform(dpr,0,0,dpr,0,0);cell=Math.max(44,Math.min(70,W/16));cols=Math.ceil(W/cell)+1;rows=Math.ceil(Hh/cell)+1;
+    const n=Math.round(cols*rows/7);cars=Array.from({length:Math.min(46,Math.max(16,n))},(_,i)=>mk(i===0));}
+  function mk(hero){const gx=Math.random()*cols|0,gy=Math.random()*rows|0,d=[[1,0],[-1,0],[0,1],[0,-1]][Math.random()*4|0];return{gx,gy,dx:d[0],dy:d[1],p:Math.random(),v:(.006+Math.random()*.01)*(hero?.8:1),hero,trail:[]}}
+  function step(car){car.p+=car.v;if(car.p>=1){car.p=0;car.gx+=car.dx;car.gy+=car.dy;
+      if(car.gx<0||car.gy<0||car.gx>cols||car.gy>rows){Object.assign(car,mk(car.hero),{trail:[]});return}
+      if(Math.random()<.4){const o=car.dx?[[0,1],[0,-1]]:[[1,0],[-1,0]];const d=o[Math.random()*2|0];car.dx=d[0];car.dy=d[1]}
+      if(Math.random()<.04&&!car.hero)pins.push({x:car.gx*cell,y:car.gy*cell,a:0})}}
+  const pos=car=>({x:(car.gx+car.dx*car.p)*cell,y:(car.gy+car.dy*car.p)*cell});
+  // offset grid so the right side is the focus
+  function draw(now){const t=(now-t0)/1000;x.clearRect(0,0,W,Hh);
+    // blocks
+    for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){const k=(i*7+j*13)%11;x.fillStyle=k<2?'#131D35':k<5?'#0F182C':'#0C1426';x.fillRect(i*cell+6,j*cell+6,cell-12,cell-12);
+      if(k===3){x.fillStyle='rgba(246,181,61,.07)';x.fillRect(i*cell+12,j*cell+12,cell-24,cell-24)}}
+    // streets
+    x.strokeStyle='#1A2643';x.lineWidth=1;x.beginPath();for(let i=0;i<=cols;i++){x.moveTo(i*cell,0);x.lineTo(i*cell,Hh)}for(let j=0;j<=rows;j++){x.moveTo(0,j*cell);x.lineTo(W,j*cell)}x.stroke();
+    // pins
+    pins=pins.filter(p=>p.a<1);pins.forEach(p=>{p.a+=.008;x.strokeStyle=`rgba(79,227,210,${1-p.a})`;x.lineWidth=1.5;x.beginPath();x.arc(p.x,p.y,4+p.a*22,0,7);x.stroke();x.fillStyle=`rgba(79,227,210,${1-p.a})`;x.beginPath();x.arc(p.x,p.y,2.5,0,7);x.fill()});
+    // cars
+    cars.forEach(car=>{if(!reduce)step(car);const q=pos(car);car.trail.push(q);if(car.trail.length>(car.hero?40:18))car.trail.shift();
+      x.lineCap='round';for(let i=1;i<car.trail.length;i++){const a=car.trail[i-1],b=car.trail[i];if(Math.abs(a.x-b.x)+Math.abs(a.y-b.y)>cell)continue;x.strokeStyle=car.hero?`rgba(246,181,61,${i/car.trail.length*.9})`:`rgba(122,167,255,${i/car.trail.length*.45})`;x.lineWidth=car.hero?3:2;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke()}
+      if(car.hero){const r=(t*40)%90;x.strokeStyle=`rgba(79,227,210,${.6-r/150})`;x.lineWidth=1.5;x.beginPath();x.arc(q.x,q.y,r,0,7);x.stroke();
+        const ang=t*2.4;x.fillStyle='rgba(79,227,210,.12)';x.beginPath();x.moveTo(q.x,q.y);x.arc(q.x,q.y,80,ang,ang+.6);x.closePath();x.fill();
+        x.fillStyle='#F6B53D';x.shadowColor='#F6B53D';x.shadowBlur=16;x.beginPath();x.arc(q.x,q.y,5,0,7);x.fill();x.shadowBlur=0;
+        x.font='600 10px JetBrains Mono, monospace';x.fillStyle='#F6B53D';x.fillText('RS-002 · 载客中',q.x+10,q.y-10)}
+      else{x.fillStyle='#BFD2FF';x.beginPath();x.arc(q.x,q.y,2.4,0,7);x.fill()}});
+    if(!reduce)requestAnimationFrame(draw)}
+  size();addEventListener('resize',()=>{size();if(reduce)draw(performance.now())});requestAnimationFrame(draw);
+  // HUD
+  let trips=1842;$('#hudCars').textContent=cars.length;$('#hudTrips').textContent=trips.toLocaleString();$('#hudBlock').textContent='#'+S.block.toLocaleString('en');
+  setInterval(()=>{S.block++;$('#hudBlock').textContent='#'+S.block.toLocaleString('en');const ab=$('#adminBlock');if(ab)ab.textContent=S.block;if(Math.random()<.5){trips+=1;$('#hudTrips').textContent=trips.toLocaleString()}},3000);
+}
+
+/* ---------- sweep animation for car art via CSS-in-JS ---------- */
+const st=document.createElement('style');st.textContent=reduce?'':`.pcard .sweep,.dart .sweep{animation:sw 3.6s ease-in-out infinite}@keyframes sw{to{transform:translateX(720px)}}.pcard .lane,.dart .lane{animation:ln 1.2s linear infinite}@keyframes ln{to{transform:translateX(-48px)}}.pcard:hover .car{animation:bob .5s ease-in-out infinite alternate}.dart .car{animation:bob 1.6s ease-in-out infinite alternate}@keyframes bob{to{transform:translateY(-1.5px)}}.drawline{stroke-dasharray:1200;stroke-dashoffset:1200;animation:dl 1.6s .2s cubic-bezier(.2,.7,.2,1) forwards}@keyframes dl{to{stroke-dashoffset:0}}`;
+document.head.appendChild(st);
+
+renderTiers(12);renderWallet();route();city();
+})();
+</script>
+
+</body>
+</html>
