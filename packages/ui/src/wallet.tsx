@@ -9,6 +9,7 @@ import {
   getAccount,
   getConnectors,
   reconnect,
+  switchChain as coreSwitchChain,
   watchAccount,
   watchConnectors,
   type Config,
@@ -88,4 +89,42 @@ export function useConnect() {
 export function useDisconnect() {
   const config = useWalletConfig();
   return useCallback(() => coreDisconnect(config), [config]);
+}
+
+/** The chain this site runs on (the config has exactly one). */
+export function useTargetChain() {
+  return useWalletConfig().chains[0];
+}
+
+/** Moves the wallet to this site's chain, adding the network to the wallet first if it does not know it yet. */
+export function useSwitchChain() {
+  const config = useWalletConfig();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const switchChain = useCallback(async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await coreSwitchChain(config, { chainId: config.chains[0].id });
+    } catch (e) {
+      setError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setPending(false);
+    }
+  }, [config]);
+  return { switchChain, pending, error };
+}
+
+/** Plain-Chinese reason for a wallet failure; raw wallet messages are English and full of RPC detail. */
+export function walletErrorMessage(e: unknown): string {
+  const chain: { name?: string; code?: number; message?: string }[] = [];
+  for (let x = e as { name?: string; code?: number; message?: string; cause?: unknown } | undefined; x && chain.length < 8; x = x.cause as typeof x) chain.push(x);
+  const has = (name: string, code?: number) => chain.some((x) => x.name === name || (code !== undefined && x.code === code));
+  if (has("UserRejectedRequestError", 4001)) return "你在钱包里取消了这次请求";
+  if (has("ProviderNotFoundError")) return "没有检测到钱包。请在钱包 App 里打开本页，或在电脑浏览器安装 MetaMask。";
+  if (has("ResourceUnavailableRpcError", -32002)) return "钱包里还有一个待处理的请求，请打开钱包 App 处理后再试";
+  if (has("ConnectorChainMismatchError") || has("ChainNotConfiguredError")) return "钱包所在的网络不对，请先切换到本站使用的网络";
+  if (has("SwitchChainError") || has("UnsupportedChainIdError", 4902)) return "钱包没能切换网络，请在钱包里手动切换后再试";
+  const first = chain[0]?.message?.split("\n")[0];
+  return first ? `出错了：${first}` : "出错了，请重试";
 }

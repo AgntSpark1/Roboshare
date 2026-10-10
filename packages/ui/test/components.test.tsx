@@ -6,6 +6,7 @@ import { OfferingProgress } from "../src/components/OfferingProgress";
 import { StatePill } from "../src/components/StatePill";
 import { TxProgress } from "../src/components/TxProgress";
 import { WalletButton } from "../src/components/WalletButton";
+import { walletErrorMessage } from "../src/wallet";
 import { Web3Providers } from "../src/providers";
 
 describe("components", () => {
@@ -62,5 +63,37 @@ describe("components", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "连接钱包" }));
     expect(screen.queryByRole("button", { name: /测试钱包/ })).not.toBeInTheDocument();
+  });
+
+  it("renders the dialog into <body> so a blurred sticky header cannot clip it", () => {
+    render(
+      <header style={{ backdropFilter: "blur(14px)" }} data-testid="hdr">
+        <Modal title="连接钱包" onClose={() => {}}><p>内容</p></Modal>
+      </header>,
+    );
+    const dialog = screen.getByRole("dialog", { name: "连接钱包" });
+    expect(screen.getByTestId("hdr")).not.toContainElement(dialog);
+    expect(document.body.style.overflow).toBe("hidden");
+  });
+
+  it("offers to open the page in a wallet app when the browser has no wallet", async () => {
+    render(
+      <Web3Providers env={{ chainId: 97 }}>
+        <WalletButton />
+      </Web3Providers>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "连接钱包" }));
+    const dialog = screen.getByRole("dialog", { name: "连接钱包" });
+    expect(within(dialog).getByRole("link", { name: "MetaMask" })).toHaveAttribute("href", expect.stringMatching(/^https:\/\/metamask\.app\.link\/dapp\//));
+    expect(within(dialog).getByRole("link", { name: "Trust Wallet" })).toHaveAttribute("href", expect.stringContaining(encodeURIComponent(window.location.href)));
+    expect(within(dialog).getByText("未检测到钱包")).toBeInTheDocument();
+  });
+
+  it("explains wallet failures in Chinese", () => {
+    expect(walletErrorMessage(Object.assign(new Error("User rejected the request."), { code: 4001 }))).toBe("你在钱包里取消了这次请求");
+    const nested = Object.assign(new Error("Request failed"), { cause: Object.assign(new Error("Already processing"), { code: -32002 }) });
+    expect(walletErrorMessage(nested)).toMatch(/待处理的请求/);
+    expect(walletErrorMessage(Object.assign(new Error("x"), { name: "ProviderNotFoundError" }))).toMatch(/没有检测到钱包/);
+    expect(walletErrorMessage(new Error("boom\nstack"))).toBe("出错了：boom");
   });
 });
