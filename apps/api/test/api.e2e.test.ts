@@ -1,10 +1,10 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@roboshare/db";
-import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, reportHash, revenueDistributorAbi } from "@roboshare/shared";
+import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
 import { createHmac, randomBytes } from "node:crypto";
 import request from "supertest";
-import { decodeFunctionData, keccak256, stringToHex, type Address } from "viem";
+import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { createSiweMessage } from "viem/siwe";
 import { base32Decode, encryptSecret, hotp, newTotpSecret, TOTP_STEP_SECONDS } from "../src/common/totp.js";
@@ -514,6 +514,89 @@ describe("investor extras", () => {
     const a = await http().post("/api/v1/me/risk-acknowledgement").set("Cookie", cookies.investor!).send({ version: "2026-10" }).expect(201);
     const b = await http().post("/api/v1/me/risk-acknowledgement").set("Cookie", cookies.investor!).send({ version: "2026-10" }).expect(201);
     expect(b.body.acceptedAt).toBe(a.body.acceptedAt);
+  });
+});
+
+describe("referrals", () => {
+  const REWARDS = getAddress(ADDR(0x4ef));
+  const ROUTER = getAddress(ADDR(0x40e7));
+
+  beforeAll(async () => {
+    const inv = investor.address.toLowerCase();
+    const oth = other.address.toLowerCase();
+    await prisma.contractDeployment.createMany({
+      data: [
+        { chainId: 31337, address: REWARDS.toLowerCase(), kind: "REFERRAL_REWARDS", deployedBlock: 1n },
+        { chainId: 31337, address: ROUTER.toLowerCase(), kind: "SUBSCRIPTION_ROUTER", deployedBlock: 1n },
+      ],
+    });
+    // investor referred other; other's distributions earned investor a share of the platform fee.
+    await prisma.referral.create({ data: { referee: oth, referrer: inv, shareBps: 2_000, expiresAt: new Date(Date.now() + 86_400_000), boundBlock: 9n, boundTxHash: "0x09" } });
+    await prisma.referralAccrual.createMany({
+      data: [
+        { projectIdOnchain: PID, batchIdOnchain: 1, referee: oth, referrer: inv, fee: (625n * ONE).toString(), shareBps: 2_000, reward: (125n * ONE).toString() },
+        { projectIdOnchain: PID, batchIdOnchain: 2, referee: oth, referrer: inv, fee: (50n * ONE).toString(), shareBps: 2_000, reward: (10n * ONE).toString() },
+      ],
+    });
+  });
+
+  it("shows earned rewards before any root is published", async () => {
+    const r = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
+    expect(r.body.contract).toBe(REWARDS);
+    expect(r.body.referredBy).toBeNull();
+    expect(r.body.referees).toEqual([expect.objectContaining({ wallet: other.address, shareBps: 2_000, earned: (135n * ONE).toString() })]);
+    expect(r.body.earned).toBe((135n * ONE).toString());
+    expect(r.body.pendingPublication).toBe((135n * ONE).toString());
+    expect(r.body.claimable).toBeNull();
+  });
+
+  it("prepares a root for the operator only and serves a valid proof once it is live", async () => {
+    await http().post("/api/v1/admin/referrals/root").set("Cookie", cookies.reviewer!).expect(403);
+    const r = await http().post("/api/v1/admin/referrals/root").set("Cookie", cookies.operator!).expect(201);
+    expect(r.body.accounts).toBe(1);
+    expect(r.body.totalCumulative).toBe((135n * ONE).toString());
+    expect(r.body.tx.to).toBe(REWARDS);
+    const call = decodeFunctionData({ abi: referralRewardsAbi, data: r.body.tx.data });
+    expect(call.functionName).toBe("setRoot");
+    expect(call.args![0]).toBe(r.body.root);
+
+    // Not claimable until the indexer has seen the root on chain.
+    expect((await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!)).body.claimable).toBeNull();
+    await prisma.referralRoot.create({ data: { epoch: 1, root: r.body.root, dataHash: r.body.dataHash, totalCumulative: r.body.totalCumulative, blockNumber: 31n, txHash: "0x31" } });
+    const me = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
+    expect(me.body.claimable.amount).toBe((135n * ONE).toString());
+    expect(verifyReferralProof(r.body.root, investor.address, BigInt(me.body.claimable.cumulative), me.body.claimable.proof)).toBe(true);
+    expect(me.body.pendingPublication).toBe("0");
+
+    // Same accruals give the same root, so there is nothing new to publish.
+    const again = await http().post("/api/v1/admin/referrals/root").set("Cookie", cookies.operator!).expect(409);
+    expect(again.body.error.code).toBe("NOTHING_TO_PUBLISH");
+
+    // After a partial claim only the remainder is claimable.
+    await prisma.referralClaim.create({ data: { account: investor.address.toLowerCase(), claimed: (135n * ONE).toString(), lastTxHash: "0x32" } });
+    const after = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
+    expect(after.body.claimable).toBeNull();
+    expect(after.body.claimed).toBe((135n * ONE).toString());
+  });
+
+  it("summarises the programme for staff", async () => {
+    const r = await http().get("/api/v1/admin/referrals").set("Cookie", cookies.reviewer!).expect(200);
+    expect(r.body.bindings).toBe(1);
+    expect(r.body.totalAccrued).toBe((135n * ONE).toString());
+    expect(r.body.outstanding).toBe("0");
+    expect(r.body.topReferrers).toEqual([{ referrer: investor.address, accrued: (135n * ONE).toString() }]);
+  });
+
+  it("wraps the on/off switch for both contracts in one timelock batch", async () => {
+    await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.operator!).send({ enabled: true, shareBps: 2_000, windowDays: 365 }).expect(403);
+    await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, shareBps: 6_000, windowDays: 365 }).expect(400);
+    const r = await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, shareBps: 2_000, windowDays: 365 }).expect(201);
+    expect(r.body.schedule.to).toBe(TIMELOCK);
+    expect(r.body.calls.map((c: any) => c.to)).toEqual([ROUTER, REWARDS]);
+    const terms = decodeFunctionData({ abi: subscriptionRouterAbi, data: r.body.calls[0].data });
+    expect(terms.functionName).toBe("setReferralTerms");
+    expect(terms.args).toEqual([true, 2_000, 365n * 86_400n]);
+    expect(decodeFunctionData({ abi: referralRewardsAbi, data: r.body.calls[1].data }).functionName).toBe("setClaimsEnabled");
   });
 });
 

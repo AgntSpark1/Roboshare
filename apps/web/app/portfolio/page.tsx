@@ -21,6 +21,7 @@ import {
 } from "@roboshare/ui";
 import { explorer } from "@/env";
 import { useEligibility, useMySubscriptions, usePaymentSetup, useRefreshAfterTx, useUsdtState } from "@/lib/data";
+import { ReferralPanel } from "@/components/ReferralPanel";
 
 interface Holding {
   projectId: string;
@@ -141,6 +142,8 @@ function Dashboard() {
           </div>
         </div>
 
+        <ReferralPanel wallet={wallet} />
+
         <div className="cols2">
           <ApprovalPanel wallet={wallet} />
           <div className="panel">
@@ -258,3 +261,4 @@ function ApprovalPanel({ wallet }: { wallet: `0x${string}` }) {
     </div>
   );
 }
+

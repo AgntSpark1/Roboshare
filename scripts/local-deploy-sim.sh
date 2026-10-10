@@ -26,6 +26,7 @@ TIMELOCK=$(addr TimelockController)
 ASSETS=$(addr AssetRegistry)
 FACTORY=$(addr ProjectFactory)
 ROUTER=$(addr SubscriptionRouter)
+REFERRAL=$(addr ReferralRewards)
 ADMIN=0x0000000000000000000000000000000000000000000000000000000000000000
 
 # cast prints big numbers as "86400 [8.64e4]"; compare the first field only.
@@ -35,6 +36,9 @@ check "timelock is AssetRegistry admin" "$(cast call "$ASSETS" 'hasRole(bytes32,
 check "deployer is not AssetRegistry admin" "$(cast call "$ASSETS" 'hasRole(bytes32,address)(bool)' $ADMIN "$DEPLOYER" --rpc-url "$RPC")" false
 check "timelock is factory admin" "$(cast call "$FACTORY" 'hasRole(bytes32,address)(bool)' $ADMIN "$TIMELOCK" --rpc-url "$RPC")" true
 check "timelock is router admin" "$(cast call "$ROUTER" 'hasRole(bytes32,address)(bool)' $ADMIN "$TIMELOCK" --rpc-url "$RPC")" true
+check "timelock is referral rewards admin" "$(cast call "$REFERRAL" 'hasRole(bytes32,address)(bool)' $ADMIN "$TIMELOCK" --rpc-url "$RPC")" true
+check "referral claims start disabled" "$(cast call "$REFERRAL" 'claimsEnabled()(bool)' --rpc-url "$RPC")" false
+check "referral binding starts disabled" "$(cast call "$ROUTER" 'referralsEnabled()(bool)' --rpc-url "$RPC")" false
 
 # A direct admin call from the deployer must now fail; only the timelock (via the Safe) can do it.
 if cast send "$ASSETS" 'grantRole(bytes32,address)' $ADMIN "$DEPLOYER" --from "$DEPLOYER" --unlocked --rpc-url "$RPC" >/dev/null 2>&1; then
