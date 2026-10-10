@@ -52,13 +52,14 @@ async function launch(port: number) {
 
 /**
  * Runs script/Deploy.s.sol against the node. Async, so the test runner keeps its own timers, and with forge's output
- * captured, so a stalled deploy in CI says where it stopped instead of failing with an empty ETIMEDOUT.
+ * captured, so a stalled deploy in CI says where it stopped instead of failing with an empty ETIMEDOUT. --slow sends one
+ * transaction at a time: forge 1.5.1's batched broadcast hangs against anvil in roughly one run in fifteen.
  */
 async function deploy(rpcUrl: string, accounts: Address[]) {
   const [deployer, safe, operator, reviewer, pauser, agent, feeRecipient] = accounts;
   await run(
     join(FOUNDRY_BIN, "forge"),
-    ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", deployer!],
+    ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", deployer!, "--slow"],
     {
       cwd: join(ROOT, "contracts"),
       env: {

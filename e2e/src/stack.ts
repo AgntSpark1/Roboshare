@@ -91,26 +91,48 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
   try {
     // 1. chain + contracts
     const rpcUrl = `http://127.0.0.1:${PORTS.anvil}`;
-    step("starting anvil");
-    procs.push(start("anvil", join(FOUNDRY_BIN, "anvil"), ["--port", String(PORTS.anvil), "--silent"], {}));
     const { pub } = clients(rpcUrl);
-    await waitFor("anvil", () => pub.getBlockNumber().then(() => true));
+    step("starting anvil");
+    const launchAnvil = async () => {
+      const p = start("anvil", join(FOUNDRY_BIN, "anvil"), ["--port", String(PORTS.anvil), "--silent"], {});
+      procs.push(p);
+      await waitFor("anvil", () => pub.getBlockNumber().then(() => true));
+      return p;
+    };
+    // --slow sends one transaction at a time: forge 1.5.1's batched broadcast hangs against anvil in roughly one run in
+    // fifteen.
+    const deploy = () =>
+      exec(join(FOUNDRY_BIN, "forge"), ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", ROLES.deployer, "--slow"], {
+        cwd: join(ROOT, "contracts"),
+        timeoutMs: 90_000,
+        env: {
+          ...process.env,
+          SAFE: ROLES.safe,
+          OPERATOR: ROLES.operator,
+          REVIEWER: ROLES.reviewer,
+          PAUSER: ROLES.pauser,
+          COMPLIANCE_AGENT: ROLES.agent,
+          FEE_RECIPIENT: ROLES.feeRecipient,
+          // Contracts are already compiled; don't let the script reach out for signature lookups or verification.
+          FOUNDRY_OFFLINE: "true",
+        },
+      });
+    let anvil = await launchAnvil();
     step("deploying contracts (forge script)");
-    await exec(join(FOUNDRY_BIN, "forge"), ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", ROLES.deployer, "-q"], {
-      cwd: join(ROOT, "contracts"),
-      timeoutMs: 300_000,
-      env: {
-        ...process.env,
-        SAFE: ROLES.safe,
-        OPERATOR: ROLES.operator,
-        REVIEWER: ROLES.reviewer,
-        PAUSER: ROLES.pauser,
-        COMPLIANCE_AGENT: ROLES.agent,
-        FEE_RECIPIENT: ROLES.feeRecipient,
-        // Contracts are already compiled; don't let the script reach out for signature lookups or verification.
-        FOUNDRY_OFFLINE: "true",
-      },
-    });
+    try {
+      await deploy();
+    } catch (e) {
+      // In CI the deploy occasionally stalls with no output while a fresh run succeeds in seconds: retry once on a new
+      // chain, printing the stalled attempt's output.
+      process.stderr.write(`[e2e stack] deploy failed, retrying on a fresh anvil:\n${(e as Error).message.split("\n").slice(-30).join("\n")}\n`);
+      const exited = new Promise((r) => anvil.once("exit", r));
+      anvil.kill("SIGKILL");
+      if (anvil.exitCode === null && anvil.signalCode === null) await exited;
+      procs.splice(procs.indexOf(anvil), 1);
+      anvil = await launchAnvil();
+      step("deploying contracts again (forge script)");
+      await deploy();
+    }
     const run = JSON.parse(readFileSync(join(ROOT, "contracts/broadcast/Deploy.s.sol/31337/run-latest.json"), "utf8")) as {
       transactions: { contractName?: string; contractAddress?: string; transactionType: string }[];
     };
