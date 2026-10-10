@@ -295,6 +295,26 @@ contract ReferralRewardsTest is BaseTest {
         vm.stopPrank();
     }
 
+    /// Vector produced by buildReferralTree in packages/shared (TS and Solidity must agree).
+    function test_AcceptsProofBuiltByTypeScript() public {
+        address a1 = address(0xA1);
+        address c3 = address(0xc3);
+        bytes32 tsRoot = 0xe023519c03356afa3717b5d51ce55b291cf747ac34556903f5e2aabca693d4f8;
+        assertEq(_leaf(a1, ONE), 0x98518aa156408a5e27f6a43ef829a5b5199d6297982abc99af2b92b847237181);
+        vm.prank(operator);
+        rewards.setRoot(tsRoot, 0, ONE + ONE / 2 + 7);
+
+        bytes32[] memory p1 = new bytes32[](1);
+        p1[0] = 0x04d0811a401267566e2260b3d51ab4859abd2e48a2ffa3334c38425da0ca33bb;
+        rewards.claim(a1, ONE, p1);
+        bytes32[] memory p3 = new bytes32[](2);
+        p3[0] = 0x019e660837aaebf37873c83a20205bc7ada6101139e039a3790c373d68d89796;
+        p3[1] = 0x98518aa156408a5e27f6a43ef829a5b5199d6297982abc99af2b92b847237181;
+        rewards.claim(c3, 7, p3);
+        assertEq(usdt.balanceOf(a1), ONE);
+        assertEq(usdt.balanceOf(c3), 7);
+    }
+
     function test_Fuzz_ClaimNeverExceedsCumulative(uint96 a1, uint96 a2) public {
         uint256 first = bound(a1, 1, 100 * ONE);
         uint256 second = bound(a2, first, 200 * ONE);

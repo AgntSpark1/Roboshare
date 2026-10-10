@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "@roboshare/db";
-import { PROJECT_STATES, RECORD_KINDS, RECORD_STATUSES } from "@roboshare/shared";
+import { PROJECT_STATES, RECORD_KINDS, RECORD_STATUSES, referralReward } from "@roboshare/shared";
 import type { ContractKind } from "./contracts.js";
 
 type Tx = Prisma.TransactionClient;
@@ -315,6 +315,8 @@ export async function applyEvent(tx: Tx, e: StoredEvent): Promise<void> {
             ? { status: "CLAIMABLE", approver: lc(a.approver), approveTxHash: e.txHash }
             : { status: "REJECTED", approver: lc(a.reviewer), approveTxHash: e.txHash },
       });
+      // The platform fee is paid out at approval, so that is when referrers earn their share.
+      if (e.name === "BatchApproved") await accrueReferralRewards(tx, e, Number(a.batchId));
       return;
     case "Claimed":
       await tx.distributionAllocation.update({
@@ -326,6 +328,39 @@ export async function applyEvent(tx: Tx, e: StoredEvent): Promise<void> {
           },
         },
         data: { claimed: true, claimTxHash: e.txHash },
+      });
+      return;
+
+    // ------------------------------------------------------------ referrals (REFERRAL_DESIGN.md)
+    case "ReferralBound":
+      await tx.referral.create({
+        data: {
+          referee: lc(a.investor),
+          referrer: lc(a.referrer),
+          shareBps: Number(a.shareBps),
+          expiresAt: new Date(Number(a.expiresAt) * 1000),
+          boundBlock: e.blockNumber,
+          boundTxHash: e.txHash,
+        },
+      });
+      return;
+    case "ReferralRootSet":
+      await tx.referralRoot.create({
+        data: {
+          epoch: Number(a.epoch),
+          root: lc(a.root),
+          dataHash: lc(a.dataHash),
+          totalCumulative: a.totalCumulative,
+          blockNumber: e.blockNumber,
+          txHash: e.txHash,
+        },
+      });
+      return;
+    case "ReferralRewardClaimed":
+      await tx.referralClaim.upsert({
+        where: { account: lc(a.account) },
+        create: { account: lc(a.account), claimed: a.cumulative, lastTxHash: e.txHash },
+        update: { claimed: a.cumulative, lastTxHash: e.txHash },
       });
       return;
 
@@ -379,10 +414,52 @@ async function ensureBatch(tx: Tx, e: StoredEvent) {
   });
 }
 
+/**
+ * Accrues each referrer's share of the platform fee charged to their referees in this batch.
+ * Skipped when the binding window has passed at approval time or the referrer is not eligible then
+ * (frozen, revoked or expired), so rewards only go to whitelisted wallets.
+ */
+async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
+  const allocations = await tx.distributionAllocation.findMany({
+    where: { projectIdOnchain: e.projectId!, batchIdOnchain: batchId },
+  });
+  if (allocations.length === 0) return;
+  const referrals = await tx.referral.findMany({ where: { referee: { in: allocations.map((x) => x.wallet) } } });
+  if (referrals.length === 0) return;
+  const block = await tx.chainBlock.findUnique({ where: { chainId_number: { chainId: e.chainId, number: e.blockNumber } } });
+  if (!block) throw new Error(`block ${e.blockNumber} not stored before BatchApproved`);
+  const at = block.timestamp.getTime();
+  const byReferee = new Map(referrals.map((r) => [r.referee, r]));
+  for (const alloc of allocations) {
+    const ref = byReferee.get(alloc.wallet);
+    if (!ref || ref.expiresAt.getTime() <= at) continue;
+    const elig = await tx.eligibility.findUnique({ where: { wallet: ref.referrer } });
+    if (elig?.status !== "ELIGIBLE" || (elig.expiresAt && elig.expiresAt.getTime() <= at)) continue;
+    const fee = BigInt(alloc.gross.toFixed()) - BigInt(alloc.net.toFixed());
+    const reward = referralReward(fee, ref.shareBps);
+    if (reward === 0n) continue;
+    await tx.referralAccrual.create({
+      data: {
+        projectIdOnchain: alloc.projectIdOnchain,
+        batchIdOnchain: batchId,
+        referee: alloc.wallet,
+        referrer: ref.referrer,
+        fee: fee.toString(),
+        shareBps: ref.shareBps,
+        reward: reward.toString(),
+      },
+    });
+  }
+}
+
 /** Deletes every chain-derived read model and replays chain.event in order. */
 export async function rebuildProjections(prisma: PrismaClient, chainId: number): Promise<number> {
   return prisma.$transaction(
     async (tx) => {
+      await tx.referralAccrual.deleteMany({});
+      await tx.referral.deleteMany({});
+      await tx.referralRoot.deleteMany({});
+      await tx.referralClaim.deleteMany({});
       await tx.distributionAllocation.deleteMany({});
       await tx.distributionBatch.deleteMany({});
       await tx.holding.deleteMany({});

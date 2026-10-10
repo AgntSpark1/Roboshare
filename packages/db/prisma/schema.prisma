@@ -429,6 +429,77 @@ model DistributionAllocation {
   @@schema("app")
 }
 
+// ---------------------------------------------------------------- app: referrals (REFERRAL_DESIGN.md)
+
+/// Projection of SubscriptionRouter.ReferralBound. Single tier: one referrer per referee, forever.
+model Referral {
+  referee     String   @id
+  referrer    String
+  /// Terms in force when the binding was made; later governance changes do not touch them.
+  shareBps    Int
+  expiresAt   DateTime
+  boundBlock  BigInt
+  boundTxHash String
+
+  @@index([referrer])
+  @@map("referral")
+  @@schema("app")
+}
+
+/// A referrer's cut of the platform fee on one referee allocation, accrued when the batch is approved.
+model ReferralAccrual {
+  projectIdOnchain String
+  batchIdOnchain   Int
+  referee          String
+  referrer         String
+  fee              Decimal @db.Decimal(78, 0)
+  shareBps         Int
+  reward           Decimal @db.Decimal(78, 0)
+
+  @@id([projectIdOnchain, batchIdOnchain, referee])
+  @@index([referrer])
+  @@map("referral_accrual")
+  @@schema("app")
+}
+
+/// Projection of ReferralRewards.ReferralRootSet.
+model ReferralRoot {
+  epoch           Int     @id
+  root            String
+  dataHash        String
+  totalCumulative Decimal @db.Decimal(78, 0)
+  blockNumber     BigInt
+  txHash          String
+
+  @@map("referral_root")
+  @@schema("app")
+}
+
+/// Projection of ReferralRewards.ReferralRewardClaimed: cumulative amount paid per account.
+model ReferralClaim {
+  account    String  @id
+  claimed    Decimal @db.Decimal(78, 0)
+  lastTxHash String
+
+  @@map("referral_claim")
+  @@schema("app")
+}
+
+/// Merkle tree prepared by staff (off-chain, survives projection rebuilds). Served as proofs once
+/// its root is published on chain.
+model ReferralTree {
+  root            String   @id
+  dataHash        String
+  totalCumulative Decimal  @db.Decimal(78, 0)
+  /// [{ account, cumulative, proof }]
+  entries         Json
+  createdAt       DateTime @default(now())
+  createdByUserId String   @db.Uuid
+
+  @@map("referral_tree")
+  @@schema("app")
+}
+
 // ---------------------------------------------------------------- app: users and admin
 
 model User {
