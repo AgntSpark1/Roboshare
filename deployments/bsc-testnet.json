@@ -1,0 +1,74 @@
+{
+  "network": "BSC testnet",
+  "chainId": 97,
+  "WARNING": "TESTNET ONLY. MockUSDT is a TEST-ONLY token anyone can mint; it has no value.",
+  "deployedAt": "2026-10-10",
+  "startBlock": 136018412,
+  "lastBlock": 136018605,
+  "contracts": {
+    "MockUSDT": {
+      "address": "0x375AB8119879fE0D0ADFeBbc964DBe92a02C465D",
+      "tx": "0x969b90dcac4a4d72618b9b4b4646f726e6bc273e97888988a170fd89cf57a056"
+    },
+    "TimelockController": {
+      "address": "0x79B159827754e3619cc1457d670eEC1fE8D852d7",
+      "tx": "0xe154a95f05d51065b48c2946910b225eec76f00745d5d8225b8376a1a06bf08b"
+    },
+    "IdentityRegistry": {
+      "address": "0x49d6C8680A1Ccf8917903DabEB758aff6CdC39E4",
+      "tx": "0xe3d8ab04e364ab4ec52a9bfc66c9aa1b0f4c5839169e92bd1de0e43b022f8c3b"
+    },
+    "AssetRegistry": {
+      "address": "0x25368BF3DEC736c10f89507c891890801fCB1af4",
+      "tx": "0x0aaa6733c64d0efa3adf7b265ffde5fc4cde80fbe7f19c00bd0428c7e10e3ef1"
+    },
+    "AuditRegistry": {
+      "address": "0x30Ea780fD513119924fA4af57615305149Ce9E58",
+      "tx": "0x3524d4d4501ab9bedf2e358039e68e9bbcc3a32c71ab46144d0f98fea2e21405"
+    },
+    "SubscriptionRouter": {
+      "address": "0xDed94Bb5F9bA83C5037E97D7c759aA699aABEAd7",
+      "tx": "0xd94dae975c7c21761b05cfb8fc1ef8f62827fe311bc58bce9171b2e373afc181"
+    },
+    "ReferralRewards": {
+      "address": "0x3eF42A386006A9B6421B97E467bDE21F6261e648",
+      "tx": "0x84ba90eda083962dff9e7eb63e8245af3e6aedffa448b02da61b8e3cc9008644"
+    },
+    "TokenDeployer": {
+      "address": "0xb2625C75A0E296f3BD423bEd78651fc3E0662218",
+      "tx": "0xe59aaa7d6e20db15053850e9e3235074e3feadb2d911f158b7ac4553985ffdaa"
+    },
+    "OfferingDeployer": {
+      "address": "0xf13304dE3D9EA7f5f63878237DE6d473E2640090",
+      "tx": "0xadc2e7e2da44a061fd9f7cd89f79e0b64f09cfefbe9c26de5b8c73aeb400c196"
+    },
+    "DistributorDeployer": {
+      "address": "0x762AEe940C0813b32008934C4fF6B627f51617Ef",
+      "tx": "0x097ca25e85432f32b9a117b4bc4fa2285705a1875918fdff48a2c5a93aac1cf9"
+    },
+    "ProjectFactory": {
+      "address": "0x6CF81F8abC3996c695bA251e00661e0c9d48C201",
+      "tx": "0x845f49eab5acb75153e4e9ef50cdd3137d37c33d4815385967569cffc88d7e06"
+    }
+  },
+  "governance": {
+    "safe": "0xf1f3a42F8F72432a22508B189Ffc52cA1bE33B3D",
+    "safeVersion": "SafeL2 v1.4.1",
+    "safeThreshold": "2/3",
+    "safeOwners": [
+      "0x2D064Cd97f52EcA63737cC0910d5a66e99146204",
+      "0x66d986c4058a10FAEc86523d762aaF329b8Dce07",
+      "0x9f9dDd80EDcfF861112C1347a24B40c26C952105"
+    ],
+    "timelockMinDelaySeconds": 86400
+  },
+  "roles": {
+    "deployer": "0x7E21246617183CFC44Ce388BbB98F4f721EBfd93",
+    "operator": "0x7ca071239C3Db78De643e2A776E02DADD57Bc2C1",
+    "reviewer": "0x0178dd84b2f418da075c932F7030bDb969f87E0D",
+    "pauser": "0x93B27a3A63AC6F145BcB5fe8E52CD43882E1cFE1",
+    "complianceAgent": "0x46E5871144fcb4BD84b75D9582c8F474bf1eb916",
+    "feeRecipient": "0x42EA4D5FC64C3A02512ba12A2AE33066040726A1"
+  },
+  "verification": "pending (needs Etherscan v2 API key)"
+}
