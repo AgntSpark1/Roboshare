@@ -1,6 +1,8 @@
 import { PrismaClient } from "@roboshare/db";
 import { Redis } from "ioredis";
 import { createPublicClient, http } from "viem";
+import { AAVE_BNB_ALLOWLIST, AAVE_V3_BNB } from "@roboshare/shared";
+import { readAaveMarkets, saveAaveSnapshot } from "./aave.js";
 import { loadConfig } from "./config.js";
 import { Indexer } from "./indexer.js";
 import { reconcile } from "./reconcile.js";
@@ -8,6 +10,26 @@ import { reconcile } from "./reconcile.js";
 const POLL_MS = Number(process.env.INDEXER_POLL_MS ?? 3000);
 const RECONCILE_EVERY = Number(process.env.RECONCILE_EVERY_TICKS ?? 100);
 const LOCK_KEY = "roboshare:indexer:leader";
+const AAVE_EVERY_MS = Number(process.env.AAVE_POLL_MS ?? 300_000);
+
+/** Optional: read-only Aave V3 market data from BSC mainnet (AAVE_RPC_URL), independent of CHAIN_ID. */
+function startAaveReader(prisma: PrismaClient) {
+  const rpc = process.env.AAVE_RPC_URL;
+  if (!rpc) return;
+  const client = createPublicClient({ transport: http(rpc), cacheTime: 0 });
+  const run = async () => {
+    try {
+      const s = await readAaveMarkets(client, AAVE_V3_BNB, AAVE_BNB_ALLOWLIST);
+      await saveAaveSnapshot(prisma, s);
+      console.log(JSON.stringify({ msg: "aave snapshot", block: s.blockNumber.toString(), reserves: s.reserves.length }));
+    } catch (err) {
+      // A failed check means no new data is published; the API keeps serving the last verified read.
+      console.error(JSON.stringify({ msg: "aave read failed", error: String(err) }));
+    }
+  };
+  void run();
+  setInterval(run, AAVE_EVERY_MS);
+}
 
 async function main() {
   const cfg = loadConfig();
@@ -17,6 +39,7 @@ async function main() {
   const id = `${process.pid}-${Date.now()}`;
   const indexer = new Indexer(prisma, client, cfg);
   await indexer.init();
+  startAaveReader(prisma);
 
   let ticks = 0;
   for (;;) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, UseGuards, UseInterceptors } from "@nestjs/common";
 import { Prisma } from "@roboshare/db";
 import {
   allocate,
@@ -15,6 +15,7 @@ import { getAddress, keccak256, stringToHex, toHex, type Address, type Hex } fro
 import { z } from "zod";
 import { Roles, RoleGuard, type AuthedRequest } from "../auth/guards.js";
 import { ApiError, notFound } from "../common/errors.js";
+import { IdempotencyInterceptor } from "../common/idempotency.js";
 import { PrismaService } from "../common/prisma.service.js";
 import { lc, plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
@@ -49,6 +50,7 @@ type DistributionBody = z.infer<typeof distributionBody>;
 
 @Controller("admin")
 @UseGuards(RoleGuard)
+@UseInterceptors(IdempotencyInterceptor)
 export class AdminController {
   constructor(
     private readonly prisma: PrismaService,

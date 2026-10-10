@@ -1,12 +1,13 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@roboshare/db";
-import { allocate, auditRegistryAbi, reportHash, revenueDistributorAbi, financialReportSchema } from "@roboshare/shared";
+import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, reportHash, revenueDistributorAbi } from "@roboshare/shared";
 import { createHmac, randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, keccak256, stringToHex, type Address } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { createSiweMessage } from "viem/siwe";
+import { base32Decode, encryptSecret, hotp, newTotpSecret, TOTP_STEP_SECONDS } from "../src/common/totp.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/bootstrap.js";
 import type { AppConfig } from "../src/config.js";
@@ -34,7 +35,23 @@ const cfg: AppConfig = {
   assetRegistry: ADDR(0xa55e),
   auditRegistry: AUDIT_REGISTRY,
   paymentToken: USDT,
+  totpEncKey: randomBytes(32).toString("hex"),
+  rateLimitPerMinute: 100_000,
+  timelockDelaySeconds: 86_400,
+  timelock: ADDR(0x71e),
 };
+const TIMELOCK = ADDR(0x71e);
+const totpSecrets: Record<string, string> = {};
+const usedSteps: Record<string, Set<number>> = {};
+/** A valid code from a time step (now ±1) this user has not used yet, so the replay guard never trips. */
+function nextCode(who: string) {
+  const now = Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS);
+  const used = (usedSteps[who] ??= new Set());
+  const step = [now, now - 1, now + 1].find((c) => !used.has(c));
+  if (step === undefined) throw new Error("no unused TOTP step left for this test");
+  used.add(step);
+  return hotp(base32Decode(totpSecrets[who]!), BigInt(step));
+}
 
 let app: INestApplication;
 let prisma: PrismaClient;
@@ -147,8 +164,17 @@ beforeAll(async () => {
     cookies[name] = res.headers["set-cookie"]![0]!.split(";")[0]!;
   }
   const userOf = async (a: PrivateKeyAccount) => (await prisma.wallet.findUniqueOrThrow({ where: { address: a.address.toLowerCase() } })).userId;
-  await prisma.staffAccount.create({ data: { userId: await userOf(operator), roles: ["OPERATOR", "REVIEWER"] } });
-  await prisma.staffAccount.create({ data: { userId: await userOf(reviewer), roles: ["REVIEWER"] } });
+  for (const [name, acct, roles] of [["operator", operator, ["OPERATOR", "REVIEWER"]], ["reviewer", reviewer, ["REVIEWER", "GOV_VIEW"]]] as const) {
+    totpSecrets[name] = newTotpSecret();
+    await prisma.staffAccount.create({ data: { userId: await userOf(acct), roles: [...roles], totpSecretEnc: encryptSecret(totpSecrets[name]!, cfg.totpEncKey!) } });
+  }
+  // Staff routes need a fresh TOTP step-up; the "step-up" tests below check the refusal paths.
+  for (const name of ["operator", "reviewer"]) {
+    const r = await http().post("/api/v1/auth/staff/totp").set("Cookie", cookies[name]!).send({ code: nextCode(name) });
+    expect(r.status).toBe(200);
+    cookies[`${name}Plain`] = cookies[name]!;
+    cookies[name] = r.headers["set-cookie"]![0]!.split(";")[0]!;
+  }
 });
 
 afterAll(async () => {
@@ -177,6 +203,21 @@ describe("public", () => {
   it("lists approved financials as ACTUAL figures", async () => {
     const r = await http().get(`/api/v1/projects/${PID}/financials`).expect(200);
     expect(r.body.items[0]).toMatchObject({ figureKind: "ACTUAL", distributableAmount: (10_000n * ONE).toString() });
+  });
+});
+
+describe("aave (read-only)", () => {
+  it("returns 503 until a verified read exists, then the latest snapshot", async () => {
+    const none = await http().get("/api/v1/aave/markets").expect(503);
+    expect(none.body.error.code).toBe("CHAIN_UNAVAILABLE");
+    await prisma.aaveMarketSnapshot.create({
+      data: {
+        chainId: 56, blockNumber: 100n, blockHash: "0xaa", blockTime: new Date(), source: "test",
+        addresses: { pool: ADDR(1) }, reserves: [{ symbol: "USDT", supplyAprBps: 500 }],
+      },
+    });
+    const r = await http().get("/api/v1/aave/markets").expect(200);
+    expect(r.body).toMatchObject({ chainId: 56, blockNumber: "100", readOnly: true, stale: false, reserves: [{ symbol: "USDT", supplyAprBps: 500 }] });
   });
 });
 
@@ -319,5 +360,153 @@ describe("KYC webhook (TEST-ONLY mock provider)", () => {
     const old = String(Math.floor(Date.now() / 1000) - 3600);
     await http().post("/api/v1/webhooks/kyc/mock").set("Content-Type", "application/json").set("x-timestamp", old).set("x-signature", sign(old, body)).send(body).expect(401);
     await http().post("/api/v1/webhooks/kyc/acme").set("Content-Type", "application/json").send(body).expect(404);
+  });
+});
+
+describe("staff step-up (TOTP)", () => {
+  it("requires a recent authenticator code for admin routes", async () => {
+    const r = await http().get("/api/v1/admin/roles").set("Cookie", cookies.operatorPlain!).expect(401);
+    expect(r.body.error.code).toBe("STEP_UP_REQUIRED");
+  });
+
+  it("rejects wrong and reused codes", async () => {
+    await http().post("/api/v1/auth/staff/totp").set("Cookie", cookies.operatorPlain!).send({ code: "000000" }).expect(401);
+    const code = nextCode("operator");
+    await http().post("/api/v1/auth/staff/totp").set("Cookie", cookies.operatorPlain!).send({ code }).expect(200);
+    await http().post("/api/v1/auth/staff/totp").set("Cookie", cookies.operatorPlain!).send({ code }).expect(401);
+  });
+
+  it("refuses investors without an enrolled authenticator", async () => {
+    await http().post("/api/v1/auth/staff/totp").set("Cookie", cookies.investor!).send({ code: "123456" }).expect(403);
+  });
+});
+
+describe("idempotency", () => {
+  it("replays the first response for a repeated Idempotency-Key", async () => {
+    const body = { projectId: PID, reportRecordId: RECORD, amount: (1n * ONE).toString(), snapshotBlock: "25" };
+    const key = `idem-${randomBytes(6).toString("hex")}`;
+    const before = await prisma.adminAction.count({ where: { action: "DISTRIBUTION_PREPARE" } });
+    const a = await http().post("/api/v1/admin/distributions").set("Cookie", cookies.operator!).set("Idempotency-Key", key).send(body).expect(201);
+    const b = await http().post("/api/v1/admin/distributions").set("Cookie", cookies.operator!).set("Idempotency-Key", key).send(body).expect(201);
+    expect(b.headers["idempotent-replay"]).toBe("true");
+    expect(b.body).toEqual(a.body);
+    expect(await prisma.adminAction.count({ where: { action: "DISTRIBUTION_PREPARE" } })).toBe(before + 1);
+  });
+});
+
+describe("governance prepares (timelock, never signed by the server)", () => {
+  const PID2 = keccak256(stringToHex("api-project-2"));
+  const OFFERING2 = ADDR(0x0ff2);
+  const late = privateKeyToAccount(generatePrivateKey());
+
+  beforeAll(async () => {
+    await prisma.project.create({
+      data: {
+        projectIdOnchain: PID2, assetIdOnchain: keccak256(stringToHex("asset-2")), issuerId: keccak256(stringToHex("issuer")),
+        rightsDocHash: keccak256(stringToHex("rights")), registrant: operator.address.toLowerCase(), state: "VERIFIED",
+        tokenAddress: ADDR(0x70c2), offeringAddress: OFFERING2.toLowerCase(), distributorAddress: ADDR(0xd152).toLowerCase(), registeredBlock: 6n,
+      },
+    });
+  });
+
+  it("wraps offering configure+open in one timelock batch for the Safe", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const body = { unitPrice: (1_000n * ONE).toString(), minUnits: 60, perWalletMax: 100, startTime: now, endTime: now + 30 * 86_400, treasury: ADDR(0x7e), termsHash: keccak256(stringToHex("terms")) };
+    const r = await http().post(`/api/v1/admin/projects/${PID2}/offering`).set("Cookie", cookies.reviewer!).send(body).expect(201);
+    const p = r.body.proposal;
+    expect(p.schedule.to).toBe(TIMELOCK);
+    expect(p.delaySeconds).toBe(86_400);
+    expect(p.calls).toHaveLength(2);
+    expect(decodeFunctionData({ abi: offeringManagerAbi, data: p.calls[0].data }).functionName).toBe("configure");
+    expect(decodeFunctionData({ abi: offeringManagerAbi, data: p.calls[1].data }).functionName).toBe("open");
+    // An active project cannot get a new offering.
+    const bad = await http().post(`/api/v1/admin/projects/${PID}/offering`).set("Cookie", cookies.reviewer!).send(body).expect(409);
+    expect(bad.body.error.code).toBe("PROJECT_STATE_INVALID");
+  });
+
+  it("checks subscriber eligibility before preparing settle", async () => {
+    await prisma.project.update({ where: { projectIdOnchain: PID2 }, data: { state: "OFFERING" } });
+    await prisma.offering.create({
+      data: {
+        projectIdOnchain: PID2, address: OFFERING2.toLowerCase(), status: "OPEN", unitPrice: (1_000n * ONE).toString(), minUnits: 60, maxUnits: 100,
+        perWalletMax: 100, startAt: new Date(0), endAt: new Date(1), treasury: ADDR(0x7e).toLowerCase(), termsHash: keccak256(stringToHex("terms")), unitsSold: 70,
+      },
+    });
+    await prisma.eligibility.create({ data: { wallet: investor.address.toLowerCase(), status: "ELIGIBLE", expiresAt: new Date(Date.now() + 86_400_000), lastBlock: 1n } });
+    await prisma.subscription.createMany({
+      data: [
+        { projectIdOnchain: PID2, wallet: investor.address.toLowerCase(), units: 60, amount: "1", status: "ESCROWED", lastTxHash: "0x1" },
+        { projectIdOnchain: PID2, wallet: late.address.toLowerCase(), units: 10, amount: "1", status: "ESCROWED", lastTxHash: "0x2" },
+      ],
+    });
+    const blocked = await http().post(`/api/v1/admin/offerings/${PID2}/settle`).set("Cookie", cookies.operator!).expect(409);
+    expect(blocked.body.error).toMatchObject({ code: "NOT_ELIGIBLE", details: { wallets: [late.address] } });
+
+    const ex = await http().post(`/api/v1/admin/offerings/${PID2}/exclude`).set("Cookie", cookies.reviewer!).send({ wallet: late.address, reason: "KYC lapsed" }).expect(201);
+    expect(decodeFunctionData({ abi: offeringManagerAbi, data: ex.body.proposal.calls[0].data }).functionName).toBe("excludeSubscriber");
+
+    await prisma.subscription.update({ where: { projectIdOnchain_wallet: { projectIdOnchain: PID2, wallet: late.address.toLowerCase() } }, data: { status: "REFUNDABLE" } });
+    const ok = await http().post(`/api/v1/admin/offerings/${PID2}/settle`).set("Cookie", cookies.operator!).expect(200);
+    expect(ok.body.tx.to.toLowerCase()).toBe(OFFERING2.toLowerCase());
+  });
+
+  it("prepares a direct reviewer transition or a timelock proposal", async () => {
+    const direct = await http().post(`/api/v1/admin/projects/${PID2}/transition`).set("Cookie", cookies.reviewer!).send({ to: "VERIFIED", reason: "documents checked" }).expect(201);
+    expect(direct.body.tx).toBeDefined();
+    const gov = await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "incident" }).expect(201);
+    expect(gov.body.proposal.schedule.to).toBe(TIMELOCK);
+  });
+
+  it("prepares the project pause set for the Guardian", async () => {
+    const r = await http().post("/api/v1/admin/pause").set("Cookie", cookies.reviewer!).send({ scope: "project", projectId: PID, reason: "incident drill" }).expect(201);
+    expect(r.body.txs).toHaveLength(3);
+    for (const tx of r.body.txs) expect(tx.data).toBe("0x8456cb59"); // pause()
+  });
+
+  it("exports holdings as CSV", async () => {
+    const r = await http().get(`/api/v1/admin/exports/holdings?projectId=${PID}`).set("Cookie", cookies.reviewer!).expect(200);
+    expect(r.headers["content-type"]).toContain("text/csv");
+    expect(r.text.split("\n")[0]).toBe('"wallet","units","last_block"');
+    expect(r.text).toContain(`"${investor.address.toLowerCase()}","50","20"`);
+  });
+});
+
+describe("investor extras", () => {
+  it("lists indexed transactions and pending ones", async () => {
+    const w = investor.address; // checksummed, as the indexer stores event args
+    await prisma.chainEvent.createMany({
+      data: [
+        { chainId: 31337, blockNumber: 10n, blockHash: "0xb", txHash: "0xaaa1", logIndex: 0, address: ADDR(0x70c).toLowerCase(), name: "Transfer", args: { from: ADDR(0), to: w, value: "60" } },
+        { chainId: 31337, blockNumber: 20n, blockHash: "0xc", txHash: "0xaaa2", logIndex: 0, address: ADDR(0x70c).toLowerCase(), name: "Transfer", args: { from: w, to: other.address, value: "10" } },
+        { chainId: 31337, blockNumber: 21n, blockHash: "0xd", txHash: "0xaaa3", logIndex: 0, address: ADDR(0x70c).toLowerCase(), name: "Transfer", args: { from: other.address, to: ADDR(5), value: "1" } },
+      ],
+    });
+    const hash = `0x${"ab".repeat(32)}`;
+    await http().post("/api/v1/tx/pending").set("Cookie", cookies.investor!).send({ hash, purpose: "CLAIM" }).expect(202);
+    const r = await http().get("/api/v1/me/transactions").set("Cookie", cookies.investor!).expect(200);
+    expect(r.body.items.map((i: any) => i.kind)).toEqual(["TRANSFER_OUT", "MINT"]);
+    expect(r.body.pending).toEqual([expect.objectContaining({ hash, purpose: "CLAIM" })]);
+  });
+
+  it("records a risk acknowledgement once per version", async () => {
+    const a = await http().post("/api/v1/me/risk-acknowledgement").set("Cookie", cookies.investor!).send({ version: "2026-10" }).expect(201);
+    const b = await http().post("/api/v1/me/risk-acknowledgement").set("Cookie", cookies.investor!).send({ version: "2026-10" }).expect(201);
+    expect(b.body.acceptedAt).toBe(a.body.acceptedAt);
+  });
+});
+
+describe("rate limiting", () => {
+  it("returns 429 past the per-minute limit", async () => {
+    const strict = await createApp({ ...cfg, rateLimitPerMinute: 3 });
+    await strict.init();
+    try {
+      const statuses: number[] = [];
+      for (let i = 0; i < 6; i++) statuses.push((await request(strict.getHttpServer()).get("/api/v1/health")).status);
+      expect(statuses).toContain(429);
+      const r = await request(strict.getHttpServer()).get("/api/v1/health");
+      expect(r.body.error?.code).toBe("RATE_LIMITED");
+    } finally {
+      await strict.close();
+    }
   });
 });

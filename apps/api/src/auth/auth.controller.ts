@@ -11,7 +11,8 @@ import { plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
 import { InvestorGuard, type AuthedRequest } from "./guards.js";
-import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession } from "./session.js";
+import { decryptSecret, TOTP_STEP_SECONDS, verifyTotp } from "../common/totp.js";
+import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession, STEP_UP_SECONDS } from "./session.js";
 
 const NONCE_TTL_SECONDS = 300;
 const verifyBody = z.object({ message: z.string().min(1).max(4000), signature: z.string().regex(/^0x[0-9a-fA-F]+$/) });
@@ -65,6 +66,37 @@ export class AuthController {
   @HttpCode(204)
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie(SESSION_COOKIE, { path: "/" });
+  }
+
+  /** Staff step-up: a valid authenticator code extends the session with stepUpUntil (15 minutes). */
+  @Post("staff/totp")
+  @HttpCode(200)
+  @UseGuards(InvestorGuard)
+  async staffTotp(
+    @Req() req: AuthedRequest,
+    @Body(new ZodPipe(z.object({ code: z.string().regex(/^\d{6}$/) }))) body: { code: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const key = this.cfg.totpEncKey;
+    if (!key) throw new ApiError(503, "CHAIN_UNAVAILABLE", "TOTP is not configured");
+    const staff = await this.prisma.staffAccount.findUnique({ where: { userId: req.session!.userId } });
+    if (!staff || staff.disabledAt || !staff.totpSecretEnc) throw new ApiError(403, "FORBIDDEN", "no authenticator enrolled");
+    const counter = verifyTotp(decryptSecret(staff.totpSecretEnc, key), body.code);
+    // Each code works once, even inside its 30-second window.
+    const fresh =
+      counter !== null &&
+      (await this.redis.set(`totp:used:${staff.userId}:${counter}`, "1", "EX", TOTP_STEP_SECONDS * 3, "NX")) === "OK";
+    if (!fresh) throw new ApiError(401, "UNAUTHENTICATED", "invalid or reused code");
+    const stepUpUntil = Math.floor(Date.now() / 1000) + STEP_UP_SECONDS;
+    const token = await signSession({ ...req.session!, stepUpUntil }, this.cfg.sessionSecret);
+    res.cookie(SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: this.cfg.nodeEnv === "production",
+      maxAge: SESSION_TTL_SECONDS * 1000,
+      path: "/",
+    });
+    return { stepUpUntil: new Date(stepUpUntil * 1000).toISOString() };
   }
 
   @Get("me")

@@ -166,6 +166,27 @@ export class PublicController {
     });
   }
 
+  /** Phase 5: read-only Aave V3 (BNB Chain) market data. Informational only; RoboShare never deposits. */
+  @Get("aave/markets")
+  async aaveMarkets() {
+    const s = await this.prisma.aaveMarketSnapshot.findFirst({ orderBy: { blockNumber: "desc" } });
+    if (!s) throw new ApiError(503, "CHAIN_UNAVAILABLE", "no verified Aave market read yet");
+    const ageSeconds = Math.floor((Date.now() - s.blockTime.getTime()) / 1000);
+    return plain({
+      figureKind: "ACTUAL",
+      readOnly: true,
+      disclaimer: "Third-party market data from Aave V3 on BNB Chain. Not RoboShare returns and not an offer to deposit.",
+      chainId: s.chainId,
+      blockNumber: s.blockNumber,
+      blockHash: s.blockHash,
+      blockTime: s.blockTime,
+      stale: ageSeconds > 30 * 60,
+      source: s.source,
+      addresses: s.addresses,
+      reserves: s.reserves,
+    });
+  }
+
   private async supplies(projectId?: string) {
     const rows = await this.prisma.holding.groupBy({
       by: ["projectIdOnchain"],

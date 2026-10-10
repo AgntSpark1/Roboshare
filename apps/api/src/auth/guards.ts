@@ -54,6 +54,12 @@ export class RoleGuard implements CanActivate {
     const required = this.reflector.getAllAndOverride<StaffRole[]>(ROLES_KEY, [ctx.getHandler(), ctx.getClass()]) ?? [];
     const staff = await this.prisma.staffAccount.findUnique({ where: { userId: req.session!.userId } });
     if (!staff || staff.disabledAt) throw new ApiError(403, "FORBIDDEN", "not a staff account");
+    if (this.cfg.totpEncKey) {
+      const until = req.session!.stepUpUntil ?? 0;
+      if (until * 1000 <= Date.now()) {
+        throw new ApiError(401, "STEP_UP_REQUIRED", "confirm with your authenticator code at /auth/staff/totp");
+      }
+    }
     const held: StaffRole[] = [];
     for (const role of staff.roles as StaffRole[]) {
       const onchain = ONCHAIN_ROLE[role];
