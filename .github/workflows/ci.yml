@@ -77,6 +77,7 @@ jobs:
   # Phase 4: investor DApp + admin console against a local anvil chain, the API and the indexer.
   frontend-e2e:
     runs-on: ubuntu-24.04
+    timeout-minutes: 40
     needs: contracts
     services:
       postgres:
@@ -121,6 +122,7 @@ jobs:
       - run: pnpm --filter @roboshare/e2e build:apps
       - run: pnpm --filter @roboshare/e2e exec playwright install --with-deps chromium
       - run: pnpm --filter @roboshare/e2e e2e
+        timeout-minutes: 20
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

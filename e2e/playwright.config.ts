@@ -5,6 +5,8 @@ import { PORTS } from "./src/accounts.ts";
 export default defineConfig({
   testDir: "tests",
   timeout: 180_000,
+  // Hard ceiling for the whole run (setup included), so a hang fails CI instead of stalling it.
+  globalTimeout: 15 * 60_000,
   expect: { timeout: 30_000 },
   fullyParallel: false,
   workers: 1,

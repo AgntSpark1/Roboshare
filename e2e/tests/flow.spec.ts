@@ -2,7 +2,7 @@
 // console on a local anvil chain. Governance (timelock), KYC and treasury funding are done by the TEST-ONLY harness.
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { allocate } from "@roboshare/shared";
+import { allocate, revenueDistributorAbi } from "@roboshare/shared";
 import { erc20Abi } from "viem";
 import { base32Decode, hotp } from "../../apps/api/src/common/totp.ts";
 import { PORTS, ROLES } from "../src/accounts.ts";
@@ -50,12 +50,18 @@ async function staffLogin(page: Page, who: "operator" | "reviewer") {
   await expect(page.getByRole("heading", { name: "待办" })).toBeVisible();
 }
 
-/** Clicks a TxAction and waits until every step it started is confirmed. */
-async function runTx(page: Page, button: ReturnType<Page["getByRole"]>) {
+/**
+ * Clicks a TxAction and waits until it has finished. Actions whose item leaves the list once confirmed (an approved
+ * report, an approved batch, a claimed distribution) unmount their own progress, so they pass `outcome` instead.
+ */
+async function runTx(page: Page, button: ReturnType<Page["getByRole"]>, outcome?: () => Promise<void>) {
   await button.click();
-  const scope = page.locator("[data-state]");
-  await expect(scope.first()).toBeVisible();
-  await expect(page.locator('[data-state]:not([data-state="done"])')).toHaveCount(0);
+  if (outcome) {
+    await outcome();
+  } else {
+    await expect(page.locator("[data-state]").first()).toBeVisible();
+    await expect(page.locator('[data-state]:not([data-state="done"])')).toHaveCount(0);
+  }
   // Our error messages are .err[role=alert]; Next.js also renders an empty route-announcer alert.
   await expect(page.locator(".err[role=alert]")).toHaveCount(0);
 }
@@ -138,7 +144,9 @@ test("a different reviewer approves the report", async ({ browser }) => {
   await staffLogin(page, "reviewer");
   await expect(page.getByText(/端到端测试车辆 财务报告/)).toBeVisible();
   await page.getByRole("link", { name: "财务报告" }).first().click();
-  await runTx(page, page.getByRole("button", { name: "批准", exact: true }).first());
+  await runTx(page, page.getByRole("button", { name: "批准", exact: true }).first(), async () => {
+    await expect(page.locator(".pill", { hasText: "已批准" }).first()).toBeVisible();
+  });
   await s.indexed();
   await page.reload();
   await expect(page.locator(".pill", { hasText: "已批准" }).first()).toBeVisible();
@@ -163,7 +171,10 @@ test("operator proposes the distribution batch and the reviewer approves it", as
   await rv.getByRole("link", { name: "分配批次" }).first().click();
   const batch = rv.getByTestId(`batch-${pid}`);
   await expect(batch).toContainText("已备足并授权");
-  await runTx(rv, batch.getByRole("button", { name: "批准并开放领取" }));
+  const distributor = await s.distributorOf(pid);
+  await runTx(rv, batch.getByRole("button", { name: "批准并开放领取" }), async () => {
+    await expect.poll(() => s.pub.readContract({ address: distributor, abi: revenueDistributorAbi, functionName: "pendingBatchId" }), { timeout: 30_000 }).toBe(0n);
+  });
   await s.indexed();
 });
 
@@ -177,9 +188,10 @@ test("investor claims the distribution in USDT", async () => {
   expect(expected).toBe(8_100n * ONE);
   await expect(page.getByTestId("claimable-total")).toHaveText("8,100.00");
   await axe(page, "portfolio");
-  await runTx(page, page.getByRole("button", { name: /领取 8,100.00 USDT/ }));
-  const after = await s.pub.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [ROLES.alice] });
-  expect(after - before).toBe(expected);
+  const balance = () => s.pub.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [ROLES.alice] });
+  await runTx(page, page.getByRole("button", { name: /领取 8,100.00 USDT/ }), async () => {
+    await expect.poll(async () => (await balance()) - before, { timeout: 30_000 }).toBe(expected);
+  });
   await s.indexed();
   await page.reload();
   await expect(page.getByTestId("claimable-total")).toHaveText("0.00");

@@ -1,7 +1,8 @@
 // TEST-ONLY: a complete local RoboShare stack for the browser e2e suite and for local demos.
 // anvil (with script/Deploy.s.sol) + Postgres migrations + API + indexer worker. The Next apps are started by
 // Playwright's webServer (see playwright.config.ts) from builds made with scripts/build-apps.mjs.
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { promisify } from "node:util";
 import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -52,8 +53,30 @@ async function waitFor(what: string, fn: () => Promise<unknown>, ms = 60_000) {
   }
 }
 
+const execAsync = promisify(execFile);
+
+/** Progress lines, so a stuck CI run shows which step it is on. */
+function step(msg: string) {
+  process.stdout.write(`[e2e stack] ${msg}\n`);
+}
+
+/**
+ * Runs a command without blocking the event loop (a blocked loop stops draining the child pipes, which can stall
+ * anvil and the web servers), with a hard timeout so a hang fails the run instead of stalling CI.
+ */
+async function exec(cmd: string, args: string[], opts: { cwd: string; env?: NodeJS.ProcessEnv; timeoutMs?: number }) {
+  try {
+    await execAsync(cmd, args, { cwd: opts.cwd, env: opts.env ?? process.env, timeout: opts.timeoutMs ?? 180_000, killSignal: "SIGKILL", maxBuffer: 32 * 1024 * 1024 });
+  } catch (e) {
+    const x = e as { stdout?: string; stderr?: string; killed?: boolean; message: string };
+    throw new Error(`${cmd} ${args.join(" ")} failed${x.killed ? " (timed out)" : ""}: ${x.message}\n${x.stdout ?? ""}\n${x.stderr ?? ""}`);
+  }
+}
+
 function start(name: string, cmd: string, args: string[], env: Record<string, string>): ChildProcess {
   const p = spawn(cmd, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ["ignore", "pipe", "pipe"] });
+  p.on("error", (e) => process.stderr.write(`[${name}] failed to start: ${e.message}\n`));
+  p.on("exit", (code, sig) => code && process.stderr.write(`[${name}] exited with ${code ?? sig}\n`));
   const log = (b: Buffer) => process.env.E2E_VERBOSE && process.stdout.write(`[${name}] ${b}`);
   p.stdout?.on("data", log);
   p.stderr?.on("data", (b: Buffer) => process.stderr.write(`[${name}] ${b}`));
@@ -68,11 +91,14 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
   try {
     // 1. chain + contracts
     const rpcUrl = `http://127.0.0.1:${PORTS.anvil}`;
+    step("starting anvil");
     procs.push(start("anvil", join(FOUNDRY_BIN, "anvil"), ["--port", String(PORTS.anvil), "--silent"], {}));
     const { pub } = clients(rpcUrl);
     await waitFor("anvil", () => pub.getBlockNumber().then(() => true));
-    execFileSync(join(FOUNDRY_BIN, "forge"), ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", ROLES.deployer, "-q"], {
+    step("deploying contracts (forge script)");
+    await exec(join(FOUNDRY_BIN, "forge"), ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", ROLES.deployer, "-q"], {
       cwd: join(ROOT, "contracts"),
+      timeoutMs: 300_000,
       env: {
         ...process.env,
         SAFE: ROLES.safe,
@@ -81,8 +107,9 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
         PAUSER: ROLES.pauser,
         COMPLIANCE_AGENT: ROLES.agent,
         FEE_RECIPIENT: ROLES.feeRecipient,
+        // Contracts are already compiled; don't let the script reach out for signature lookups or verification.
+        FOUNDRY_OFFLINE: "true",
       },
-      stdio: "pipe",
     });
     const run = JSON.parse(readFileSync(join(ROOT, "contracts/broadcast/Deploy.s.sol/31337/run-latest.json"), "utf8")) as {
       transactions: { contractName?: string; contractAddress?: string; transactionType: string }[];
@@ -92,7 +119,8 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
 
     // 2. database: migrate, empty it, enrol two staff wallets with authenticators
     const dbUrl = databaseUrl();
-    execFileSync("pnpm", ["--filter", "@roboshare/db", "migrate"], { cwd: ROOT, env: { ...process.env, DATABASE_URL: dbUrl }, stdio: "pipe" });
+    step("migrating the test database");
+    await exec("pnpm", ["--filter", "@roboshare/db", "migrate"], { cwd: ROOT, env: { ...process.env, DATABASE_URL: dbUrl } });
     const prisma = new PrismaClient({ datasourceUrl: dbUrl });
     const rows = await prisma.$queryRaw<{ s: string; t: string }[]>`
       SELECT table_schema AS s, table_name AS t FROM information_schema.tables
@@ -112,6 +140,7 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
 
     // 3. API + indexer
     const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+    step("starting the API and the indexer");
     const common = { DATABASE_URL: dbUrl, REDIS_URL: redisUrl, CHAIN_ID: "31337" };
     procs.push(
       start("api", "node", ["apps/api/dist/main.js"], {
@@ -151,6 +180,7 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
     });
     const state: StackState = { rpcUrl, addr, totp, databaseUrl: dbUrl };
     writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+    step("ready");
     return { state, stop };
   } catch (e) {
     await stop();
