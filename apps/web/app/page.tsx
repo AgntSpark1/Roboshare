@@ -50,7 +50,7 @@ export default function Home() {
 
       <section style={{ paddingTop: 0 }}>
         <div className="wrap">
-          <div className="sec-h"><h2>你的资金有保障</h2></div>
+          <div className="sec-h"><h2>合约保证的三件事</h2></div>
           <div className="trust">
             <div>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7z" /><path d="M9 12l2 2 4-4" /></svg>
@@ -114,7 +114,7 @@ function TierCalculator() {
             <div className="line"><span className="muted">按份额分到</span><b>{formatUsdt(mine.gross)} USDT</b></div>
             <div className="line"><span className="muted">平台分成</span><b>− {formatUsdt(fee)} USDT（{formatBps(bps)}）</b></div>
             <div className="line total"><span>你到手</span><b>{formatUsdt(mine.net)} USDT</b></div>
-            <p className="fine">示例数字，仅演示计算方式，实际收益以每期运营结果为准。</p>
+            <p className="fine">示例为预估，仅演示计算方式，不构成收益承诺；实际收益以每期运营结果为准。</p>
           </div>
         </div>
       </div>
