@@ -1,0 +1,23 @@
+{
+  "name": "@roboshare/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:apps": "node scripts/build-apps.mjs",
+    "demo": "node src/demo.ts",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@roboshare/db": "workspace:*",
+    "@roboshare/shared": "workspace:*",
+    "viem": "2.57.4"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.56.1",
+    "@types/node": "22.18.6",
+    "typescript": "5.9.3"
+  }
+}
