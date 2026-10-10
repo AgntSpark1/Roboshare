@@ -1,0 +1,496 @@
+// Authoritative database schema (DATABASE_SCHEMA.md is the design note).
+// Amounts are token base units in numeric(78,0). Addresses are stored lowercase.
+// Rows derived from chain events can always be rebuilt from chain.event.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["app", "chain", "compliance"]
+}
+
+// ---------------------------------------------------------------- chain
+
+model ChainBlock {
+  chainId    Int
+  number     BigInt
+  hash       String
+  timestamp  DateTime
+
+  @@id([chainId, number])
+  @@map("block")
+  @@schema("chain")
+}
+
+model ChainEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  chainId     Int
+  blockNumber BigInt
+  blockHash   String
+  txHash      String
+  logIndex    Int
+  address     String
+  name        String
+  args        Json
+  createdAt   DateTime @default(now())
+
+  @@unique([chainId, txHash, logIndex])
+  @@index([chainId, blockNumber, logIndex])
+  @@map("event")
+  @@schema("chain")
+}
+
+model IndexerCursor {
+  chainId   Int      @id
+  lastBlock BigInt
+  lastHash  String
+  updatedAt DateTime @updatedAt
+
+  @@map("indexer_cursor")
+  @@schema("chain")
+}
+
+model ContractDeployment {
+  chainId       Int
+  address       String
+  kind          String
+  projectId     String?
+  deployedBlock BigInt
+  createdAt     DateTime @default(now())
+
+  @@id([chainId, address])
+  @@map("contract_deployment")
+  @@schema("chain")
+}
+
+model RoleGrant {
+  chainId  Int
+  contract String
+  role     String
+  account  String
+  active   Boolean
+  eventId  String  @db.Uuid
+
+  @@id([chainId, contract, role, account])
+  @@index([account])
+  @@map("contract_role_grant")
+  @@schema("chain")
+}
+
+model ReconciliationRun {
+  id     String                @id @default(uuid()) @db.Uuid
+  runAt  DateTime              @default(now())
+  block  BigInt
+  ok     Boolean
+  issues ReconciliationIssue[]
+
+  @@map("reconciliation_run")
+  @@schema("chain")
+}
+
+model ReconciliationIssue {
+  id         String            @id @default(uuid()) @db.Uuid
+  runId      String            @db.Uuid
+  run        ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  scope      String
+  subject    String
+  expected   String
+  actual     String
+  severity   String
+  resolvedAt DateTime?
+
+  @@map("reconciliation_issue")
+  @@schema("chain")
+}
+
+// ---------------------------------------------------------------- app: projects
+
+enum ProjectState {
+  NONE
+  DRAFT
+  VERIFIED
+  OFFERING
+  FUNDED
+  ACTIVE
+  SUSPENDED
+  EXIT_PENDING
+  TERMINATED
+  CLOSED
+  CANCELLED
+
+  @@schema("app")
+}
+
+model Project {
+  projectIdOnchain   String       @id
+  assetIdOnchain     String       @unique
+  issuerId           String
+  rightsDocHash      String
+  registrant         String
+  state              ProjectState
+  tokenAddress       String?
+  offeringAddress    String?
+  distributorAddress String?
+  fundedAtBlock      BigInt?
+  registeredBlock    BigInt
+
+  stateChanges ProjectStateChange[]
+  offering     Offering?
+  holdings     Holding[]
+  batches      DistributionBatch[]
+
+  @@map("project")
+  @@schema("app")
+}
+
+/// Off-chain presentation metadata, edited by operators. Never derived from chain, so it has no
+/// foreign key to the chain-derived project table (which is rebuilt after a reorg).
+model ProjectMeta {
+  projectIdOnchain String   @id
+  slug             String   @unique
+  title            String
+  make             String?
+  model            String?
+  modelYear        Int?
+  summary          String?
+  updatedAt        DateTime @updatedAt
+
+  @@map("project_meta")
+  @@schema("app")
+}
+
+model ProjectStateChange {
+  id               String       @id @default(uuid()) @db.Uuid
+  projectIdOnchain String
+  project          Project      @relation(fields: [projectIdOnchain], references: [projectIdOnchain], onDelete: Cascade)
+  fromState        ProjectState
+  toState          ProjectState
+  reasonHash       String
+  actor            String
+  blockNumber      BigInt
+  txHash           String
+  eventId          String       @unique @db.Uuid
+
+  @@map("project_state_change")
+  @@schema("app")
+}
+
+enum OfferingStatus {
+  CONFIGURED
+  OPEN
+  SETTLED
+  FAILED
+  CANCELLED
+
+  @@schema("app")
+}
+
+model Offering {
+  projectIdOnchain String         @id
+  project          Project        @relation(fields: [projectIdOnchain], references: [projectIdOnchain], onDelete: Cascade)
+  address          String         @unique
+  status           OfferingStatus
+  unitPrice        Decimal        @db.Decimal(78, 0)
+  minUnits         Int
+  maxUnits         Int
+  perWalletMax     Int
+  startAt          DateTime
+  endAt            DateTime
+  treasury         String
+  termsHash        String
+  unitsSold        Int            @default(0)
+  proceeds         Decimal?       @db.Decimal(78, 0)
+  subscriptions    Subscription[]
+
+  @@map("offering")
+  @@schema("app")
+}
+
+enum SubscriptionStatus {
+  ESCROWED
+  SETTLED
+  REFUNDABLE
+  REFUNDED
+
+  @@schema("app")
+}
+
+model Subscription {
+  projectIdOnchain String
+  offering         Offering           @relation(fields: [projectIdOnchain], references: [projectIdOnchain], onDelete: Cascade)
+  wallet           String
+  units            Int
+  amount           Decimal            @db.Decimal(78, 0)
+  status           SubscriptionStatus
+  lastTxHash       String
+
+  @@id([projectIdOnchain, wallet])
+  @@index([wallet])
+  @@map("subscription")
+  @@schema("app")
+}
+
+model TokenTransfer {
+  id               String @id @default(uuid()) @db.Uuid
+  projectIdOnchain String
+  fromAddress      String
+  toAddress        String
+  units            Int
+  kind             String
+  blockNumber      BigInt
+  logIndex         Int
+  txHash           String
+  eventId          String @unique @db.Uuid
+
+  @@index([projectIdOnchain, blockNumber])
+  @@index([toAddress])
+  @@index([fromAddress])
+  @@map("token_transfer")
+  @@schema("app")
+}
+
+model Holding {
+  projectIdOnchain String
+  project          Project @relation(fields: [projectIdOnchain], references: [projectIdOnchain], onDelete: Cascade)
+  wallet           String
+  units            Int
+  lastBlock        BigInt
+
+  @@id([projectIdOnchain, wallet])
+  @@index([wallet])
+  @@map("holding")
+  @@schema("app")
+}
+
+enum EligibilityState {
+  NONE
+  ELIGIBLE
+  FROZEN
+
+  @@schema("app")
+}
+
+/// Current on-chain eligibility per wallet (codes only; no personal data).
+model Eligibility {
+  wallet         String           @id
+  status         EligibilityState
+  investorClass  Int?
+  jurisdiction   Int?
+  expiresAt      DateTime?
+  attestationRef String?
+  lastBlock      BigInt
+
+  @@map("eligibility")
+  @@schema("app")
+}
+
+// ---------------------------------------------------------------- app: reports and distributions
+
+model AuditRecord {
+  recordIdOnchain     String  @id
+  projectIdOnchain    String
+  kind                String
+  status              String
+  contentHash         String
+  docType             String
+  version             Int
+  supersedes          String?
+  supersededBy        String?
+  periodStart         BigInt
+  periodEnd           BigInt
+  distributableAmount Decimal @db.Decimal(78, 0)
+  paymentToken        String
+  submitter           String
+  reviewer            String?
+  submittedBlock      BigInt
+
+  @@index([projectIdOnchain])
+  @@map("audit_record")
+  @@schema("app")
+}
+
+enum ReportStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+
+  @@schema("app")
+}
+
+model FinancialReport {
+  id                  String         @id @default(uuid()) @db.Uuid
+  projectIdOnchain    String
+  periodStart         DateTime       @db.Date
+  periodEnd           DateTime       @db.Date
+  paymentToken        String
+  grossRevenue        Decimal        @db.Decimal(78, 0)
+  totalExpenses       Decimal        @db.Decimal(78, 0)
+  totalReserves       Decimal        @db.Decimal(78, 0)
+  distributableAmount Decimal        @db.Decimal(78, 0)
+  canonicalHash       String         @unique
+  body                Json
+  status              ReportStatus   @default(SUBMITTED)
+  supersedesId        String?        @db.Uuid
+  submittedByUserId   String         @db.Uuid
+  submittedByWallet   String
+  submittedAt         DateTime       @default(now())
+  recordIdOnchain     String?        @unique
+  lines               ReportLine[]
+  reviews             ReportReview[]
+
+  @@index([projectIdOnchain, periodStart, periodEnd])
+  @@map("financial_report")
+  @@schema("app")
+}
+
+enum ReportSection {
+  REVENUE
+  EXPENSE
+  RESERVE
+
+  @@schema("app")
+}
+
+model ReportLine {
+  id          String          @id @default(uuid()) @db.Uuid
+  reportId    String          @db.Uuid
+  report      FinancialReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  section     ReportSection
+  category    String
+  description String
+  amount      Decimal         @db.Decimal(78, 0)
+
+  @@map("report_line")
+  @@schema("app")
+}
+
+model ReportReview {
+  id             String          @id @default(uuid()) @db.Uuid
+  reportId       String          @db.Uuid
+  report         FinancialReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reviewerUserId String          @db.Uuid
+  decision       String
+  reason         String?
+  decidedAt      DateTime        @default(now())
+
+  @@map("report_review")
+  @@schema("app")
+}
+
+enum BatchStatus {
+  PROPOSED
+  CLAIMABLE
+  REJECTED
+
+  @@schema("app")
+}
+
+model DistributionBatch {
+  projectIdOnchain String
+  project          Project                  @relation(fields: [projectIdOnchain], references: [projectIdOnchain], onDelete: Cascade)
+  batchIdOnchain   Int
+  reportId         String
+  amount           Decimal                  @db.Decimal(78, 0)
+  pool             Decimal                  @db.Decimal(78, 0)
+  totalNet         Decimal                  @db.Decimal(78, 0)
+  totalFee         Decimal                  @db.Decimal(78, 0)
+  dustOut          Decimal                  @db.Decimal(78, 0)
+  snapshotBlock    BigInt
+  status           BatchStatus
+  proposeTxHash    String
+  approveTxHash    String?
+  approver         String?
+  allocations      DistributionAllocation[]
+
+  @@id([projectIdOnchain, batchIdOnchain])
+  @@map("distribution_batch")
+  @@schema("app")
+}
+
+model DistributionAllocation {
+  projectIdOnchain String
+  batchIdOnchain   Int
+  batch            DistributionBatch @relation(fields: [projectIdOnchain, batchIdOnchain], references: [projectIdOnchain, batchIdOnchain], onDelete: Cascade)
+  wallet           String
+  units            Int
+  gross            Decimal           @db.Decimal(78, 0)
+  feeBps           Int
+  net              Decimal           @db.Decimal(78, 0)
+  claimed          Boolean           @default(false)
+  claimTxHash      String?
+
+  @@id([projectIdOnchain, batchIdOnchain, wallet])
+  @@index([wallet])
+  @@map("distribution_allocation")
+  @@schema("app")
+}
+
+// ---------------------------------------------------------------- app: users and admin
+
+model User {
+  id        String        @id @default(uuid()) @db.Uuid
+  createdAt DateTime      @default(now())
+  wallets   Wallet[]
+  staff     StaffAccount?
+
+  @@map("user")
+  @@schema("app")
+}
+
+model Wallet {
+  address  String   @id
+  userId   String   @db.Uuid
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedAt DateTime @default(now())
+
+  @@map("wallet")
+  @@schema("app")
+}
+
+/// Off-chain staff record. Admin routes also require the matching on-chain role (RoleGrant).
+model StaffAccount {
+  userId     String    @id @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles      String[]
+  disabledAt DateTime?
+
+  @@map("staff_account")
+  @@schema("app")
+}
+
+model AdminAction {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  wallet      String
+  action      String
+  targetType  String
+  targetId    String
+  payloadHash String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("admin_action")
+  @@schema("app")
+}
+
+// ---------------------------------------------------------------- compliance (restricted role)
+
+model ComplianceCase {
+  id          String    @id @default(uuid()) @db.Uuid
+  provider    String
+  providerRef String
+  wallet      String
+  status      String
+  payloadHash String
+  receivedAt  DateTime  @default(now())
+  decidedAt   DateTime?
+
+  @@unique([provider, providerRef])
+  @@index([wallet])
+  @@map("compliance_case")
+  @@schema("compliance")
+}
