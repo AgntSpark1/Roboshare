@@ -290,6 +290,13 @@ export class AdminController {
 
   // ---------------------------------------------------------------- read-only admin views
 
+  /** The admin console's own view: which staff roles this wallet holds right now (off-chain and on-chain). */
+  @Get("me")
+  me(@Req() req: AuthedRequest) {
+    const until = req.session!.stepUpUntil;
+    return { wallet: getAddress(req.session!.wallet), roles: req.staffRoles ?? [], stepUpUntil: until ? new Date(until * 1000).toISOString() : null };
+  }
+
   @Get("roles")
   @Roles("OPERATOR", "REVIEWER", "COMPLIANCE", "GOV_VIEW")
   async roles() {

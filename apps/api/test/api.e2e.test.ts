@@ -290,6 +290,13 @@ describe("admin", () => {
     await http().post("/api/v1/admin/reports").set("Cookie", cookies.operator!).send(report).expect(409);
   });
 
+  it("tells the console which roles the signed-in staff wallet holds", async () => {
+    const r = await http().get("/api/v1/admin/me").set("Cookie", cookies.reviewer!).expect(200);
+    expect(r.body).toMatchObject({ wallet: reviewer.address, roles: ["REVIEWER", "GOV_VIEW"] });
+    expect(Date.parse(r.body.stepUpUntil)).toBeGreaterThan(Date.now());
+    expect((await http().get("/api/v1/admin/me").set("Cookie", cookies.reviewerPlain!).expect(401)).body.error.code).toBe("STEP_UP_REQUIRED");
+  });
+
   it("lists reports by status for reviewers", async () => {
     const r = await http().get("/api/v1/admin/reports?status=SUBMITTED").set("Cookie", cookies.reviewer!).expect(200);
     const mine = r.body.items.find((i: { id: string }) => i.id === reportId);
