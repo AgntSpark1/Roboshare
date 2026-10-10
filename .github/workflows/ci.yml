@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: contracts
+    env:
+      # foundry.toml is offline for the sandbox; CI may fetch solc 0.8.30.
+      FOUNDRY_OFFLINE: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1
+      - run: forge build --sizes
+      - run: forge test
+      - run: FOUNDRY_PROFILE=ci forge test
+
+  backend:
+    runs-on: ubuntu-24.04
+    needs: contracts
+    services:
+      postgres:
+        image: postgres:16.4
+        env:
+          POSTGRES_USER: roboshare
+          POSTGRES_PASSWORD: roboshare
+          POSTGRES_DB: roboshare_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U roboshare" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4.1
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://roboshare:roboshare@localhost:5432/roboshare_ci
+      REDIS_URL: redis://localhost:6379
+      FOUNDRY_OFFLINE: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Worker e2e tests deploy contract artifacts (including TEST-ONLY mocks) to a local anvil.
+      - run: forge build
+        working-directory: contracts
+      - run: pnpm db:generate
+      - run: pnpm db:migrate
+      # apps import @roboshare/db and @roboshare/shared from their dist/ builds.
+      - run: pnpm --filter "./packages/**" build
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm audit
