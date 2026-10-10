@@ -1,0 +1,38 @@
+{
+  "name": "@roboshare/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/main.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.2.7",
+    "@nestjs/core": "11.2.7",
+    "@nestjs/platform-express": "11.2.7",
+    "@roboshare/db": "workspace:*",
+    "@roboshare/shared": "workspace:*",
+    "cookie-parser": "1.4.7",
+    "ioredis": "5.11.1",
+    "jose": "6.2.12",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "viem": "2.57.4",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "11.2.7",
+    "@swc/core": "1.16.13",
+    "@types/cookie-parser": "1.4.10",
+    "@types/express": "5.0.6",
+    "@types/node": "22.18.6",
+    "@types/supertest": "7.2.1",
+    "supertest": "7.3.1",
+    "typescript": "5.9.3",
+    "unplugin-swc": "2.0.0",
+    "vitest": "4.1.11"
+  }
+}
