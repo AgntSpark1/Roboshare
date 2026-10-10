@@ -30,6 +30,7 @@ jobs:
 
   backend:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     needs: contracts
     services:
       postgres:
@@ -72,4 +73,63 @@ jobs:
       - run: pnpm --filter "./packages/**" build
       - run: pnpm typecheck
       - run: pnpm test
+        timeout-minutes: 15
       - run: pnpm audit
+
+  # Phase 4: investor DApp + admin console against a local anvil chain, the API and the indexer.
+  frontend-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    needs: contracts
+    services:
+      postgres:
+        image: postgres:16.4
+        env:
+          POSTGRES_USER: roboshare
+          POSTGRES_PASSWORD: roboshare
+          POSTGRES_DB: roboshare_e2e_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U roboshare" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7.4.1
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://roboshare:roboshare@localhost:5432/roboshare_e2e_test
+      E2E_DATABASE_URL: postgresql://roboshare:roboshare@localhost:5432/roboshare_e2e_test
+      REDIS_URL: redis://localhost:6379
+      FOUNDRY_OFFLINE: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: forge build
+        working-directory: contracts
+      - run: pnpm db:generate
+      - run: pnpm --filter "./packages/**" build
+      - run: pnpm --filter @roboshare/api --filter @roboshare/worker build
+      # Both sites are built for chain 31337 with TEST-ONLY anvil wallets (e2e/src/accounts.ts).
+      - run: pnpm --filter @roboshare/e2e build:apps
+      - run: pnpm --filter @roboshare/e2e exec playwright install --with-deps chromium
+      - run: pnpm --filter @roboshare/e2e e2e
+        timeout-minutes: 20
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

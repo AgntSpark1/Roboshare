@@ -1,0 +1,11 @@
+/* Investor DApp additions on top of @roboshare/ui/styles.css */
+.sec-h .h2{font-size:var(--step-3);font-weight:900;background:linear-gradient(180deg,#FFFFFF,#A9B8DA);-webkit-background-clip:text;background-clip:text;color:transparent}
+.pcard .sweep,.dart .sweep{animation:sw 3.6s ease-in-out infinite}
+@keyframes sw{to{transform:translateX(720px)}}
+.pcard .lane,.dart .lane{animation:ln 1.2s linear infinite}
+@keyframes ln{to{transform:translateX(-48px)}}
+.dart .car{animation:bob 1.6s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-1.5px)}}
+.facts b.sm{font-size:.84rem;font-family:var(--f-mono);font-weight:400;word-break:break-all}
+.warnbox{border:1px solid #5A2A14;background:#1D110A;color:#F3CBB0;border-radius:var(--r-s);padding:12px 14px;font-size:.82rem;display:grid;gap:6px}
+.warnbox b{color:var(--warn)}

@@ -9,7 +9,7 @@ import { PrismaService } from "../common/prisma.service.js";
 import { REDIS, type RedisClient } from "../common/redis.js";
 import { plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
-import { APP_CONFIG, type AppConfig } from "../config.js";
+import { APP_CONFIG, siweDomains, type AppConfig } from "../config.js";
 import { InvestorGuard, type AuthedRequest } from "./guards.js";
 import { decryptSecret, TOTP_STEP_SECONDS, verifyTotp } from "../common/totp.js";
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, signSession, STEP_UP_SECONDS } from "./session.js";
@@ -30,7 +30,7 @@ export class AuthController {
     if (!address || !isAddress(address)) throw new ApiError(400, "VALIDATION_FAILED", "address is required");
     const nonce = randomBytes(16).toString("hex");
     await this.redis.set(`siwe:nonce:${nonce}`, address.toLowerCase(), "EX", NONCE_TTL_SECONDS);
-    return { nonce, domain: this.cfg.siweDomain, chainId: this.cfg.chainId, expiresIn: NONCE_TTL_SECONDS };
+    return { nonce, domain: siweDomains(this.cfg)[0], chainId: this.cfg.chainId, expiresIn: NONCE_TTL_SECONDS };
   }
 
   @Post("verify")
@@ -43,7 +43,8 @@ export class AuthController {
     if (!owner || owner !== msg.address.toLowerCase()) throw new ApiError(401, "UNAUTHENTICATED", "unknown or expired nonce");
     const valid =
       msg.chainId === this.cfg.chainId &&
-      validateSiweMessage({ message: msg, domain: this.cfg.siweDomain, nonce: msg.nonce, time: new Date() }) &&
+      !!msg.domain && siweDomains(this.cfg).includes(msg.domain) &&
+      validateSiweMessage({ message: msg, domain: msg.domain, nonce: msg.nonce, time: new Date() }) &&
       (await verifyMessage({ address: msg.address, message: body.message, signature: body.signature as `0x${string}` }));
     if (!valid) throw new ApiError(401, "UNAUTHENTICATED", "signature, domain or chain does not match");
 

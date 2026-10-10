@@ -81,6 +81,22 @@ export class AdminController {
 
   // ---------------------------------------------------------------- reports
 
+  @Get("reports")
+  @Roles("OPERATOR", "REVIEWER", "COMPLIANCE", "GOV_VIEW")
+  async listReports(@Query("status") status?: string, @Query("projectId") projectId?: string) {
+    const statuses = ["SUBMITTED", "APPROVED", "REJECTED", "SUPERSEDED"];
+    if (status && !statuses.includes(status)) throw new ApiError(400, "VALIDATION_FAILED", `status must be one of ${statuses.join(", ")}`);
+    const items = await this.prisma.financialReport.findMany({
+      where: { ...(status ? { status: status as never } : {}), ...(projectId ? { projectIdOnchain: projectId } : {}) },
+      orderBy: { submittedAt: "desc" },
+      take: 100,
+      include: { reviews: { select: { decision: true, reason: true, decidedAt: true } } },
+    });
+    return plain({
+      items: items.map(({ body: _body, ...r }) => ({ ...r, figureKind: r.status === "APPROVED" ? "ACTUAL" : "UNAUDITED" })),
+    });
+  }
+
   @Post("reports")
   @Roles("OPERATOR")
   async submitReport(@Req() req: AuthedRequest, @Body(new ZodPipe(financialReportSchema)) report: FinancialReport) {
@@ -273,6 +289,13 @@ export class AdminController {
   }
 
   // ---------------------------------------------------------------- read-only admin views
+
+  /** The admin console's own view: which staff roles this wallet holds right now (off-chain and on-chain). */
+  @Get("me")
+  me(@Req() req: AuthedRequest) {
+    const until = req.session!.stepUpUntil;
+    return { wallet: getAddress(req.session!.wallet), roles: req.staffRoles ?? [], stepUpUntil: until ? new Date(until * 1000).toISOString() : null };
+  }
 
   @Get("roles")
   @Roles("OPERATOR", "REVIEWER", "COMPLIANCE", "GOV_VIEW")

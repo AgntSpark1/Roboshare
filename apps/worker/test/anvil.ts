@@ -54,8 +54,12 @@ export async function startAnvil(port: number): Promise<Chain> {
         ...process.env,
         SAFE: safe, OPERATOR: operator, REVIEWER: reviewer, PAUSER: pauser,
         COMPLIANCE_AGENT: agent, FEE_RECIPIENT: feeRecipient,
+        // Contracts are already compiled; online mode lets forge reach out for signature lookups, which has hung CI.
+        FOUNDRY_OFFLINE: "true",
       },
       stdio: "pipe",
+      timeout: 180_000,
+      killSignal: "SIGKILL",
     },
   );
   const run = JSON.parse(

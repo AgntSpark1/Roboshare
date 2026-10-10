@@ -30,7 +30,7 @@ const cfg: AppConfig = {
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
   chainId: 31337,
   sessionSecret: randomBytes(32).toString("hex"),
-  siweDomain: "app.roboshare.test",
+  siweDomain: "app.roboshare.test, admin.roboshare.test",
   kycWebhookSecret: randomBytes(32).toString("hex"),
   assetRegistry: ADDR(0xa55e),
   auditRegistry: AUDIT_REGISTRY,
@@ -67,9 +67,9 @@ async function login(acct: PrivateKeyAccount, overrides: { domain?: string; chai
   const message = createSiweMessage({
     address: acct.address,
     chainId: overrides.chainId ?? cfg.chainId,
-    domain: overrides.domain ?? cfg.siweDomain,
+    domain: overrides.domain ?? "app.roboshare.test",
     nonce: n.body.nonce,
-    uri: `https://${cfg.siweDomain}`,
+    uri: `https://${overrides.domain ?? "app.roboshare.test"}`,
     version: "1",
   });
   const signature = await acct.signMessage({ message });
@@ -227,6 +227,12 @@ describe("auth", () => {
     expect(r.body.error.code).toBe("UNAUTHENTICATED");
   });
 
+  it("accepts every configured SIWE domain and advertises the first", async () => {
+    const n = await http().get(`/api/v1/auth/nonce?address=${other.address}`).expect(200);
+    expect(n.body.domain).toBe("app.roboshare.test");
+    expect((await login(other, { domain: "admin.roboshare.test" })).status).toBe(200);
+  });
+
   it("rejects a SIWE message for another domain or chain", async () => {
     expect((await login(other, { domain: "evil.example" })).status).toBe(401);
     expect((await login(other, { chainId: 1 })).status).toBe(401);
@@ -234,7 +240,7 @@ describe("auth", () => {
 
   it("does not accept a nonce twice", async () => {
     const n = await http().get(`/api/v1/auth/nonce?address=${other.address}`).expect(200);
-    const message = createSiweMessage({ address: other.address, chainId: cfg.chainId, domain: cfg.siweDomain, nonce: n.body.nonce, uri: `https://${cfg.siweDomain}`, version: "1" });
+    const message = createSiweMessage({ address: other.address, chainId: cfg.chainId, domain: "app.roboshare.test", nonce: n.body.nonce, uri: "https://app.roboshare.test", version: "1" });
     const signature = await other.signMessage({ message });
     await http().post("/api/v1/auth/verify").send({ message, signature }).expect(200);
     await http().post("/api/v1/auth/verify").send({ message, signature }).expect(401);
@@ -242,7 +248,7 @@ describe("auth", () => {
 
   it("rejects a signature from a different wallet", async () => {
     const n = await http().get(`/api/v1/auth/nonce?address=${other.address}`).expect(200);
-    const message = createSiweMessage({ address: other.address, chainId: cfg.chainId, domain: cfg.siweDomain, nonce: n.body.nonce, uri: `https://${cfg.siweDomain}`, version: "1" });
+    const message = createSiweMessage({ address: other.address, chainId: cfg.chainId, domain: "app.roboshare.test", nonce: n.body.nonce, uri: "https://app.roboshare.test", version: "1" });
     const signature = await investor.signMessage({ message });
     await http().post("/api/v1/auth/verify").send({ message, signature }).expect(401);
   });
@@ -282,6 +288,22 @@ describe("admin", () => {
     expect((call.args![0] as any).distributableAmount).toBe(10_000n * ONE);
 
     await http().post("/api/v1/admin/reports").set("Cookie", cookies.operator!).send(report).expect(409);
+  });
+
+  it("tells the console which roles the signed-in staff wallet holds", async () => {
+    const r = await http().get("/api/v1/admin/me").set("Cookie", cookies.reviewer!).expect(200);
+    expect(r.body).toMatchObject({ wallet: reviewer.address, roles: ["REVIEWER", "GOV_VIEW"] });
+    expect(Date.parse(r.body.stepUpUntil)).toBeGreaterThan(Date.now());
+    expect((await http().get("/api/v1/admin/me").set("Cookie", cookies.reviewerPlain!).expect(401)).body.error.code).toBe("STEP_UP_REQUIRED");
+  });
+
+  it("lists reports by status for reviewers", async () => {
+    const r = await http().get("/api/v1/admin/reports?status=SUBMITTED").set("Cookie", cookies.reviewer!).expect(200);
+    const mine = r.body.items.find((i: { id: string }) => i.id === reportId);
+    expect(mine).toMatchObject({ status: "SUBMITTED", figureKind: "UNAUDITED", recordIdOnchain: null });
+    expect(mine.body).toBeUndefined();
+    await http().get("/api/v1/admin/reports?status=BOGUS").set("Cookie", cookies.reviewer!).expect(400);
+    await http().get("/api/v1/admin/reports").set("Cookie", cookies.investor!).expect(403);
   });
 
   it("forbids self-review and requires on-chain anchoring", async () => {
