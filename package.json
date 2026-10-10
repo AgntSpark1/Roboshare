@@ -2,7 +2,9 @@
   "name": "roboshare",
   "private": true,
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "abi": "pnpm --filter @roboshare/shared abi",
     "db:generate": "pnpm --filter @roboshare/db generate",
@@ -10,5 +12,10 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --workspace-concurrency=1 test"
+  },
+  "pnpm": {
+    "overrides": {
+      "deepmerge-ts": "8.0.2"
+    }
   }
 }

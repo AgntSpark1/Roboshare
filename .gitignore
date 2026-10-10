@@ -9,3 +9,4 @@ broadcast/
 dist/
 coverage/
 .DS_Store
+dump.rdb

@@ -453,12 +453,41 @@ model Wallet {
 
 /// Off-chain staff record. Admin routes also require the matching on-chain role (RoleGrant).
 model StaffAccount {
-  userId     String    @id @db.Uuid
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roles      String[]
-  disabledAt DateTime?
+  userId        String    @id @db.Uuid
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles         String[]
+  disabledAt    DateTime?
+  /// TOTP secret encrypted with AES-256-GCM (TOTP_ENC_KEY); base32 secret never stored in clear.
+  totpSecretEnc String?
 
   @@map("staff_account")
+  @@schema("app")
+}
+
+model RiskAcknowledgement {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  wallet     String
+  version    String
+  acceptedAt DateTime @default(now())
+
+  @@unique([userId, version])
+  @@map("risk_acknowledgement")
+  @@schema("app")
+}
+
+/// Transactions a wallet submitted from the UI, tracked until the indexer sees them.
+model PendingTx {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  chainId   Int
+  hash      String
+  purpose   String
+  createdAt DateTime @default(now())
+
+  @@unique([chainId, hash])
+  @@index([userId])
+  @@map("pending_tx")
   @@schema("app")
 }
 

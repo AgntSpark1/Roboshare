@@ -22,11 +22,16 @@ export const configSchema = z.object({
   sessionSecret: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
   siweDomain: z.string().min(1),
   kycWebhookSecret: z.string().min(32).optional(),
+  /** 32-byte hex key that encrypts staff TOTP secrets. Without it staff step-up is not enforced (dev only). */
+  totpEncKey: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
+  rateLimitPerMinute: z.coerce.number().int().positive().default(120),
+  timelockDelaySeconds: z.coerce.number().int().positive().default(86_400),
   // Contract addresses come from the deployment output. Prepare endpoints refuse to run without them.
   assetRegistry: optionalAddress,
   auditRegistry: optionalAddress,
   paymentToken: optionalAddress,
-});
+  timelock: optionalAddress,
+}).refine((c) => c.nodeEnv !== "production" || !!c.totpEncKey, { message: "TOTP_ENC_KEY is required in production", path: ["totpEncKey"] });
 
 export type AppConfig = z.infer<typeof configSchema>;
 export const APP_CONFIG = Symbol("APP_CONFIG");
@@ -41,6 +46,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     sessionSecret: env.SESSION_SECRET,
     siweDomain: env.SIWE_DOMAIN,
     kycWebhookSecret: env.KYC_WEBHOOK_SECRET || undefined,
+    totpEncKey: env.TOTP_ENC_KEY || undefined,
+    rateLimitPerMinute: env.RATE_LIMIT_PER_MINUTE,
+    timelockDelaySeconds: env.TIMELOCK_DELAY_SECONDS,
+    timelock: env.TIMELOCK,
     assetRegistry: env.ASSET_REGISTRY,
     auditRegistry: env.AUDIT_REGISTRY,
     paymentToken: env.PAYMENT_TOKEN,
