@@ -7,6 +7,7 @@ import {
   api,
   countdown,
   formatUsdt,
+  shortAddr,
   TxProgress,
   useAccount,
   useChainNow,
@@ -18,6 +19,7 @@ import {
 } from "@roboshare/ui";
 import { explorer, RISK_VERSION } from "@/env";
 import { useEligibility, useMySubscriptions, usePaymentSetup, useRefreshAfterTx, useUsdtState } from "@/lib/data";
+import { storedReferrer, useReferralsEnabled } from "@/lib/referral";
 
 type Purpose = "APPROVE" | "SUBSCRIBE";
 
@@ -58,6 +60,10 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
   const [ack, setAck] = useState(false);
   const [unlimited, setUnlimited] = useState(true);
   const [done, setDone] = useState(false);
+  const referralsOn = useReferralsEnabled().data === true;
+  // Read on render: the invite was stored when the visitor landed. Binding happens on chain, once.
+  const referrer = referralsOn ? storedReferrer(address) : null;
+  const firstPurchase = subs.data !== undefined && subs.data.items.length === 0;
 
   const now = useChainNow();
   const open = p.state === "OFFERING" && o.status === "OPEN" && now >= new Date(o.startAt ?? 0).getTime() && now < new Date(o.endAt).getTime();
@@ -92,10 +98,12 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
     s.push({
       label: `认购 ${units} 份`,
       purpose: "SUBSCRIBE",
-      write: { address: pay.router, abi: subscriptionRouterAbi, functionName: "subscribe", args: [p.id, units, cost] },
+      write: referrer
+        ? { address: pay.router, abi: subscriptionRouterAbi, functionName: "subscribeWithReferrer", args: [p.id, units, cost, referrer] }
+        : { address: pay.router, abi: subscriptionRouterAbi, functionName: "subscribe", args: [p.id, units, cost] },
     });
     return s;
-  }, [pay.router, pay.usdt, needApproval, unlimited, cost, units, p.id]);
+  }, [pay.router, pay.usdt, needApproval, unlimited, cost, units, p.id, referrer]);
 
   async function buy() {
     reset();
@@ -153,6 +161,11 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
             <label><input type="radio" name="allow" checked={!unlimited} onChange={() => setUnlimited(false)} /> 仅本次 {formatUsdt(cost)} USDT</label>
           </div>
         </div>
+      )}
+      {referrer && firstPurchase && (
+        <p className="muted" style={{ fontSize: ".78rem" }} data-testid="referrer-note">
+          邀请人 <span className="mono">{shortAddr(referrer)}</span> 会在你首次认购时绑定。邀请奖励由平台从自己的手续费里支付，不影响你的价格和收益。
+        </p>
       )}
       <label className="check">
         <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />

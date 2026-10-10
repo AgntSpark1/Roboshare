@@ -55,7 +55,7 @@ forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --verify --led
 4. 把所有合约的管理员角色交给时间锁，部署者放弃管理员角色。
 5. 在同一次执行里逐项核对：时间锁是各合约管理员、部署者已无权限、时间锁延迟为 24 小时、Safe 是提案人和执行人、路由使用的 USDT 正确且有代码。任一项不符就整体回滚。
 
-部署后，把 `broadcast/Deploy.s.sol/<chainId>/run-latest.json` 里的地址和部署区块填入后端环境变量（`ASSET_REGISTRY`、`AUDIT_REGISTRY`、`IDENTITY_REGISTRY`、`SUBSCRIPTION_ROUTER`、`PROJECT_FACTORY`、`TIMELOCK`、`START_BLOCK`、`PAYMENT_TOKEN`）。不要手抄，不要用占位地址。
+部署后，把 `broadcast/Deploy.s.sol/<chainId>/run-latest.json` 里的地址和部署区块填入后端环境变量（`ASSET_REGISTRY`、`AUDIT_REGISTRY`、`IDENTITY_REGISTRY`、`SUBSCRIPTION_ROUTER`、`PROJECT_FACTORY`、`REFERRAL_REWARDS`、`TIMELOCK`、`START_BLOCK`、`PAYMENT_TOKEN`）。不要手抄，不要用占位地址。
 
 按项目部署：项目在 `AssetRegistry` 里变成 VERIFIED 后，由后端 `/admin/.../prepare` 接口生成时间锁 `schedule` 调用数据，Safe 签名提交；24 小时后再提交 `execute`。配置并开启募集走同一路径。
 
