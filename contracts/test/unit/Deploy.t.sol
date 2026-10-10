@@ -29,6 +29,9 @@ contract DeployScriptTest is Test {
         assertEq(d.timelock.getMinDelay(), 24 hours);
         assertFalse(d.assets.hasRole(0x00, address(script)));
         assertTrue(d.assets.hasRole(0x00, address(d.timelock)));
+        assertTrue(d.referralRewards.hasRole(0x00, address(d.timelock)));
+        assertFalse(d.referralRewards.claimsEnabled());
+        assertFalse(d.router.referralsEnabled());
     }
 
     function test_RevertWhen_MockUsdtOnMainnet() public {

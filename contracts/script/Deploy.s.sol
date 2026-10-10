@@ -9,9 +9,8 @@ import {IdentityRegistry} from "../src/identity/IdentityRegistry.sol";
 import {AssetRegistry} from "../src/registry/AssetRegistry.sol";
 import {AuditRegistry} from "../src/registry/AuditRegistry.sol";
 import {SubscriptionRouter} from "../src/offering/SubscriptionRouter.sol";
-import {
-    ProjectFactory, TokenDeployer, OfferingDeployer, DistributorDeployer
-} from "../src/factory/ProjectFactory.sol";
+import {ReferralRewards} from "../src/referral/ReferralRewards.sol";
+import {ProjectFactory, TokenDeployer, OfferingDeployer, DistributorDeployer} from "../src/factory/ProjectFactory.sol";
 import {MockUSDT} from "../test/mocks/MockUSDT.sol";
 
 /// @notice Deploys the RoboShare singletons and hands admin to a 24h timelock controlled by the Safe (D-16).
@@ -40,6 +39,7 @@ contract Deploy is Script {
         AuditRegistry audit;
         SubscriptionRouter router;
         ProjectFactory factory;
+        ReferralRewards referralRewards;
         address usdt;
         bool usdtIsMock;
     }
@@ -73,6 +73,8 @@ contract Deploy is Script {
         d.assets = new AssetRegistry(deployer);
         d.audit = new AuditRegistry(deployer);
         d.router = new SubscriptionRouter(IERC20(d.usdt), d.assets, address(d.timelock), c.pauser);
+        // Referrals ship switched off in both contracts; only the timelock can enable them.
+        d.referralRewards = new ReferralRewards(IERC20(d.usdt), address(d.timelock), c.operator, c.pauser);
         d.factory = new ProjectFactory(
             d.assets,
             d.audit,
@@ -127,6 +129,11 @@ contract Deploy is Script {
         _check(d.timelock.hasRole(d.timelock.PROPOSER_ROLE(), c.safe), "safe proposer");
         _check(d.timelock.hasRole(d.timelock.EXECUTOR_ROLE(), c.safe), "safe executor");
         _check(!d.timelock.hasRole(admin, deployer), "timelock has no deployer admin");
+        _check(d.referralRewards.hasRole(admin, address(d.timelock)), "referral admin");
+        _check(!d.referralRewards.hasRole(admin, deployer) || deployer == address(d.timelock), "referral deployer");
+        _check(d.referralRewards.hasRole(d.referralRewards.ROOT_SETTER_ROLE(), c.operator), "referral root setter");
+        _check(address(d.referralRewards.paymentToken()) == d.usdt, "referral usdt");
+        _check(!d.router.referralsEnabled() && !d.referralRewards.claimsEnabled(), "referrals start disabled");
         _check(d.assets.hasRole(d.assets.FACTORY_ROLE(), address(d.factory)), "factory role");
         _check(d.identity.hasRole(d.identity.COMPLIANCE_AGENT_ROLE(), c.complianceAgent), "agent role");
         _check(address(d.router.USDT()) == d.usdt, "router usdt");
@@ -170,6 +177,7 @@ contract Deploy is Script {
         console2.log("AuditRegistry     ", address(d.audit));
         console2.log("SubscriptionRouter", address(d.router));
         console2.log("ProjectFactory    ", address(d.factory));
+        console2.log("ReferralRewards   ", address(d.referralRewards));
         console2.log("USDT              ", d.usdt);
     }
 }
