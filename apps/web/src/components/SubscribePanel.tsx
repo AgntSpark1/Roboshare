@@ -38,11 +38,11 @@ export function blockReason(input: {
   if (!input.open) return "当前不在募集期";
   if (!input.connected) return "请先连接钱包";
   if (!input.signedIn) return "请先签名登录";
-  if (input.eligible === false) return "你的钱包还没有通过投资资格认证";
+  if (input.eligible === false) return "你的钱包还未开通认购资格";
   if (input.remaining <= 0) return "你已达到本项目的认购上限，或份额已售罄";
   if (input.units < 1 || input.units > input.remaining) return `可认购 1–${input.remaining} 份`;
   if (input.balance !== undefined && input.balance < input.cost) return "USDT 余额不足";
-  if (!input.acknowledged) return "请先勾选风险确认";
+  if (!input.acknowledged) return "请先勾选确认";
   return null;
 }
 
@@ -128,12 +128,12 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
       </div>
       {open && (
         <div className="line">
-          <span className="muted">募集剩余</span>
+          <span className="muted">剩余时间</span>
           <b className="mono">{countdown(o.endAt, now)}</b>
         </div>
       )}
       <div>
-        <label htmlFor="units" className="muted" style={{ fontSize: ".8rem" }}>认购份数（剩余可认购 {remaining} 份）</label>
+        <label htmlFor="units" className="muted" style={{ fontSize: ".8rem" }}>认购份数（还可买 {remaining} 份）</label>
         <div className="stepper" style={{ marginTop: 6 }}>
           <button type="button" aria-label="减少一份" onClick={() => set(units - 1)} disabled={units <= 1}>−</button>
           <input id="units" inputMode="numeric" value={units} onChange={(e) => set(Number(e.target.value))} />
@@ -147,30 +147,27 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
       {address && usdt.data && (
         <div className={`approval${needApproval ? "" : " ok"}`}>
           <span className="st" aria-hidden="true" />
-          余额 {formatUsdt(usdt.data.balance)} USDT · {needApproval ? "需要先授权 USDT" : "已授权，可直接认购"}
+          余额 {formatUsdt(usdt.data.balance)} USDT{needApproval ? "" : " · 可直接认购"}
         </div>
       )}
       {needApproval && isConnected && me && (
         <div className="warnbox">
-          <b>关于 USDT 授权</b>
-          <span>
-            授权让平台认购合约可以从你的钱包扣除 USDT。默认不限额，以后认购只需一笔交易；但如果合约出现漏洞，授权额度内的 USDT 都有风险。你可以随时在“我的资产”里撤销。
-          </span>
+          <span>首次认购需要授权 USDT。不限额授权以后买入只需一步，但授权期间如合约出现问题，额度内的 USDT 可能受影响；可随时在“我的资产”撤销。</span>
           <div className="radio" role="radiogroup" aria-label="授权额度">
-            <label><input type="radio" name="allow" checked={unlimited} onChange={() => setUnlimited(true)} /> 不限额（推荐，之后免授权）</label>
+            <label><input type="radio" name="allow" checked={unlimited} onChange={() => setUnlimited(true)} /> 不限额（之后免授权）</label>
             <label><input type="radio" name="allow" checked={!unlimited} onChange={() => setUnlimited(false)} /> 仅本次 {formatUsdt(cost)} USDT</label>
           </div>
         </div>
       )}
       {referrer && firstPurchase && (
         <p className="muted" style={{ fontSize: ".78rem" }} data-testid="referrer-note">
-          邀请人 <span className="mono">{shortAddr(referrer)}</span> 会在你首次认购时绑定。邀请奖励由平台从自己的手续费里支付，不影响你的价格和收益。
+          邀请人 <span className="mono">{shortAddr(referrer)}</span>。邀请奖励由平台承担，不影响你的价格和收益。
         </p>
       )}
       <label className="check">
         <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
         <span>
-          我已阅读 <Link href="/risk" style={{ color: "var(--amber)" }}>风险披露</Link> 和本项目募集条款，理解份额不是车辆所有权、不保证回报、可能损失全部投资。
+          我已阅读 <Link href="/risk" style={{ color: "var(--amber)" }}>投资须知</Link> 和项目条款
         </span>
       </label>
       {!isConnected || !me ? (
@@ -185,12 +182,10 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
       {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
       {done && (
         <p className="okmsg" role="status">
-          认购成功，USDT 已进入募集托管。募集结算后份额会发到你的钱包。<Link href="/portfolio">查看我的资产</Link>
+          认购成功！募集结束后份额会发到你的钱包。<Link href="/portfolio">查看我的资产</Link>
         </p>
       )}
-      <p className="muted" style={{ fontSize: ".74rem" }}>
-        募集截止达到最低 {o.minUnits} 份才会结算发币，否则全额退款。最多 {o.perWalletMax ?? o.maxUnits} 份/钱包。
-      </p>
+      <p className="fine">未达到 {o.minUnits} 份全额退款 · 每个钱包最多 {o.perWalletMax ?? o.maxUnits} 份</p>
     </aside>
   );
 }

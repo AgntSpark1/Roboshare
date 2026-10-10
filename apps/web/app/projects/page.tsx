@@ -21,7 +21,7 @@ export default function Projects() {
       <div className="wrap">
         <div className="sec-h">
           <h1 className="h2">车辆项目</h1>
-          <p>每个项目对应一辆车、一个独立的份额代币和独立的分配合约。数据来自链上索引。</p>
+          <p>每个项目对应一辆车，按份认购，按期领取收益。</p>
         </div>
         <div className="filters" role="group" aria-label="按状态筛选">
           {FILTERS.map(([k, v]) => (
@@ -31,9 +31,9 @@ export default function Projects() {
           ))}
         </div>
         {q.isLoading ? (
-          <p className="muted">正在读取链上项目…</p>
+          <p className="muted">正在加载项目…</p>
         ) : q.error ? (
-          <p className="err" role="alert">暂时无法读取项目：{q.error.message}</p>
+          <p className="err" role="alert">项目暂时加载不出来，请稍后刷新。</p>
         ) : items.length === 0 ? (
           <div className="panel empty"><p className="muted">这个分类下暂时没有项目。</p></div>
         ) : (

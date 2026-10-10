@@ -9,3 +9,11 @@
 .facts b.sm{font-size:.84rem;font-family:var(--f-mono);font-weight:400;word-break:break-all}
 .warnbox{border:1px solid #5A2A14;background:#1D110A;color:#F3CBB0;border-radius:var(--r-s);padding:12px 14px;font-size:.82rem;display:grid;gap:6px}
 .warnbox b{color:var(--warn)}
+
+/* three bottom tabs on phones (the shared stylesheet lays out four) */
+@media (max-width:820px){.tabs{grid-template-columns:repeat(3,1fr)}}
+.fine{font-size:.74rem;color:var(--dim)}
+.fine a{color:inherit;text-decoration:underline}
+.chain-info{margin-top:16px}
+.chain-info summary{cursor:pointer;color:var(--mute);font-size:.86rem;padding:6px 0}
+footer a{color:var(--mute)}

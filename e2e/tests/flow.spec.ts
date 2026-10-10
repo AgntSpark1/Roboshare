@@ -97,7 +97,7 @@ test("investor browses and subscribes with a one-time USDT approval", async ({ b
 
   await page.getByLabel(/认购份数/).fill(String(UNITS));
   await expect(page.getByText("60,000.00 USDT").first()).toBeVisible();
-  await page.getByRole("checkbox", { name: /风险披露/ }).check();
+  await page.getByRole("checkbox", { name: /投资须知/ }).check();
   await runTx(page, page.getByRole("button", { name: "授权并认购" }));
   await expect(page.getByRole("status")).toContainText("认购成功");
   await s.indexed();
