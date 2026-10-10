@@ -1,0 +1,25 @@
+import {
+  assetRegistryAbi,
+  auditRegistryAbi,
+  identityRegistryAbi,
+  offeringManagerAbi,
+  projectFactoryAbi,
+  revenueDistributorAbi,
+  rwaShareTokenAbi,
+  subscriptionRouterAbi,
+} from "@roboshare/shared";
+import type { Abi } from "viem";
+
+export const CONTRACT_KINDS = {
+  IDENTITY_REGISTRY: identityRegistryAbi,
+  ASSET_REGISTRY: assetRegistryAbi,
+  AUDIT_REGISTRY: auditRegistryAbi,
+  SUBSCRIPTION_ROUTER: subscriptionRouterAbi,
+  PROJECT_FACTORY: projectFactoryAbi,
+  TOKEN: rwaShareTokenAbi,
+  OFFERING: offeringManagerAbi,
+  DISTRIBUTOR: revenueDistributorAbi,
+} as const satisfies Record<string, Abi>;
+
+export type ContractKind = keyof typeof CONTRACT_KINDS;
+export const PROJECT_CONTRACT_KINDS: readonly ContractKind[] = ["TOKEN", "OFFERING", "DISTRIBUTOR"];
