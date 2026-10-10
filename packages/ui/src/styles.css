@@ -312,6 +312,10 @@ td.r,th.r{text-align:right}
 .wallets button{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px 14px;text-align:left}
 .wallets button:hover{border-color:var(--amber)}
 .wl{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;color:#0A1020}
+.wallets button .spin{margin-left:auto;flex:none}
+img.wl{object-fit:contain;background:#fff;padding:3px}
+.wallet-apps{display:grid;gap:10px;border:1px dashed var(--line2);border-radius:12px;padding:12px 14px;font-size:.86rem}
+.wallet-apps .links{display:flex;flex-wrap:wrap;gap:8px}
 .check{display:flex;gap:10px;align-items:start;font-size:.84rem;color:#D6DDEC}
 .check input{margin-top:4px;accent-color:var(--amber);width:16px;height:16px;flex:none}
 .radio{display:grid;gap:8px}

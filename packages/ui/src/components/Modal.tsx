@@ -1,21 +1,31 @@
 "use client";
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
-/** Accessible dialog: labelled by its title, closes on Escape or the scrim, returns focus to the opener. */
+/**
+ * Accessible dialog: labelled by its title, closes on Escape or the scrim, returns focus to the opener.
+ * Rendered into <body> so an ancestor with backdrop-filter or transform (the sticky header has one) cannot become the
+ * containing block of the fixed scrim and squeeze the dialog into the header on phones.
+ */
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
     ref.current?.querySelector<HTMLElement>("button, [href], input, select, textarea")?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close.current();
     window.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
       opener?.focus?.();
     };
-  }, [onClose]);
-  return (
+  }, []);
+  return createPortal(
     <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby={id} ref={ref}>
         <div className="mhead">
@@ -24,6 +34,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
