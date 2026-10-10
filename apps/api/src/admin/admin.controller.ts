@@ -81,6 +81,22 @@ export class AdminController {
 
   // ---------------------------------------------------------------- reports
 
+  @Get("reports")
+  @Roles("OPERATOR", "REVIEWER", "COMPLIANCE", "GOV_VIEW")
+  async listReports(@Query("status") status?: string, @Query("projectId") projectId?: string) {
+    const statuses = ["SUBMITTED", "APPROVED", "REJECTED", "SUPERSEDED"];
+    if (status && !statuses.includes(status)) throw new ApiError(400, "VALIDATION_FAILED", `status must be one of ${statuses.join(", ")}`);
+    const items = await this.prisma.financialReport.findMany({
+      where: { ...(status ? { status: status as never } : {}), ...(projectId ? { projectIdOnchain: projectId } : {}) },
+      orderBy: { submittedAt: "desc" },
+      take: 100,
+      include: { reviews: { select: { decision: true, reason: true, decidedAt: true } } },
+    });
+    return plain({
+      items: items.map(({ body: _body, ...r }) => ({ ...r, figureKind: r.status === "APPROVED" ? "ACTUAL" : "UNAUDITED" })),
+    });
+  }
+
   @Post("reports")
   @Roles("OPERATOR")
   async submitReport(@Req() req: AuthedRequest, @Body(new ZodPipe(financialReportSchema)) report: FinancialReport) {

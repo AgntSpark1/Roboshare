@@ -20,6 +20,7 @@ export const configSchema = z.object({
   redisUrl: z.string().min(1),
   chainId: z.coerce.number().int().positive(),
   sessionSecret: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
+  /** Host (or comma-separated hosts) allowed in SIWE messages, e.g. the investor DApp and the admin console. */
   siweDomain: z.string().min(1),
   kycWebhookSecret: z.string().min(32).optional(),
   /** 32-byte hex key that encrypts staff TOTP secrets. Without it staff step-up is not enforced (dev only). */
@@ -35,6 +36,10 @@ export const configSchema = z.object({
 
 export type AppConfig = z.infer<typeof configSchema>;
 export const APP_CONFIG = Symbol("APP_CONFIG");
+
+export function siweDomains(cfg: Pick<AppConfig, "siweDomain">): string[] {
+  return cfg.siweDomain.split(",").map((d) => d.trim()).filter(Boolean);
+}
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return configSchema.parse({
