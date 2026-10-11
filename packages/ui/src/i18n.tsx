@@ -6,6 +6,25 @@ import { STATE_LABEL } from "./format";
  * Text used by the shared components. Chinese is the default, so the ops console (Chinese only) needs no provider;
  * the investor site passes the visitor's language through <UiStringsProvider>.
  */
+export interface ContractErrorStrings {
+  ineligible: string;
+  frozen: string;
+  walletLimit: string;
+  soldOut: string;
+  closed: string;
+  settled: string;
+  priceChanged: string;
+  listingGone: string;
+  listingShort: string;
+  ownListing: string;
+  claimed: string;
+  notClaimable: string;
+  notRefundable: string;
+  transfersOff: string;
+  balance: string;
+  allowance: string;
+}
+
 export interface UiStrings {
   close: string;
   connectWallet: string;
@@ -36,6 +55,12 @@ export interface UiStrings {
   txRejected: string;
   txReverted: string;
   contractRejected: (reason: string) => string;
+  /** Wallet has too little BNB to pay the network fee. */
+  noGas: string;
+  /** Wraps a contract rejection: the call never ran, so nothing moved. */
+  notCharged: (reason: string) => string;
+  /** Plain-language reasons for the contract errors investors can hit (see CONTRACT_ERROR_KIND in tx.ts). */
+  contractErrors: ContractErrorStrings;
   walletErrors: {
     rejected: string;
     noProvider: string;
@@ -78,6 +103,26 @@ export const zhUiStrings: UiStrings = {
   txRejected: "你在钱包里拒绝了这笔交易",
   txReverted: "交易在链上执行失败（reverted）",
   contractRejected: (r) => `合约拒绝：${r}`,
+  noGas: "钱包里的 BNB 不够付网络手续费，请先转入少量 BNB",
+  notCharged: (r) => `${r}。资金没有变动。`,
+  contractErrors: {
+    ineligible: "你的钱包还未开通认购资格",
+    frozen: "这个钱包已被暂停，请联系平台",
+    walletLimit: "超过了每个钱包的认购上限",
+    soldOut: "剩余份额不够了，请减少份数",
+    closed: "当前不在募集期",
+    settled: "这个钱包在本项目的认购已经结算或退款",
+    priceChanged: "价格有变化，请刷新页面后再试",
+    listingGone: "这笔挂单已失效（已售出、已撤销或已过期）",
+    listingShort: "这笔挂单剩余份数不够了，请减少份数",
+    ownListing: "不能购买自己的挂单",
+    claimed: "这笔已经领取过了",
+    notClaimable: "暂时还不能领取，请稍后再试",
+    notRefundable: "这笔认购当前不能退款",
+    transfersOff: "这个项目当前不能转让份额",
+    balance: "USDT 余额不足",
+    allowance: "USDT 授权额度不够，请重新授权",
+  },
   walletErrors: {
     rejected: "你在钱包里取消了这次请求",
     noProvider: "没有检测到钱包。请在钱包 App 里打开本页，或在电脑浏览器安装 MetaMask。",

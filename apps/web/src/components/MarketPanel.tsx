@@ -316,6 +316,7 @@ function SellForm({
           </select>
         </label>
       </div>
+      {p.offering && <p className="muted" style={{ fontSize: ".8rem" }}>{m.refPrice(formatUsdt(p.offering.unitPrice))}</p>}
       {"price" in parsed && <p className="muted" style={{ fontSize: ".84rem" }}>{m.proceeds(formatUsdt(parsed.price * BigInt(units)))}</p>}
       <button type="button" className="btn primary" style={{ marginTop: 8 }} disabled={"error" in parsed || running} onClick={list}>
         {m.listBtn}

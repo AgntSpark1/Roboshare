@@ -2,7 +2,7 @@
 import { useCallback, useState } from "react";
 import { sendTransaction, waitForTransactionReceipt, writeContract } from "@wagmi/core";
 import { useWalletConfig } from "./wallet";
-import { useUiStrings, zhUiStrings, type UiStrings } from "./i18n";
+import { useUiStrings, zhUiStrings, type ContractErrorStrings, type UiStrings } from "./i18n";
 import { BaseError, type Abi, type Hash } from "viem";
 import type { PreparedTx } from "./api";
 
@@ -20,14 +20,50 @@ export interface TxRun {
   running: boolean;
 }
 
+/** Contract custom errors an investor can run into, grouped by what we tell them. Anything else shows its raw name. */
+const CONTRACT_ERROR_KIND: Record<string, keyof ContractErrorStrings> = {
+  NotEligible: "ineligible",
+  SubscriberIneligible: "ineligible",
+  WalletIsFrozen: "frozen",
+  HolderFrozen: "frozen",
+  SenderFrozen: "frozen",
+  PerWalletLimit: "walletLimit",
+  UnitsExceedAvailable: "soldOut",
+  CapExceeded: "soldOut",
+  OfferingWindowClosed: "closed",
+  NotOpen: "closed",
+  OfferingFinalized: "closed",
+  SubscriptionClosedForWallet: "settled",
+  CostAboveMax: "priceChanged",
+  CostMismatch: "priceChanged",
+  PriceAboveMax: "priceChanged",
+  ListingExpired: "listingGone",
+  ListingInactive: "listingGone",
+  InsufficientUnits: "listingShort",
+  SelfPurchase: "ownListing",
+  NothingToClaim: "claimed",
+  AlreadyClaimed: "claimed",
+  NotClaimable: "notClaimable",
+  ClaimsDisabled: "notClaimable",
+  NotRefundable: "notRefundable",
+  TransfersDisabledInState: "transfersOff",
+  ERC20InsufficientBalance: "balance",
+  ERC20InsufficientAllowance: "allowance",
+};
+
 /** Human-readable reason for a wallet or contract error. */
 export function txErrorMessage(e: unknown, t: UiStrings = zhUiStrings): string {
   if (e instanceof BaseError) {
     if (e.walk((x) => (x as { name?: string }).name === "UserRejectedRequestError")) return t.txRejected;
+    if (e.walk((x) => (x as { name?: string }).name === "InsufficientFundsError")) return t.noGas;
     const revert = e.walk((x) => (x as { name?: string }).name === "ContractFunctionRevertedError") as
       | { data?: { errorName?: string }; reason?: string }
       | null;
-    if (revert?.data?.errorName) return t.contractRejected(revert.data.errorName);
+    const name = revert?.data?.errorName;
+    if (name) {
+      const kind = CONTRACT_ERROR_KIND[name];
+      return t.notCharged(kind ? t.contractErrors[kind] : t.contractRejected(name));
+    }
     if (revert?.reason) return t.contractRejected(revert.reason);
     return e.shortMessage;
   }

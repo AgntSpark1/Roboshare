@@ -29,6 +29,7 @@ export function Hero({ featured }: { featured?: ProjectListItem }) {
   }, []);
 
   const o = featured?.offering;
+  const notStarted = !!o?.startAt && Date.now() < new Date(o.startAt).getTime();
   return (
     <section className="hero">
       <div className="stage" ref={stage}>
@@ -71,8 +72,8 @@ export function Hero({ featured }: { featured?: ProjectListItem }) {
               <div className="num">{o.unitsSold}<span className="muted" style={{ fontSize: ".8rem" }}> / {t.units.n(o.maxUnits)}</span></div>
             </div>
             <div className="h">
-              <span className="eyebrow">{h.timeLeft}</span>
-              <div className="num mono" style={{ fontSize: "1.1rem" }}>{countdown(o.endAt, Date.now(), t.ui.days)}</div>
+              <span className="eyebrow">{notStarted ? h.startsIn : h.timeLeft}</span>
+              <div className="num mono" style={{ fontSize: "1.1rem" }}>{countdown(notStarted ? o.startAt! : o.endAt, Date.now(), t.ui.days)}</div>
             </div>
           </div>
         )}

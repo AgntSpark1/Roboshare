@@ -16,7 +16,12 @@ describe("subscribe gating", () => {
     expect(blockReason({ ...ok, remaining: 0 })).toMatch(/上限|售罄/);
     expect(blockReason({ ...ok, units: 41 })).toBe("可认购 1–40 份");
     expect(blockReason({ ...ok, balance: 1_000n })).toBe("USDT 余额不足");
+    expect(blockReason({ ...ok, native: 0n })).toMatch(/BNB/);
     expect(blockReason({ ...ok, acknowledged: false })).toBe("请先勾选确认");
+  });
+
+  it("says when a not-yet-open offering starts", () => {
+    expect(blockReason({ ...ok, open: false, opensAt: "2026-10-12 03:06" })).toBe("2026-10-12 03:06 开放认购");
   });
 
   it("does not block while eligibility or balance are still loading", () => {

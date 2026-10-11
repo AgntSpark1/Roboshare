@@ -14,3 +14,9 @@ export const EXPLORER: Record<number, string | undefined> = { 56: "https://bscsc
 export const explorer = EXPLORER[walletEnv.chainId];
 export const isTestChain = walletEnv.chainId !== 56;
 export const RISK_VERSION = "2026-10";
+
+/** Support channels shown in the footer, guide and eligibility hints; each is hidden while unset. */
+export const support = {
+  telegram: process.env.NEXT_PUBLIC_SUPPORT_TELEGRAM || undefined,
+  email: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || undefined,
+};
