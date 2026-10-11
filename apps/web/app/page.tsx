@@ -5,6 +5,7 @@ import { DEFAULT_TIERS, allocate } from "@roboshare/shared";
 import { formatBps, formatUsdt } from "@roboshare/ui";
 import { Hero } from "@/components/Hero";
 import { ProjectCard } from "@/components/ProjectCard";
+import { WhitepaperBand } from "@/components/Whitepaper";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useProjects } from "@/lib/data";
 
@@ -51,6 +52,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <WhitepaperBand />
 
       <TierCalculator />
 

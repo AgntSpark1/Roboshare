@@ -26,12 +26,12 @@ export const configSchema = z.object({
   /** 32-byte hex key that encrypts staff TOTP secrets. Without it staff step-up is not enforced (dev only). */
   totpEncKey: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
   rateLimitPerMinute: z.coerce.number().int().positive().default(120),
-  timelockDelaySeconds: z.coerce.number().int().positive().default(86_400),
   // Contract addresses come from the deployment output. Prepare endpoints refuse to run without them.
   assetRegistry: optionalAddress,
   auditRegistry: optionalAddress,
   paymentToken: optionalAddress,
-  timelock: optionalAddress,
+  /** The 2/3 governance Safe; it holds admin on every contract directly (no timelock). */
+  safe: optionalAddress,
 }).refine((c) => c.nodeEnv !== "production" || !!c.totpEncKey, { message: "TOTP_ENC_KEY is required in production", path: ["totpEncKey"] });
 
 export type AppConfig = z.infer<typeof configSchema>;
@@ -53,8 +53,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     kycWebhookSecret: env.KYC_WEBHOOK_SECRET || undefined,
     totpEncKey: env.TOTP_ENC_KEY || undefined,
     rateLimitPerMinute: env.RATE_LIMIT_PER_MINUTE,
-    timelockDelaySeconds: env.TIMELOCK_DELAY_SECONDS,
-    timelock: env.TIMELOCK,
+    safe: env.SAFE,
     assetRegistry: env.ASSET_REGISTRY,
     auditRegistry: env.AUDIT_REGISTRY,
     paymentToken: env.PAYMENT_TOKEN,

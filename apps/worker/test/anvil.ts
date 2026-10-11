@@ -118,15 +118,9 @@ export async function send(c: Chain, from: Address, req: { address: Address; abi
   return receipt;
 }
 
-export async function asTimelock<T>(c: Chain, fn: (timelock: Address) => Promise<T>): Promise<T> {
-  const timelock = c.addr.TimelockController!;
-  await c.test.impersonateAccount({ address: timelock });
-  await c.test.setBalance({ address: timelock, value: 10n ** 20n });
-  try {
-    return await fn(timelock);
-  } finally {
-    await c.test.stopImpersonatingAccount({ address: timelock });
-  }
+/** Governance: the Safe holds admin directly (no timelock). On anvil it is an unlocked account (accounts[1]). */
+export async function asSafe<T>(c: Chain, fn: (safe: Address) => Promise<T>): Promise<T> {
+  return fn(c.accounts[1]!);
 }
 
 /** Empties every table in the test database. Refuses to run against a non-test database. */

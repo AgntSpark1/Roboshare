@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Web3Providers, type TimelockProposal } from "@roboshare/ui";
+import { Web3Providers, type SafeProposal } from "@roboshare/ui";
 import { Gate } from "@/components/Gate";
 import { ProposalView } from "@/components/Proposal";
 
@@ -10,14 +10,22 @@ vi.mock("next/link", () => ({ default: ({ href, children, ...p }: { href: string
 
 const tx = (data: string) => ({ chainId: 31337, to: "0x00000000000000000000000000000000000071e0" as const, data: data as `0x${string}`, value: "0" as const, description: "x" });
 
-describe("timelock proposal", () => {
-  it("shows schedule and execute calldata for the Safe and never sends anything", async () => {
+describe("Safe proposal", () => {
+  it("lists each call for the Safe, says it takes effect at once, and never sends anything", async () => {
     const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    const p: TimelockProposal = { timelock: "0x00000000000000000000000000000000000071e0", salt: `0x${"11".repeat(32)}`, delaySeconds: 86_400, schedule: tx("0x01020304"), execute: tx("0x05060708") };
+    const p: SafeProposal = {
+      safe: "0x00000000000000000000000000000000000005af",
+      calls: [
+        { to: "0x00000000000000000000000000000000000000a1", data: "0x01020304", description: "configure" },
+        { to: "0x00000000000000000000000000000000000000a1", data: "0x05060708", description: "open" },
+      ],
+      tx: { ...tx("0x8d80ff0a"), operation: 1 },
+    };
     render(<ProposalView proposal={p} />);
     expect(screen.getByText(/3 人中 2 人签名/)).toBeInTheDocument();
-    expect(screen.getByText(/等待 24 小时/)).toBeInTheDocument();
+    expect(screen.getByText("立即生效")).toBeInTheDocument();
+    expect(screen.queryByText(/24 小时/)).not.toBeInTheDocument();
     expect(screen.getByText("0x01020304")).toBeInTheDocument();
     expect(screen.getByText("0x05060708")).toBeInTheDocument();
     await userEvent.click(screen.getAllByRole("button", { name: "复制 calldata" })[0]!);

@@ -14,7 +14,7 @@ import { erc20Abi, keccak256, parseAbi, stringToHex, type Address, type Hex } fr
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Indexer } from "../src/indexer.js";
 import { reconcile } from "../src/reconcile.js";
-import { asTimelock, bytes32, resetDb, send, startAnvil, type Chain } from "./anvil.js";
+import { asSafe, bytes32, resetDb, send, startAnvil, type Chain } from "./anvil.js";
 
 const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);
 const ONE = 10n ** 18n;
@@ -65,7 +65,7 @@ describe("indexer against a local chain", () => {
   it("follows a project from registration to an active, funded offering", async () => {
     await send(c, A.operator!, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "registerProject", args: [PID, bytes32("asset-1"), bytes32("issuer-1"), bytes32("rights-v1")] });
     await send(c, A.reviewer!, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 2, bytes32("kyb ok")] });
-    await asTimelock(c, async (tl) => {
+    await asSafe(c, async (tl) => {
       await send(c, tl, {
         address: c.addr.ProjectFactory!, abi: projectFactoryAbi, functionName: "deployProject",
         args: [{ projectId: PID, name: "RoboShare Vehicle 1", symbol: "RSV1", allowedClassesMask: 2n, treasury: A.treasury }],
@@ -74,7 +74,7 @@ describe("indexer against a local chain", () => {
     const p = await c.pub.readContract({ address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "offeringOf", args: [PID] });
     offering = p as Address;
     const now = (await c.pub.getBlock()).timestamp;
-    await asTimelock(c, async (tl) => {
+    await asSafe(c, async (tl) => {
       await send(c, tl, {
         address: offering, abi: offeringManagerAbi, functionName: "configure",
         args: [{ unitPrice: UNIT_PRICE, minUnits: 100, maxUnits: 100, perWalletMax: 100, startTime: now, endTime: now + 86_400n, treasury: A.treasury, termsHash: bytes32("terms-v1") }],
@@ -89,7 +89,7 @@ describe("indexer against a local chain", () => {
       await send(c, who, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "subscribe", args: [PID, units, BigInt(units) * UNIT_PRICE] });
     }
     await send(c, A.operator!, { address: offering, abi: offeringManagerAbi, functionName: "settle" });
-    await asTimelock(c, (tl) => send(c, tl, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 5, bytes32("go live")] }));
+    await asSafe(c, (tl) => send(c, tl, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 5, bytes32("go live")] }));
     token = ((await c.pub.readContract({ address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "getProject", args: [PID] })) as { token: Address }).token;
     await send(c, A.alice!, { address: token, abi: rwaShareTokenAbi, functionName: "transfer", args: [A.bob!, 10n] });
 

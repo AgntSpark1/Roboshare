@@ -86,7 +86,7 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
         }
     }
 
-    /// @notice Governance (timelock) only. New terms apply to bindings made afterwards.
+    /// @notice Governance (Safe) only. New terms apply to bindings made afterwards.
     function setReferralTerms(bool enabled, uint16 shareBps, uint64 window) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (shareBps > MAX_REFERRAL_SHARE_BPS || window == 0 || window > MAX_REFERRAL_WINDOW) {
             revert InvalidReferralTerms();

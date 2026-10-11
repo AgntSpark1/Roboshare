@@ -25,7 +25,7 @@
 | 手续费 | 无（D-8：平台只收分配环节的分级手续费） |
 | 价格 | 卖家自定。买家的 `maxPricePerUnit` 防止成交前被改价 |
 | 转让限制 | 全部由份额代币执行：买家须合格且类别获准、卖家未被冻结、项目处于 FUNDED / ACTIVE、代币未暂停 |
-| 治理 | 管理员 = 时间锁（2/3 多签 + 24h）。PAUSER 可暂停，解除暂停需治理 |
+| 治理 | 管理员 = 2/3 治理 Safe（签名后立即执行）。PAUSER 可暂停，解除暂停需治理 |
 | 查询 | `fillable(listingId)` 返回考虑到期、卖家余额和授权后当前可买数量 |
 
 挂单不锁定份额：卖家在挂单后转走份额，购买会失败，前端以 `fillable` 显示真实可买数量。
@@ -36,7 +36,7 @@
 
 ## 5. 部署
 
-新部署由 `Deploy.s.sol` 一并部署。已有部署用 `contracts/script/DeployShareMarket.s.sol` 追加，需要环境变量 `ASSET_REGISTRY`、`PAYMENT_TOKEN`、`TIMELOCK`、`PAUSER`。部署者不持有任何角色。测试网在 Charlene 的 Mac 上执行。部署后把地址填入索引器环境变量 `SHARE_MARKET`，投资者页面会自动显示转让市场；未配置时页面不显示。
+新部署由 `Deploy.s.sol` 一并部署。已有部署用 `contracts/script/DeployShareMarket.s.sol` 追加，需要环境变量 `ASSET_REGISTRY`、`PAYMENT_TOKEN`、`SAFE`、`PAUSER`。部署者不持有任何角色。测试网在 Charlene 的 Mac 上执行。部署后把地址填入索引器环境变量 `SHARE_MARKET`，投资者页面会自动显示转让市场；未配置时页面不显示。
 
 ## 6. 尚待完成
 

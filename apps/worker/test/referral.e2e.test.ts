@@ -15,7 +15,7 @@ import {
 import { erc20Abi, keccak256, parseAbi, stringToHex, type Address, type Hex } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Indexer } from "../src/indexer.js";
-import { asTimelock, bytes32, resetDb, send, startAnvil, type Chain } from "./anvil.js";
+import { asSafe, bytes32, resetDb, send, startAnvil, type Chain } from "./anvil.js";
 
 const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);
 const ONE = 10n ** 18n;
@@ -73,7 +73,7 @@ describe("referral rewards against a local chain", () => {
   it("binds referrals with the terms in force at bind time", async () => {
     await send(c, A.operator!, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "registerProject", args: [PID, bytes32("asset-r"), bytes32("issuer-r"), bytes32("rights-r")] });
     await send(c, A.reviewer!, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 2, bytes32("kyb ok")] });
-    await asTimelock(c, (tl) =>
+    await asSafe(c, (tl) =>
       send(c, tl, {
         address: c.addr.ProjectFactory!, abi: projectFactoryAbi, functionName: "deployProject",
         args: [{ projectId: PID, name: "RoboShare Vehicle R", symbol: "RSVR", allowedClassesMask: 2n, treasury: A.treasury }],
@@ -81,7 +81,7 @@ describe("referral rewards against a local chain", () => {
     );
     offering = (await c.pub.readContract({ address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "offeringOf", args: [PID] })) as Address;
     const now = (await c.pub.getBlock()).timestamp;
-    await asTimelock(c, async (tl) => {
+    await asSafe(c, async (tl) => {
       await send(c, tl, {
         address: offering, abi: offeringManagerAbi, functionName: "configure",
         args: [{ unitPrice: UNIT_PRICE, minUnits: 100, maxUnits: 100, perWalletMax: 100, startTime: now, endTime: now + 86_400n, treasury: A.treasury, termsHash: bytes32("terms-r") }],
@@ -95,12 +95,12 @@ describe("referral rewards against a local chain", () => {
     await subscribe(A.alice!, 50);
     await subscribe(A.bob!, 30, A.alice!);
     // Shorter terms apply only to bindings made from now on.
-    await asTimelock(c, (tl) =>
+    await asSafe(c, (tl) =>
       send(c, tl, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "setReferralTerms", args: [true, 2_000, 3_600n] }),
     );
     await subscribe(A.carol!, 20, A.bob!);
     await send(c, A.operator!, { address: offering, abi: offeringManagerAbi, functionName: "settle" });
-    await asTimelock(c, (tl) => send(c, tl, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 5, bytes32("go live")] }));
+    await asSafe(c, (tl) => send(c, tl, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 5, bytes32("go live")] }));
 
     await indexer.catchUp();
     const refs = await prisma.referral.findMany({ orderBy: { boundBlock: "asc" } });
@@ -147,7 +147,7 @@ describe("referral rewards against a local chain", () => {
     await send(c, A.operator!, { address: rewards, abi: referralRewardsAbi, functionName: "setRoot", args: [tree.root, bytes32("file"), tree.totalCumulative] });
     // Platform tops up from the fee income it received at approval.
     await send(c, A.feeRecipient!, { address: c.addr.MockUSDT!, abi: erc20Abi, functionName: "transfer", args: [rewards, reward] });
-    await asTimelock(c, (tl) => send(c, tl, { address: rewards, abi: referralRewardsAbi, functionName: "setClaimsEnabled", args: [true] }));
+    await asSafe(c, (tl) => send(c, tl, { address: rewards, abi: referralRewardsAbi, functionName: "setClaimsEnabled", args: [true] }));
     const before = (await c.pub.readContract({ address: c.addr.MockUSDT!, abi: erc20Abi, functionName: "balanceOf", args: [A.alice!] })) as bigint;
     await send(c, A.alice!, { address: rewards, abi: referralRewardsAbi, functionName: "claim", args: [A.alice!, reward, tree.entries[0]!.proof] });
     const after = (await c.pub.readContract({ address: c.addr.MockUSDT!, abi: erc20Abi, functionName: "balanceOf", args: [A.alice!] })) as bigint;

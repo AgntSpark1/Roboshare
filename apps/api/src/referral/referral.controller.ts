@@ -16,7 +16,7 @@ import { PrismaService } from "../common/prisma.service.js";
 import { plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
-import { call, prepare, viaTimelock } from "../admin/prepare.js";
+import { call, prepare, viaSafe } from "../admin/prepare.js";
 
 interface TreeEntry {
   account: Address;
@@ -184,12 +184,12 @@ export class AdminReferralController {
     });
   }
 
-  /** Governance switch for both contracts, as one timelock batch for the Safe. Off by default. */
+  /** Governance switch for both contracts, as one Safe batch (effective once two owners sign). Off by default. */
   @Post("terms")
   @Roles("GOV_VIEW")
   async terms(@Req() req: AuthedRequest, @Body(new ZodPipe(termsBody)) body: z.infer<typeof termsBody>) {
-    const timelock = this.cfg.timelock;
-    if (!timelock) throw new ApiError(503, "CHAIN_UNAVAILABLE", "TIMELOCK is not configured");
+    const safe = this.cfg.safe;
+    if (!safe) throw new ApiError(503, "CHAIN_UNAVAILABLE", "SAFE is not configured");
     const router = await contractOf(this.prisma, this.cfg.chainId, "SUBSCRIPTION_ROUTER");
     const rewards = await contractOf(this.prisma, this.cfg.chainId, "REFERRAL_REWARDS");
     if (!router || !rewards) throw new ApiError(503, "CHAIN_UNAVAILABLE", "referral contracts are not indexed");
@@ -198,7 +198,7 @@ export class AdminReferralController {
       call(rewards, referralRewardsAbi, "setClaimsEnabled", [body.enabled]),
     ];
     await this.audit(req, "REFERRAL_TERMS_PREPARE", "referral", "terms", body);
-    return viaTimelock(this.cfg.chainId, timelock, this.cfg.timelockDelaySeconds, calls, `referral terms ${body.enabled ? "on" : "off"}`);
+    return viaSafe(this.cfg.chainId, safe, calls, `referral terms ${body.enabled ? "on" : "off"}`);
   }
 
   private async audit(req: AuthedRequest, action: string, targetType: string, targetId: string, payload: unknown) {

@@ -29,6 +29,7 @@ export function Footer() {
         <span className="links">
           <Link href="/guide">{t.help.guideLink}</Link>
           <Link href="/faq">{t.help.faqLink}</Link>
+          <Link href="/whitepaper">{t.whitepaper.link}</Link>
           <ContactLinks />
         </span>
         <span>
