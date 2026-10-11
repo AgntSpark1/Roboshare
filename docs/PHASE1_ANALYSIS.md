@@ -314,7 +314,7 @@ erDiagram
 | D-16 | 治理 | ✅ 已确认（2026-10-09）：Safe **2-of-3** 多签 → OpenZeppelin `TimelockController`（**24 小时**延迟）持有 `DEFAULT_ADMIN_ROLE`。独立的守护者（Guardian）Safe 仅持有 `PAUSER_ROLE`。解除暂停需要治理。 | ⚠ |
 | D-17 | 投资资格模型 | 钱包 → `{status, investorClass, jurisdictionCode, expiresAt}`；不含 PII。开发环境中的模拟服务商标注为 **TEST-ONLY**，并在 `CHAIN_ID=56` 时拒绝运行。真实服务商待定。 | |
 | D-18 | 跨链 | MVP 中不支持。代币不提供跨链桥铸造接口。仅在文档中描述 `ICrossChainGateway` 接口。 | |
-| D-19 | 二级交易 | MVP 中不提供交易市场。仅支持合格钱包之间的点对点转让（不在 DEX 上架；DEX 资金池无论如何都无法通过投资资格检查）。 | |
+| D-19 | 二级交易 | ✅ 已确认（2026-10-11）：提供平台内点对点转让市场 `ShareMarket`（挂单 + USDT 原子成交，无托管、无手续费），平台可用自有合格钱包自愿买入兜底，无回购义务（EARLY_EXIT_DESIGN.md）。不在 DEX 上架。主网前需律师确认。 | ⚠ |
 | D-20 | 由谁为批次出资 | 由明确指定的 `funder` 地址（发行方金库 Safe）授权稳定币额度；合约精确拉取 `amount`。金额必须 ≤ 已批准报告的 `distributableAmount` 减去该报告此前各批次的金额。 | |
 | D-21 | 暂停阻止哪些操作 | ✅ 已确认（2026-10-09）：暂停会阻止认购、结算、转让、领取**以及退款**，以在漏洞利用期间阻止资金被耗尽。由于这同样会阻止投资者退出，暂停应只维持必要的时间，并建议由法律顾问复核。 | ⚠ |
 | D-22 | 入金币种 | ✅ 已确认（2026-10-09）：**所有项目统一使用 USDT（BEP20）** 认购、退款和分配。BSC 主网 USDT 合约（常用地址 `0x55d398326f99059fF775485246999027B3197955`，名称 Binance-Peg BSC-USD）及其 decimals 必须在部署前于链上和 BscScan 核实后才写入配置；本环境暂时无法访问 BSC 节点，尚未核实。BSC 测试网没有官方 USDT，测试网使用标注 **TEST-ONLY** 的模拟 USDT。 | ⚠ |
