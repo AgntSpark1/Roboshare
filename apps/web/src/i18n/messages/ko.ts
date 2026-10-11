@@ -268,6 +268,8 @@ export const ko: Messages = {
     claimableTitle: "수령 가능한 수익",
     noClaimable: "지금 수령할 수익이 없습니다.",
     noHoldings: "아직 지분이 없습니다.",
+    pendingUnits: (n) => `지급 대기 ${n}좌`,
+    pendingNote: (n) => `청약한 ${n}좌는 모집 정산 후 지갑으로 들어옵니다.`,
     browse: "차량 프로젝트 보러 가기",
     shareOfIssued: (pct) => `발행분의 ${pct}`,
     cost: "매입가",

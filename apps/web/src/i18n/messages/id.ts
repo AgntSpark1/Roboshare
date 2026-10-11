@@ -268,6 +268,8 @@ export const id: Messages = {
     claimableTitle: "Pendapatan yang bisa diklaim",
     noClaimable: "Belum ada pendapatan yang bisa diklaim.",
     noHoldings: "Belum punya unit.",
+    pendingUnits: (n) => `${n} menunggu`,
+    pendingNote: (n) => `${n} unit yang Anda pesan akan masuk ke dompet setelah penawaran diselesaikan.`,
     browse: "Lihat proyek kendaraan",
     shareOfIssued: (pct) => `${pct} dari yang diterbitkan`,
     cost: "Biaya",

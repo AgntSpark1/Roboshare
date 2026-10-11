@@ -268,6 +268,8 @@ export const es: Messages = {
     claimableTitle: "Ingresos por cobrar",
     noClaimable: "No tienes nada por cobrar ahora mismo.",
     noHoldings: "Aún no tienes participaciones.",
+    pendingUnits: (n) => `${n} pendientes`,
+    pendingNote: (n) => `Tus ${n} participaciones suscritas llegarán a tu billetera cuando se liquide la oferta.`,
     browse: "Ver vehículos",
     shareOfIssued: (pct) => `${pct} de lo emitido`,
     cost: "Coste",

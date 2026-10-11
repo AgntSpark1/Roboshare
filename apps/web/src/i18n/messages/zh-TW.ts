@@ -268,6 +268,8 @@ export const zhTW: Messages = {
     claimableTitle: "可領取收益",
     noClaimable: "暫時沒有可領取的收益。",
     noHoldings: "還沒有份額。",
+    pendingUnits: (n) => `待發放 ${n} 份`,
+    pendingNote: (n) => `你認購的 ${n} 份將在募集結算後發到錢包。`,
     browse: "去看看車輛項目",
     shareOfIssued: (pct) => `占已發行 ${pct}`,
     cost: "成本",

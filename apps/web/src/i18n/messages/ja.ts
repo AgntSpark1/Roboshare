@@ -268,6 +268,8 @@ export const ja: Messages = {
     claimableTitle: "受取可能な収益",
     noClaimable: "現在受け取れる収益はありません。",
     noHoldings: "まだ持分がありません。",
+    pendingUnits: (n) => `付与待ち ${n} 口`,
+    pendingNote: (n) => `申し込んだ ${n} 口は、募集の決済後にウォレットに届きます。`,
     browse: "車両プロジェクトを見る",
     shareOfIssued: (pct) => `発行済みの ${pct}`,
     cost: "取得額",

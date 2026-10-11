@@ -85,6 +85,8 @@ function Dashboard() {
   const totalClaimable = claimable.reduce((s, d) => s + BigInt(d.net), 0n);
   const totalClaimed = (dists.data?.items ?? []).filter((d) => d.claimed).reduce((s, d) => s + BigInt(d.net), 0n);
   const totalUnits = (holdings.data?.items ?? []).reduce((s, h) => s + h.units, 0);
+  // Escrowed subscriptions become units only when the offering settles; show them as pending meanwhile.
+  const pendingUnits = (subs.data?.items ?? []).filter((s) => s.status === "ESCROWED").reduce((n, s) => n + s.units, 0);
 
   return (
     <section>
@@ -100,7 +102,7 @@ function Dashboard() {
         <div className="tiles">
           <div className="tile hl"><span className="eyebrow">{c.claimable}</span><span className="num" data-testid="claimable-total">{formatUsdt(totalClaimable)}</span><small className="muted">USDT</small></div>
           <div className="tile"><span className="eyebrow">{c.claimed}</span><span className="num">{formatUsdt(totalClaimed)}</span><small className="muted">USDT</small></div>
-          <div className="tile"><span className="eyebrow">{c.holdings}</span><span className="num">{totalUnits}</span><small className="muted">{c.projectsCount(totalUnits, holdings.data?.items.length ?? 0)}</small></div>
+          <div className="tile"><span className="eyebrow">{c.holdings}</span><span className="num">{totalUnits}</span><small className="muted">{c.projectsCount(totalUnits, holdings.data?.items.length ?? 0)}{pendingUnits > 0 && ` · ${c.pendingUnits(pendingUnits)}`}</small></div>
         </div>
 
         <div className="panel">
@@ -118,7 +120,11 @@ function Dashboard() {
           <div className="panel">
             <h2 className="h3">{c.holdings}</h2>
             {(holdings.data?.items ?? []).length === 0 ? (
-              <p className="muted">{c.noHoldings} <Link href="/projects" style={{ color: "var(--amber)" }}>{c.browse}</Link></p>
+              pendingUnits > 0 ? (
+                <p className="muted" data-testid="pending-units">{c.pendingNote(pendingUnits)}</p>
+              ) : (
+                <p className="muted">{c.noHoldings} <Link href="/projects" style={{ color: "var(--amber)" }}>{c.browse}</Link></p>
+              )
             ) : (
               holdings.data!.items.map((h) => (
                 <div className="hold" key={h.projectId}>
