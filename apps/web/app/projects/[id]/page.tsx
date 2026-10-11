@@ -4,6 +4,7 @@ import { use } from "react";
 import { formatBps, formatDate, formatUsdt, OfferingProgress, shortAddr, StatePill, stateLabel } from "@roboshare/ui";
 import { CarArt } from "@/components/CarArt";
 import { projectCode } from "@/components/ProjectCard";
+import { MarketPanel } from "@/components/MarketPanel";
 import { SubscribePanel } from "@/components/SubscribePanel";
 import { explorer } from "@/env";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -76,6 +77,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </aside>
           )}
         </div>
+
+        {(p.state === "FUNDED" || p.state === "ACTIVE") && <MarketPanel p={p} />}
 
         <div className="cols2" style={{ marginTop: 24 }}>
           <div className="panel">
