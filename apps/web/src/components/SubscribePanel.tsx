@@ -73,7 +73,6 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
   const { run, start, reset } = useTxRunner();
   const [units, setUnits] = useState(1);
   const [ack, setAck] = useState(false);
-  const [unlimited, setUnlimited] = useState(true);
   const [done, setDone] = useState(false);
   const [ackError, setAckError] = useState<string | null>(null);
   const referralsOn = useReferralsEnabled().data === true;
@@ -111,9 +110,9 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
     const s: (TxStep & { purpose: Purpose })[] = [];
     if (needApproval) {
       s.push({
-        label: unlimited ? c.stepApproveUnlimited : c.stepApprove(formatUsdt(cost)),
+        label: c.stepApproveUnlimited,
         purpose: "APPROVE",
-        write: { address: pay.usdt, abi: erc20Abi, functionName: "approve", args: [pay.router, unlimited ? maxUint256 : cost] },
+        write: { address: pay.usdt, abi: erc20Abi, functionName: "approve", args: [pay.router, maxUint256] },
       });
     }
     s.push({
@@ -124,7 +123,7 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
         : { address: pay.router, abi: subscriptionRouterAbi, functionName: "subscribe", args: [p.id, units, cost] },
     });
     return s;
-  }, [pay.router, pay.usdt, needApproval, unlimited, cost, units, p.id, referrer, c]);
+  }, [pay.router, pay.usdt, needApproval, cost, units, p.id, referrer, c]);
 
   async function buy() {
     reset();
@@ -182,15 +181,6 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
         <div className={`approval${needApproval || short ? "" : " ok"}`}>
           <span className="st" aria-hidden="true" />
           {c.balance(formatUsdt(usdt.data.balance))}{needApproval || short ? "" : c.direct}
-        </div>
-      )}
-      {needApproval && isConnected && me && (
-        <div className="warnbox">
-          <span>{c.approvalWarn}</span>
-          <div className="radio" role="radiogroup" aria-label={c.approvalAria}>
-            <label><input type="radio" name="allow" checked={unlimited} onChange={() => setUnlimited(true)} /> {c.unlimited}</label>
-            <label><input type="radio" name="allow" checked={!unlimited} onChange={() => setUnlimited(false)} /> {c.once(formatUsdt(cost))}</label>
-          </div>
         </div>
       )}
       {referrer && firstPurchase && (
