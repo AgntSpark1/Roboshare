@@ -36,11 +36,12 @@ describe("project card", () => {
   });
 });
 
-describe("risk disclosure", () => {
+describe("investor notes", () => {
   it("keeps the key warnings, the KYC status and the no-Tesla statement", () => {
     render(<Risk />);
-    expect(screen.getByRole("heading", { level: 1, name: "风险披露" })).toBeInTheDocument();
-    expect(screen.getByText("你可能损失部分或全部投资款项。")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "投资须知" })).toBeInTheDocument();
+    expect(screen.getByText("投资可能亏损，收益不作保证。")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "未成团全额退款" })).toBeInTheDocument();
     expect(screen.getByText(/RoboShare 与 Tesla 不存在任何合作关系/)).toBeInTheDocument();
     expect(screen.getByText(/尚未接入第三方 KYC\/AML/)).toBeInTheDocument();
     expect(screen.getByText(/不提供任何找回功能/)).toBeInTheDocument();

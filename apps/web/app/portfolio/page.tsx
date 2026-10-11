@@ -57,7 +57,7 @@ export default function Portfolio() {
         <div className="wrap">
           <div className="sec-h"><h1 className="h2">我的资产</h1></div>
           <div className="panel empty">
-            <p>{loading ? "正在检查登录状态…" : "连接钱包并签名登录后，可以查看份额、领取分配和管理 USDT 授权。"}</p>
+            <p>{loading ? "正在检查登录状态…" : "连接钱包后，查看你的份额和收益。"}</p>
             <WalletButton />
           </div>
         </div>
@@ -91,8 +91,8 @@ function Dashboard() {
         <div className="sec-h">
           <h1 className="h2">我的资产</h1>
           <p>
-            钱包 <span className="mono">{shortAddr(wallet)}</span> · 资格认证：
-            {elig.data ? (elig.data.eligibleNow ? <span className="ok-t"> 有效</span> : <span className="warn-t"> 未通过或已过期</span>) : " —"}
+            钱包 <span className="mono">{shortAddr(wallet)}</span> · 认购资格：
+            {elig.data ? (elig.data.eligibleNow ? <span className="ok-t"> 有效</span> : <span className="warn-t"> 未开通</span>) : " —"}
           </p>
         </div>
         <div className="tiles">
@@ -102,9 +102,9 @@ function Dashboard() {
         </div>
 
         <div className="panel">
-          <h2 className="h3">可领取的分配</h2>
+          <h2 className="h3">可领取收益</h2>
           {claimable.length === 0 ? (
-            <p className="muted">暂时没有可领取的分配。</p>
+            <p className="muted">暂时没有可领取的收益。</p>
           ) : (
             claimable.map((d) => (
               <ClaimRow key={`${d.projectId}-${d.batchId}`} d={d} name={name(d.projectId)} distributor={project(d.projectId)?.contracts.distributor ?? null} />
@@ -147,7 +147,7 @@ function Dashboard() {
         <div className="cols2">
           <ApprovalPanel wallet={wallet} />
           <div className="panel">
-            <h2 className="h3">链上记录</h2>
+            <h2 className="h3">交易记录</h2>
             {(txs.data?.pending ?? []).map((t) => (
               <div className="tl new" key={t.hash}><i aria-hidden="true" /><span>{t.purpose} · 等待确认</span><span className="hash">{shortAddr(t.hash, 8, 6)}</span></div>
             ))}

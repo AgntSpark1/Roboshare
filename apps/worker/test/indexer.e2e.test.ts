@@ -48,7 +48,7 @@ beforeAll(async () => {
     batchSize: 50,
   });
   await indexer.init();
-}, 120_000);
+}, 180_000);
 
 afterAll(async () => {
   await prisma?.$disconnect();

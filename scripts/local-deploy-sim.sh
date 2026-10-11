@@ -18,7 +18,7 @@ export DEPLOYER="${ACCTS[0]}" SAFE="${ACCTS[1]}" OPERATOR="${ACCTS[2]}" REVIEWER
 export PAUSER="${ACCTS[4]}" COMPLIANCE_AGENT="${ACCTS[5]}" FEE_RECIPIENT="${ACCTS[6]}"
 
 cd "$ROOT/contracts"
-forge script script/Deploy.s.sol --rpc-url "$RPC" --broadcast --unlocked --sender "$DEPLOYER" -q
+forge script script/Deploy.s.sol --rpc-url "$RPC" --broadcast --unlocked --sender "$DEPLOYER" --slow -q
 RUN="broadcast/Deploy.s.sol/31337/run-latest.json"
 addr() { jq -r --arg n "$1" '[.transactions[] | select(.contractName==$n)][0].contractAddress' "$RUN"; }
 

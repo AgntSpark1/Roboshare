@@ -12,11 +12,11 @@ describe("subscribe gating", () => {
     expect(blockReason({ ...ok, open: false })).toBe("当前不在募集期");
     expect(blockReason({ ...ok, connected: false })).toBe("请先连接钱包");
     expect(blockReason({ ...ok, signedIn: false })).toBe("请先签名登录");
-    expect(blockReason({ ...ok, eligible: false })).toBe("你的钱包还没有通过投资资格认证");
+    expect(blockReason({ ...ok, eligible: false })).toBe("你的钱包还未开通认购资格");
     expect(blockReason({ ...ok, remaining: 0 })).toMatch(/上限|售罄/);
     expect(blockReason({ ...ok, units: 41 })).toBe("可认购 1–40 份");
     expect(blockReason({ ...ok, balance: 1_000n })).toBe("USDT 余额不足");
-    expect(blockReason({ ...ok, acknowledged: false })).toBe("请先勾选风险确认");
+    expect(blockReason({ ...ok, acknowledged: false })).toBe("请先勾选确认");
   });
 
   it("does not block while eligibility or balance are still loading", () => {

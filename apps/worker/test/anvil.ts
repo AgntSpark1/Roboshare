@@ -1,8 +1,9 @@
 // TEST-ONLY helpers: local anvil chain with the RoboShare contracts deployed by script/Deploy.s.sol.
-import { execFileSync, spawn, type ChildProcess } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { promisify } from "node:util";
 import { PrismaClient } from "@roboshare/db";
 import {
   createPublicClient,
@@ -29,11 +30,13 @@ export interface Chain {
   stop: () => void;
 }
 
-export async function startAnvil(port: number): Promise<Chain> {
+const run = promisify(execFile);
+const DEPLOY_TIMEOUT_MS = 60_000;
+
+async function launch(port: number) {
   const proc = spawn(join(FOUNDRY_BIN, "anvil"), ["--port", String(port), "--silent"], { stdio: "ignore" });
   const rpcUrl = `http://127.0.0.1:${port}`;
-  const transport = http(rpcUrl);
-  const pub = createPublicClient({ chain: foundry, transport, cacheTime: 0 });
+  const pub = createPublicClient({ chain: foundry, transport: http(rpcUrl), cacheTime: 0 });
   for (let i = 0; ; i++) {
     try {
       await pub.getBlockNumber();
@@ -44,10 +47,19 @@ export async function startAnvil(port: number): Promise<Chain> {
     }
   }
   const accounts = (await pub.request({ method: "eth_accounts" })) as Address[];
+  return { proc, rpcUrl, pub, accounts };
+}
+
+/**
+ * Runs script/Deploy.s.sol against the node. Async, so the test runner keeps its own timers, and with forge's output
+ * captured, so a stalled deploy in CI says where it stopped instead of failing with an empty ETIMEDOUT. --slow sends one
+ * transaction at a time: forge 1.5.1's batched broadcast hangs against anvil in roughly one run in fifteen.
+ */
+async function deploy(rpcUrl: string, accounts: Address[]) {
   const [deployer, safe, operator, reviewer, pauser, agent, feeRecipient] = accounts;
-  execFileSync(
+  await run(
     join(FOUNDRY_BIN, "forge"),
-    ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", deployer!, "-q"],
+    ["script", "script/Deploy.s.sol", "--rpc-url", rpcUrl, "--broadcast", "--unlocked", "--sender", deployer!, "--slow"],
     {
       cwd: join(ROOT, "contracts"),
       env: {
@@ -57,16 +69,40 @@ export async function startAnvil(port: number): Promise<Chain> {
         // Contracts are already compiled; online mode lets forge reach out for signature lookups, which has hung CI.
         FOUNDRY_OFFLINE: "true",
       },
-      stdio: "pipe",
-      timeout: 180_000,
+      timeout: DEPLOY_TIMEOUT_MS,
       killSignal: "SIGKILL",
+      maxBuffer: 16 * 1024 * 1024,
     },
   );
-  const run = JSON.parse(
+}
+
+const tail = (s: unknown) => String(s ?? "").split("\n").slice(-30).join("\n");
+
+export async function startAnvil(port: number): Promise<Chain> {
+  // The deploy takes about a second, but in CI forge has occasionally stalled for minutes on a fresh node. Retry once
+  // on a fresh node and print what the stalled attempt had written.
+  let node = await launch(port);
+  try {
+    await deploy(node.rpcUrl, node.accounts);
+  } catch (e) {
+    const err = e as { killed?: boolean; stdout?: string; stderr?: string; message?: string };
+    console.warn(`forge script failed on the first attempt (${err.killed ? "timed out" : err.message})\n${tail(err.stdout)}\n${tail(err.stderr)}`);
+    const old = node.proc;
+    if (old.exitCode === null && old.signalCode === null) {
+      const exited = new Promise((r) => old.once("exit", r));
+      old.kill();
+      await exited;
+    }
+    node = await launch(port);
+    await deploy(node.rpcUrl, node.accounts);
+  }
+  const { proc, rpcUrl, pub, accounts } = node;
+  const transport = http(rpcUrl);
+  const broadcast = JSON.parse(
     readFileSync(join(ROOT, "contracts/broadcast/Deploy.s.sol/31337/run-latest.json"), "utf8"),
   ) as { transactions: { contractName?: string; contractAddress?: string; transactionType: string }[] };
   const addr: Record<string, Address> = {};
-  for (const t of run.transactions) {
+  for (const t of broadcast.transactions) {
     if (t.transactionType === "CREATE" && t.contractName && t.contractAddress) addr[t.contractName] = t.contractAddress as Address;
   }
   const wallet = createWalletClient({ chain: foundry, transport });

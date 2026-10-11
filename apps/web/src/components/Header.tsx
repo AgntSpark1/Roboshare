@@ -8,7 +8,6 @@ const NAV = [
   { href: "/", label: "首页", icon: "M4 11l8-7 8 7v9h-5v-6H9v6H4z" },
   { href: "/projects", label: "车辆项目", icon: "M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16v3H5z" },
   { href: "/portfolio", label: "我的资产", icon: "M3 9h18v10H3zM16 13.5h2M3 6h18" },
-  { href: "/risk", label: "风险披露", icon: "M12 3l9 16H3zM12 10v4M12 17v.5" },
 ];
 
 function active(path: string, href: string) {
@@ -48,7 +47,7 @@ export function Header() {
         <div className="spacer" />
         <span className="chip-net">
           <span className="dot" aria-hidden="true" />
-          {CHAIN_NAME[walletEnv.chainId] ?? "网络"} · {walletEnv.chainId}
+          {CHAIN_NAME[walletEnv.chainId] ?? "网络"}
         </span>
         <WalletButton />
       </div>
@@ -65,7 +64,7 @@ export function Tabs() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
             <path d={n.icon} />
           </svg>
-          {n.label.replace("车辆", "").replace("我的", "").replace("披露", "")}
+          {n.label.replace("车辆", "").replace("我的", "")}
         </Link>
       ))}
     </nav>

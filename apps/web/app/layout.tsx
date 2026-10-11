@@ -1,14 +1,15 @@
 import "@roboshare/ui/styles.css";
 import "./web.css";
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Header, Tabs } from "@/components/Header";
-import { CHAIN_NAME, isTestChain, walletEnv } from "@/env";
+import { isTestChain } from "@/env";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "RoboShare · Robotaxi 份额",
-  description: "按份额认购单辆自动驾驶网约车的利润分配权。USDT 结算，规则写在 BNB Chain 合约里。",
+  description: "按份认购自动驾驶网约车的运营收益，USDT 按期发到你的钱包。",
 };
 
 export const viewport: Viewport = { themeColor: "#050914", width: "device-width", initialScale: 1, viewportFit: "cover" };
@@ -29,15 +30,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <Providers>
           {isTestChain && (
             <div className="ribbon" role="note">
-              <b>测试网络</b> · {CHAIN_NAME[walletEnv.chainId]} · 使用仅供测试的模拟 USDT，页面上的项目与金额来自测试链，不是真实收益，也不构成要约
+              <b>测试版</b> · 使用测试 USDT，不涉及真实资金
             </div>
           )}
           <Header />
           <main id="main">{children}</main>
           <footer>
             <div className="wrap">
-              <span>RoboShare · 链 ID {walletEnv.chainId}（{CHAIN_NAME[walletEnv.chainId] ?? "未知网络"}）· 结算币种 USDT（BEP20）</span>
-              <span>份额代表单车利润分配的合同权益，不是车辆所有权，不保证任何回报。你可能损失全部投资。RoboShare 与 Tesla 不存在任何合作关系。</span>
+              <span>RoboShare · USDT 结算 · BNB Chain</span>
+              <span>
+                投资有风险，收益不作保证。<Link href="/risk">投资须知</Link> · RoboShare 与 Tesla 无任何关联。
+              </span>
             </div>
           </footer>
           <Tabs />
