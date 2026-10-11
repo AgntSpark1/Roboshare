@@ -65,6 +65,8 @@ struct Project {
     address distributor;
     uint64  createdAt;
     uint64  fundedAtBlock;  // set on FUNDED; lower bound for distribution snapshots
+    uint32  termDays;       // operating term; default 720 if unset when the offering opens
+    uint64  operatingStartedAt; // first FUNDED -> ACTIVE; term clock does not restart after SUSPENDED
 }
 mapping(bytes32 projectId => Project) projects;
 mapping(bytes32 assetId => bytes32 projectId) assetToProject; // never cleared
@@ -79,7 +81,9 @@ mapping(bytes32 assetId => bytes32 projectId) assetToProject; // never cleared
 | `transition(projectId, newState, reasonHash)` | 见下表 | `reasonHash` 必须非零，且应存在于 AuditRegistry 中 |
 | `linkContracts(projectId, token, offering, distributor)` | FACTORY_ROLE | 仅一次，且仅在 `VERIFIED` 状态下 |
 | `markFunded(projectId)` / `markOffering` / `markCancelled` | 仅限该项目的 `OfferingManager` | 由募集结果驱动 |
+| `setOperatingTerm(projectId, termDays)` | OPERATOR | 仅在 `DRAFT` / `VERIFIED` 状态下（募集开启后不可改）；`1 ≤ termDays ≤ 3650`。未设置时募集开启自动设为 `DEFAULT_TERM_DAYS = 720` |
 | `getProject(projectId)` / `stateOf(projectId)` | 只读 | |
+| `termOf(projectId)` | 只读 | 返回 `(termDays, startedAt, endsAt)`；运营开始前 `startedAt = endsAt = 0` |
 
 ### 3.3 状态转换表
 
@@ -101,11 +105,13 @@ mapping(bytes32 assetId => bytes32 projectId) assetToProject; // never cleared
 
 任何其他状态组合都会以 `InvalidTransition(from, to)` 回滚。`CANCELLED` 和 `CLOSED` 为终态。
 
+运营期（OPERATING_TERM_PROPOSAL.md）：`FUNDED → ACTIVE` 时记录 `operatingStartedAt`，到期时间 = 开始时间 + `termDays` 天。到期不会自动改变状态，由 GOV 转入 `EXIT_PENDING` 进行车辆处置；车辆全损等情况可提前转入。
+
 状态是**调用方作出的声明/证明（attestation）**。`ACTIVE` 表示治理方已声明该车辆处于运营中，并以 `reasonHash` 引用相应证据；链本身不会、也无法对此进行验证。
 
 ### 3.4 事件
 
-`ProjectRegistered(projectId, assetId, issuerId, rightsDocHash, registrant)`、`ProjectStateChanged(projectId, from, to, reasonHash, actor)`、`ProjectContractsLinked(projectId, token, offering, distributor)`、`DraftUpdated(projectId, issuerId, rightsDocHash)`。
+`ProjectRegistered(projectId, assetId, issuerId, rightsDocHash, registrant)`、`ProjectStateChanged(projectId, from, to, reasonHash, actor)`、`ProjectContractsLinked(projectId, token, offering, distributor)`、`DraftUpdated(projectId, issuerId, rightsDocHash)`、`OperatingTermSet(projectId, termDays)`、`OperatingStarted(projectId, startedAt, termEndsAt)`。
 
 ## 4. AuditRegistry
 
@@ -335,6 +341,7 @@ dust   = D − Σ grossᵢ          (0 ≤ dust < number of holders, in base uni
 | 函数 | 访问权限 | 规则 |
 |---|---|---|
 | `proposeBatch(reportId, amount, snapshotBlock, address[] holders)` | OPERATOR | 项目状态 ∈ {ACTIVE, EXIT_PENDING, TERMINATED}；不存在其他 `PROPOSED` 批次；报告为 `APPROVED`，属于同一项目，使用同一支付代币；`amount > 0`；`distributedForPeriod + amount ≤ report.distributableAmount`；`fundedAtBlock ≤ snapshotBlock < block.number`；`holders` 严格递增（以证明唯一性），且不含零地址；`Σ balanceOfAt(hᵢ) == totalSupplyAt(snapshotBlock)` 且每个 `balanceOfAt(hᵢ) > 0`。计算并存储分配额。 |
+| `proposeCapitalReturnBatch(reportId, amount, snapshotBlock, holders)` | OPERATOR | 本金返还批次（到期卖车净款、剩余储备金、保险赔款）。项目状态 ∈ {EXIT_PENDING, TERMINATED}，其余规则同 `proposeBatch`，但所有持有人 `feeBps = 0`，`totalFee = 0`。批次标记 `capitalReturn = true` |
 | `approveBatch(batchId, funder)` | REVIEWER ≠ 提议人 | `PROPOSED → CLAIMABLE`；从 `funder` 精确拉取 `amount`（校验余额变化）；将 `totalFee` 转给 `feeRecipient`；记录 `distributedForPeriod`；结转 `dustOut` |
 | `rejectBatch(batchId, reasonHash)` | REVIEWER | `PROPOSED → REJECTED`；不转移任何资金 |
 | `claim(batchId)` / `claimMany(batchIds)` | 持有人 | 批次为 `CLAIMABLE`，`!claimed`，`net > 0`，`!isFrozen(msg.sender)`（D-13），未暂停；先设置 `claimed` 再转账；nonReentrant |
@@ -345,7 +352,7 @@ dust   = D − Σ grossᵢ          (0 ≤ dust < number of holders, in base uni
 
 为何采用链上计算加主动领取（pull）模式（D-11）：持有人最多 100 位，完整的分配计算可在一笔交易内完成，因此由合约本身强制执行公式和档位表，而无需信任链下的 Merkle 根。主动领取可避免单个接收方失败而阻塞所有人，并使每次操作的 gas 保持有界。代价是每个期间需要一笔较大的提议交易。
 
-事件：`BatchProposed(batchId, reportId, amount, snapshotBlock, pool, totalNet, totalFee, dustOut)`、`AllocationRecorded(batchId, holder, units, gross, feeBps, net)`、`BatchApproved(batchId, approver, funder)`、`BatchRejected`、`Claimed(batchId, holder, net, caller)`、`DustCarried`、`DustSwept`。
+事件：`BatchProposed(batchId, reportId, amount, snapshotBlock, pool, totalNet, totalFee, dustOut)`、`AllocationRecorded(batchId, holder, units, gross, feeBps, net)`、`BatchApproved(batchId, approver, funder)`、`BatchRejected`、`Claimed(batchId, holder, net, caller)`、`DustCarried`、`DustSwept`、`CapitalReturnProposed(batchId)`。
 
 ## 9. 交互时序
 

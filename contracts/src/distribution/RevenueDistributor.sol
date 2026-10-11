@@ -29,6 +29,9 @@ import {FeeTiers} from "../libraries/FeeTiers.sol";
 ///   fee_i   = floor(gross_i * tierBps(u_i) / 10_000)
 ///   net_i   = gross_i - fee_i
 ///   dust    = D - sum(gross_i)   (carried into the next batch)
+///
+/// Capital-return batches (vehicle sale proceeds, returned reserve, insurance payout at term end)
+/// charge no fee: fee_i = 0.
 contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -56,6 +59,7 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
         address proposer;
         address approver;
         BatchStatus status;
+        bool capitalReturn; // fee-free; only in EXIT_PENDING / TERMINATED
     }
 
     struct Allocation {
@@ -116,6 +120,7 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
     event AllocationRecorded(
         uint256 indexed batchId, address indexed holder, uint256 units, uint256 gross, uint16 feeBps, uint256 net
     );
+    event CapitalReturnProposed(uint256 indexed batchId);
     event BatchApproved(uint256 indexed batchId, address indexed approver, address funder);
     event BatchRejected(uint256 indexed batchId, bytes32 reasonHash, address indexed reviewer);
     event Claimed(uint256 indexed batchId, address indexed holder, uint256 net, address caller);
@@ -179,11 +184,36 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
         whenNotPaused
         returns (uint256 batchId)
     {
-        if (pendingBatchId != 0) revert BatchPending(pendingBatchId);
         ProjectState s = assetRegistry.stateOf(projectId);
         if (s != ProjectState.ACTIVE && s != ProjectState.EXIT_PENDING && s != ProjectState.TERMINATED) {
             revert ProjectStateInvalid(s);
         }
+        batchId = _propose(reportId, amount, snapshotBlock, holders, false);
+    }
+
+    /// @notice Fee-free batch returning capital to holders: net vehicle sale proceeds, unused reserve,
+    /// insurance payout. Only once the project is winding down (EXIT_PENDING or TERMINATED).
+    /// The amount must still be covered by an approved report, and a reviewer must approve the batch.
+    function proposeCapitalReturnBatch(
+        bytes32 reportId,
+        uint256 amount,
+        uint64 snapshotBlock,
+        address[] calldata holders
+    ) external onlyRole(OPERATOR_ROLE) whenNotPaused returns (uint256 batchId) {
+        ProjectState s = assetRegistry.stateOf(projectId);
+        if (s != ProjectState.EXIT_PENDING && s != ProjectState.TERMINATED) revert ProjectStateInvalid(s);
+        batchId = _propose(reportId, amount, snapshotBlock, holders, true);
+        emit CapitalReturnProposed(batchId);
+    }
+
+    function _propose(
+        bytes32 reportId,
+        uint256 amount,
+        uint64 snapshotBlock,
+        address[] calldata holders,
+        bool capitalReturn
+    ) private returns (uint256 batchId) {
+        if (pendingBatchId != 0) revert BatchPending(pendingBatchId);
         if (amount == 0) revert ZeroValue();
         _checkReportCapacity(reportId, amount);
 
@@ -206,6 +236,7 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
         b.snapshotBlock = snapshotBlock;
         b.proposer = msg.sender;
         b.status = BatchStatus.PROPOSED;
+        b.capitalReturn = capitalReturn;
 
         (uint256 counted, uint256 totalGross) = _allocate(batchId, b, holders, supply);
         if (counted != supply) revert HolderSetIncomplete(counted, supply);
@@ -321,6 +352,7 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
         uint256 counted;
         uint256 totalGross;
         uint256 totalNet;
+        bool feeFree;
     }
 
     function _allocate(uint256 batchId, Batch storage b, address[] calldata holders, uint256 supply)
@@ -334,7 +366,8 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
             snapshotBlock: b.snapshotBlock,
             counted: 0,
             totalGross: 0,
-            totalNet: 0
+            totalNet: 0,
+            feeFree: b.capitalReturn
         });
         address prev;
         for (uint256 i; i < holders.length; ++i) {
@@ -351,18 +384,22 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
     function _allocateOne(AllocationContext memory c, address holder) private {
         uint256 units = token.balanceOfAt(holder, c.snapshotBlock);
         if (units == 0) revert HolderHasNoUnits(holder);
-        (uint256 gross, uint256 net) = _recordAllocation(c.batchId, holder, units, c.pool, c.supply);
+        (uint256 gross, uint256 net) = _recordAllocation(c.batchId, holder, units, c.pool, c.supply, c.feeFree);
         c.counted += units;
         c.totalGross += gross;
         c.totalNet += net;
     }
 
-    function _recordAllocation(uint256 batchId, address holder, uint256 units, uint256 pool, uint256 supply)
-        private
-        returns (uint256 gross, uint256 net)
-    {
+    function _recordAllocation(
+        uint256 batchId,
+        address holder,
+        uint256 units,
+        uint256 pool,
+        uint256 supply,
+        bool feeFree
+    ) private returns (uint256 gross, uint256 net) {
         gross = Math.mulDiv(pool, units, supply);
-        uint16 bps = FeeTiers.bpsFor(_tierMinUnits, _tierBps, units);
+        uint16 bps = feeFree ? 0 : FeeTiers.bpsFor(_tierMinUnits, _tierBps, units);
         net = gross - (gross * bps) / FeeTiers.BPS_DENOMINATOR;
         _allocations[batchId][holder] = Allocation({net: SafeCast.toUint128(net), feeBps: bps, claimed: false});
         emit AllocationRecorded(batchId, holder, units, gross, bps, net);
