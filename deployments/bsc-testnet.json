@@ -34,6 +34,12 @@
       "address": "0x3eF42A386006A9B6421B97E467bDE21F6261e648",
       "tx": "0x84ba90eda083962dff9e7eb63e8245af3e6aedffa448b02da61b8e3cc9008644"
     },
+    "ShareMarket": {
+      "address": "0x96bF247F456C88482Ba8E9F3d93341eDcB3d8201",
+      "tx": "0x66680f40fd90d07ba8c1ee4b2b2852c3a87b1d217af64501d1c7026b000be93d",
+      "block": 136196684,
+      "deployedAt": "2026-10-11"
+    },
     "TokenDeployer": {
       "address": "0xb2625C75A0E296f3BD423bEd78651fc3E0662218",
       "tx": "0xe59aaa7d6e20db15053850e9e3235074e3feadb2d911f158b7ac4553985ffdaa"
