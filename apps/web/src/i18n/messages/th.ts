@@ -235,6 +235,9 @@ export const th: Messages = {
     stepApproveUnlimited: "อนุมัติ USDT (ไม่จำกัด)",
     stepApprove: (amt) => `อนุมัติ ${amt} USDT`,
     stepBuy: (n) => `ซื้อ ${n} หน่วย`,
+    settleNote: "ครบจำนวนแล้ว ระบบกำลังออกหน่วยให้โดยอัตโนมัติ",
+    settleButton: "ปิดการระดมทุนและออกหน่วย",
+    settleDone: "ออกหน่วยแล้ว",
     block: {
       notStarted: (when: string) => `เปิดจองซื้อ ${when}`,
       gas: "ต้องมี BNB เล็กน้อยในกระเป๋าเพื่อจ่ายค่าธรรมเนียมเครือข่าย",
