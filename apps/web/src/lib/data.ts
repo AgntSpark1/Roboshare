@@ -1,6 +1,6 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { readContract } from "@wagmi/core";
+import { getBalance, readContract } from "@wagmi/core";
 import { erc20Abi, type Address } from "viem";
 import { subscriptionRouterAbi } from "@roboshare/shared";
 import { api, contractOf, useSession, useWalletConfig, type ContractsResponse, type ProjectDetail, type ProjectListItem } from "@roboshare/ui";
@@ -70,7 +70,7 @@ export function usePaymentSetup() {
   return { router, usdt: usdt.data, loading: contracts.isLoading || usdt.isLoading, error: contracts.error ?? usdt.error };
 }
 
-/** USDT balance and allowance to the router for a wallet. */
+/** USDT balance and allowance to the router for a wallet, plus its BNB for network fees. */
 export function useUsdtState(owner: Address | undefined) {
   const config = useWalletConfig();
   const { router, usdt } = usePaymentSetup();
@@ -78,11 +78,12 @@ export function useUsdtState(owner: Address | undefined) {
     queryKey: ["usdt-state", usdt, router, owner],
     enabled: !!usdt && !!router && !!owner,
     queryFn: async () => {
-      const [balance, allowance] = await Promise.all([
+      const [balance, allowance, native] = await Promise.all([
         readContract(config, { address: usdt!, abi: erc20Abi, functionName: "balanceOf", args: [owner!] }),
         readContract(config, { address: usdt!, abi: erc20Abi, functionName: "allowance", args: [owner!, router!] }),
+        getBalance(config, { address: owner! }).then((b) => b.value),
       ]);
-      return { balance, allowance };
+      return { balance, allowance, native };
     },
   });
 }

@@ -46,7 +46,7 @@ export class PublicController {
         issuedUnits: supply.get(p.projectIdOnchain) ?? 0,
         authorizedUnits: SHARE_CAP,
         offering: p.offering
-          ? { status: p.offering.status, unitsSold: p.offering.unitsSold, minUnits: p.offering.minUnits, maxUnits: p.offering.maxUnits, unitPrice: p.offering.unitPrice, endAt: p.offering.endAt }
+          ? { status: p.offering.status, unitsSold: p.offering.unitsSold, minUnits: p.offering.minUnits, maxUnits: p.offering.maxUnits, unitPrice: p.offering.unitPrice, startAt: p.offering.startAt, endAt: p.offering.endAt }
           : null,
       })),
     });

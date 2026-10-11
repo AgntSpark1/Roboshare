@@ -7,6 +7,8 @@ import { StatePill } from "../src/components/StatePill";
 import { TxProgress } from "../src/components/TxProgress";
 import { WalletButton } from "../src/components/WalletButton";
 import { walletErrorMessage } from "../src/wallet";
+import { txErrorMessage } from "../src/tx";
+import { ContractFunctionRevertedError, InsufficientFundsError, encodeErrorResult, parseAbi } from "viem";
 import { Web3Providers } from "../src/providers";
 
 describe("components", () => {
@@ -105,5 +107,14 @@ describe("components", () => {
     expect(walletErrorMessage(nested)).toMatch(/待处理的请求/);
     expect(walletErrorMessage(Object.assign(new Error("x"), { name: "ProviderNotFoundError" }))).toMatch(/没有检测到钱包/);
     expect(walletErrorMessage(new Error("boom\nstack"))).toBe("出错了：boom");
+  });
+
+  it("turns contract errors and a missing network fee into plain words", () => {
+    const abi = parseAbi(["error PerWalletLimit(uint32 requested, uint32 allowed)", "error SomethingNew()"]);
+    const revert = (errorName: "PerWalletLimit" | "SomethingNew", args?: readonly unknown[]) =>
+      new ContractFunctionRevertedError({ abi, functionName: "subscribe", data: encodeErrorResult({ abi, errorName, args } as never) });
+    expect(txErrorMessage(revert("PerWalletLimit", [5, 2]))).toBe("超过了每个钱包的认购上限。资金没有变动。");
+    expect(txErrorMessage(revert("SomethingNew"))).toBe("合约拒绝：SomethingNew。资金没有变动。");
+    expect(txErrorMessage(new InsufficientFundsError())).toMatch(/BNB/);
   });
 });

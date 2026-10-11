@@ -42,6 +42,7 @@ export const zhCN = {
     perUnit: "每份",
     sold: "已认购",
     timeLeft: "剩余时间",
+    startsIn: "距开放认购",
   },
   home: {
     offering: "正在募集",
@@ -87,6 +88,7 @@ export const zhCN = {
     model: "车型",
     timeLeft: "剩余时间",
     issued: "已发行份额",
+    startsIn: "距开放认购",
   },
   project: {
     loading: "正在读取项目…",
@@ -131,6 +133,9 @@ export const zhCN = {
     aria: "认购",
     unitPrice: "每份价格",
     timeLeft: "剩余时间",
+    startsIn: "距开放认购",
+    sessionExpired: "登录已过期，请重新签名登录",
+    ackFailed: "暂时无法提交，请稍后重试",
     unitsLabel: (n: number) => `认购份数（还可买 ${n} 份）`,
     less: "减少一份",
     more: "增加一份",
@@ -155,6 +160,8 @@ export const zhCN = {
     stepBuy: (n: number) => `认购 ${n} 份`,
     block: {
       closed: "当前不在募集期",
+      notStarted: (when: string) => `${when} 开放认购`,
+      gas: "钱包里需要少量 BNB 支付网络手续费",
       connect: "请先连接钱包",
       signIn: "请先签名登录",
       ineligible: "你的钱包还未开通认购资格",
@@ -260,6 +267,7 @@ export const zhCN = {
     bought: (n: number) => `购买成功，${n} 份已到你的钱包。`,
     sellTitle: (held: number) => `卖出我的份额（持有 ${held} 份）`,
     days: (d: number) => `${d} 天`,
+    refPrice: (amt: string) => `参考：认购价每份 ${amt} USDT`,
     proceeds: (amt: string) => `全部卖出可得 ${amt} USDT`,
     stepList: (n: number) => `挂单 ${n} 份`,
     buyRange: (n: number) => `可买 1–${n} 份`,

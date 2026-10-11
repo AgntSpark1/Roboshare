@@ -13,6 +13,8 @@ export function ProjectCard({ p }: { p: ProjectListItem }) {
   const c = t.projects;
   const code = projectCode(p);
   const o = p.offering;
+  const now = Date.now();
+  const notStarted = !!o?.startAt && now < new Date(o.startAt).getTime();
   return (
     <Link className={`pcard${p.state === "OFFERING" ? " hot" : ""}`} href={`/projects/${p.id}`}>
       <div className="art">
@@ -40,8 +42,8 @@ export function ProjectCard({ p }: { p: ProjectListItem }) {
           <>
             <OfferingProgress sold={o.unitsSold} min={o.minUnits} max={o.maxUnits} />
             <div className="line">
-              <span className="muted">{c.timeLeft}</span>
-              <b className="mono">{countdown(o.endAt, Date.now(), t.ui.days)}</b>
+              <span className="muted">{notStarted ? c.startsIn : c.timeLeft}</span>
+              <b className="mono">{countdown(notStarted ? o.startAt! : o.endAt, now, t.ui.days)}</b>
             </div>
           </>
         ) : (
