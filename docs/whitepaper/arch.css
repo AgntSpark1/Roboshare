@@ -1,0 +1,11 @@
+/* architecture layers (section 09) */
+.arch{display:grid;gap:2.5mm;margin:4mm 0 6mm;break-inside:avoid}
+.arch .layer{display:grid;grid-template-columns:24mm repeat(3,1fr);gap:2.5mm;align-items:stretch}
+.arch .layer:first-child{grid-template-columns:24mm repeat(2,1fr)}
+.arch .lab{font-family:var(--f-mono);font-size:7.2pt;letter-spacing:.08em;color:var(--mute);display:flex;align-items:center;line-height:1.3}
+.arch .layer>div{border:1px solid var(--rule);border-radius:2.5mm;padding:3mm 3.5mm;background:var(--tint)}
+.arch .layer.chain>div{background:var(--night);border-color:var(--night)}
+.arch b{display:block;font-size:9pt;margin-bottom:.6mm}
+.arch i{display:block;font-style:normal;font-size:7.8pt;line-height:1.5;color:var(--mute)}
+.arch .chain b{color:#fff}
+.arch .chain i{color:#9FB0D6;font-family:var(--f-mono);font-size:7pt}

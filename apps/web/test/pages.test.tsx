@@ -1,10 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ProjectListItem } from "@roboshare/ui";
 import { ProjectCard } from "@/components/ProjectCard";
 import Risk from "../app/risk/page";
 import Guide from "../app/guide/page";
 import Faq from "../app/faq/page";
+import WhitepaperPage from "../app/whitepaper/page";
+import manifest from "@/lib/whitepaper.json";
 import { EligibilityHelp } from "@/components/Help";
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
@@ -69,5 +71,28 @@ describe("beginner help", () => {
     render(<EligibilityHelp wallet="0x06cD41Dd6E7a59fC057954FA6a81Abe76522f820" />);
     expect(screen.getByRole("button", { name: "复制我的钱包地址" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "新手指南" })).toHaveAttribute("href", "/guide#eligibility");
+  });
+});
+
+describe("whitepaper", () => {
+  it("offers the Chinese PDF by default, previews every page and switches to English", () => {
+    render(<WhitepaperPage />);
+    expect(screen.getByRole("heading", { level: 1, name: "RoboShare 白皮书" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /下载 PDF/ })).toHaveAttribute("href", manifest.zh.file);
+    expect(screen.getAllByRole("button", { name: /^第 \d+ 页$/ })).toHaveLength(manifest.zh.pages);
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(screen.getByRole("link", { name: /下载 PDF/ })).toHaveAttribute("href", manifest.en.file);
+    expect(screen.getAllByRole("button", { name: /^第 \d+ 页$/ })).toHaveLength(manifest.en.pages);
+  });
+
+  it("opens a page in the viewer and pages through it", () => {
+    render(<WhitepaperPage />);
+    fireEvent.click(screen.getByRole("button", { name: "第 2 页" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent(`2 / ${manifest.zh.pages}`);
+    fireEvent.click(screen.getByRole("button", { name: /下一页/ }));
+    expect(dialog).toHaveTextContent(`3 / ${manifest.zh.pages}`);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
