@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div className="wrap">
               <span>RoboShare · USDT 结算 · BNB Chain</span>
               <span>
-                投资有风险，收益不作保证。<Link href="/risk">投资须知</Link> · RoboShare 与 Tesla 无任何关联。
+                投资有风险，收益不作保证。<Link href="/risk">投资须知</Link>
               </span>
             </div>
           </footer>
