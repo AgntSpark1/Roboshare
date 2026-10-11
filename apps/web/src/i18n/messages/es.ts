@@ -106,6 +106,7 @@ export const es: Messages = {
     network: "Red",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC Testnet", 31337: "Cadena de prueba local" },
     language: "Idioma",
+    auto: "Idioma del dispositivo",
   },
   hero: {
     tagAuto: "Conducción autónoma",

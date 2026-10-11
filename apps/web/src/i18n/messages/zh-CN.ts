@@ -27,6 +27,7 @@ export const zhCN = {
     network: "网络",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC 测试网", 31337: "本地测试链" } as Record<number, string>,
     language: "语言",
+    auto: "跟随系统",
   },
   hero: {
     tagAuto: "自动驾驶",

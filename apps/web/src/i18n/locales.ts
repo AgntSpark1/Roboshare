@@ -36,6 +36,11 @@ function matchTag(tag: string): Locale | null {
 
 /** Picks a locale from an Accept-Language header (or navigator.languages joined by commas), honouring q-values. */
 export function pickLocale(acceptLanguage: string | null | undefined): Locale {
+  return matchLocale(acceptLanguage) ?? DEFAULT_LOCALE;
+}
+
+/** Like pickLocale, but null when none of the languages is one of ours. */
+export function matchLocale(acceptLanguage: string | null | undefined): Locale | null {
   const tags = (acceptLanguage ?? "")
     .split(",")
     .map((part, i) => {
@@ -49,5 +54,5 @@ export function pickLocale(acceptLanguage: string | null | undefined): Locale {
     const m = matchTag(tag);
     if (m) return m;
   }
-  return DEFAULT_LOCALE;
+  return null;
 }

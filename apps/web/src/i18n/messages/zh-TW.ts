@@ -106,6 +106,7 @@ export const zhTW: Messages = {
     network: "網路",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC 測試網", 31337: "本地測試鏈" },
     language: "語言",
+    auto: "跟隨系統",
   },
   hero: {
     tagAuto: "自動駕駛",

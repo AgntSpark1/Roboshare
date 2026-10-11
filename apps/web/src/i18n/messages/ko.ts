@@ -106,6 +106,7 @@ export const ko: Messages = {
     network: "네트워크",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC 테스트넷", 31337: "로컬 테스트 체인" },
     language: "언어",
+    auto: "기기 언어",
   },
   hero: {
     tagAuto: "자율주행",

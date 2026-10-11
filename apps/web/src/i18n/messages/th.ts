@@ -106,6 +106,7 @@ export const th: Messages = {
     network: "เครือข่าย",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC Testnet", 31337: "เชนทดสอบในเครื่อง" },
     language: "ภาษา",
+    auto: "ตามอุปกรณ์",
   },
   hero: {
     tagAuto: "ไร้คนขับ",

@@ -106,6 +106,7 @@ export const ja: Messages = {
     network: "ネットワーク",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC テストネット", 31337: "ローカルテストチェーン" },
     language: "言語",
+    auto: "端末の言語",
   },
   hero: {
     tagAuto: "自動運転",

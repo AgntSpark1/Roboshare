@@ -106,6 +106,7 @@ export const en: Messages = {
     network: "Network",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC Testnet", 31337: "Local test chain" },
     language: "Language",
+    auto: "Device language",
   },
   hero: {
     tagAuto: "Self-driving",

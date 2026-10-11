@@ -106,6 +106,7 @@ export const vi: Messages = {
     network: "Mạng",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC Testnet", 31337: "Chuỗi thử nghiệm cục bộ" },
     language: "Ngôn ngữ",
+    auto: "Theo thiết bị",
   },
   hero: {
     tagAuto: "Tự lái",
