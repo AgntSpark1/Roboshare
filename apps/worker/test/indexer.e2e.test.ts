@@ -10,10 +10,12 @@ import {
   rwaShareTokenAbi,
   subscriptionRouterAbi,
 } from "@roboshare/shared";
-import { erc20Abi, keccak256, parseAbi, stringToHex, type Address, type Hex } from "viem";
+import { erc20Abi, getAddress, keccak256, parseAbi, stringToHex, type Address, type Hex } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Indexer } from "../src/indexer.js";
 import { reconcile } from "../src/reconcile.js";
+import { autoSettle, settleSender } from "../src/settler.js";
+import { generatePrivateKey } from "viem/accounts";
 import { asSafe, bytes32, resetDb, send, startAnvil, type Chain } from "./anvil.js";
 
 const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);
@@ -88,7 +90,12 @@ describe("indexer against a local chain", () => {
       await send(c, who, { address: usdt, abi: erc20Abi, functionName: "approve", args: [c.addr.SubscriptionRouter!, 2n ** 256n - 1n] });
       await send(c, who, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "subscribe", args: [PID, units, BigInt(units) * UNIT_PRICE] });
     }
-    await send(c, A.operator!, { address: offering, abi: offeringManagerAbi, functionName: "settle" });
+    // Sold out: the worker's gas-only settler (no role) settles it before the deadline.
+    await indexer.catchUp();
+    const settlerKey = generatePrivateKey();
+    const settler = settleSender(c.pub as any, c.rpcUrl, settlerKey);
+    await c.test.setBalance({ address: settler.account, value: 10n ** 18n });
+    expect(await autoSettle(prisma, c.pub as any, settler.send)).toEqual({ settled: [getAddress(offering)], failed: [] });
     await asSafe(c, (tl) => send(c, tl, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 5, bytes32("go live")] }));
     token = ((await c.pub.readContract({ address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "getProject", args: [PID] })) as { token: Address }).token;
     await send(c, A.alice!, { address: token, abi: rwaShareTokenAbi, functionName: "transfer", args: [A.bob!, 10n] });

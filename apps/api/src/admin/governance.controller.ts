@@ -96,7 +96,7 @@ export class GovernanceController {
     const blocked = escrowed.filter((s) => !ok.has(s.wallet)).map((s) => getAddress(s.wallet));
     if (blocked.length) throw new ApiError(409, "NOT_ELIGIBLE", "some subscribers are no longer eligible; exclude them first", { wallets: blocked });
     await this.audit(req, "OFFERING_SETTLE_PREPARE", "project", id, {});
-    return { tx: prepare(this.cfg.chainId, getAddress(p.offeringAddress!), offeringManagerAbi, "settle", [], "Settle the offering (operator wallet)") };
+    return { tx: prepare(this.cfg.chainId, getAddress(p.offeringAddress!), offeringManagerAbi, "settle", [], "Settle the offering (any wallet)") };
   }
 
   @Post("offerings/:id/exclude")

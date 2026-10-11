@@ -72,7 +72,7 @@
 | POST | `/admin/projects/:id/documents` | OPERATOR | 上传版本 → 计算哈希 → 准备 `submitRecord` |
 | POST | `/admin/projects/:id/transition` | REVIEWER / GOV_VIEW | 准备状态转换交易或 Safe 提案 |
 | POST | `/admin/projects/:id/offering` | GOV_VIEW | 校验配置（从链上读取稳定币 decimals），为 `configure` + `open` 准备 Safe 提案 |
-| POST | `/admin/offerings/:id/settle` | OPERATOR | 预检查所有认购人的投资资格；准备 `settle` |
+| POST | `/admin/offerings/:id/settle` | OPERATOR | 预检查所有认购人的投资资格；准备 `settle`（合约上任何钱包都可调用；worker 配置 `SETTLER_PRIVATE_KEY` 后会在满额或到期达标后自动结算） |
 | POST | `/admin/offerings/:id/exclude` | GOV_VIEW | 为 `excludeSubscriber` 准备 Safe 提案 |
 | POST | `/admin/reports` | OPERATOR | 提交报告 JSON + 附件；经 zod 校验；返回规范哈希 |
 | POST | `/admin/reports/:id/review` | REVIEWER | 批准/驳回（必须与提交人不同）并准备链上交易 |
