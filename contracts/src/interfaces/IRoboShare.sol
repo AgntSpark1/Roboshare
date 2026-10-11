@@ -52,6 +52,7 @@ struct AuditRecord {
 }
 
 interface IIdentityRegistry {
+    function checksRequired() external view returns (bool);
     function isEligible(address wallet) external view returns (bool);
     function isFrozen(address wallet) external view returns (bool);
     function classOf(address wallet) external view returns (uint16);

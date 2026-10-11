@@ -99,6 +99,19 @@ export const identityRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "checksRequired",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "classOf",
     "inputs": [
       {
@@ -374,6 +387,19 @@ export const identityRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "setChecksRequired",
+    "inputs": [
+      {
+        "name": "required",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setEligibility",
     "inputs": [
       {
@@ -443,6 +469,25 @@ export const identityRegistryAbi = [
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "ChecksRequiredSet",
+    "inputs": [
+      {
+        "name": "required",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "admin",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",

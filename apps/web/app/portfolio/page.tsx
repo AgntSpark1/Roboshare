@@ -94,8 +94,14 @@ function Dashboard() {
         <div className="sec-h">
           <h1 className="h2">{c.title}</h1>
           <p>
-            {c.wallet} <span className="mono">{shortAddr(wallet)}</span> · {c.eligibility}
-            {elig.data ? (elig.data.eligibleNow ? <span className="ok-t"> {c.eligible}</span> : <span className="warn-t"> {c.notEligible}</span>) : " —"}
+            {c.wallet} <span className="mono">{shortAddr(wallet)}</span>
+            {/* With KYC checks off there is nothing to show unless the wallet is frozen. */}
+            {elig.data && (elig.data.checksRequired !== false || !elig.data.eligibleNow) && (
+              <>
+                {" · "}{c.eligibility}
+                {elig.data.eligibleNow ? <span className="ok-t"> {c.eligible}</span> : <span className="warn-t"> {c.notEligible}</span>}
+              </>
+            )}
           </p>
         </div>
         {elig.data && !elig.data.eligibleNow && <EligibilityHelp wallet={wallet} />}

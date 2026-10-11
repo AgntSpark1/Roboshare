@@ -465,6 +465,15 @@ describe("governance prepares (Safe, no timelock, never signed by the server)", 
         { projectIdOnchain: PID2, wallet: late.address.toLowerCase(), units: 10, amount: "1", status: "ESCROWED", lastTxHash: "0x2" },
       ],
     });
+    // KYC checks are off by default: only frozen wallets block settlement, and any unfrozen wallet may invest.
+    await http().post(`/api/v1/admin/offerings/${PID2}/settle`).set("Cookie", cookies.operator!).expect(200);
+    const off = await http().get("/api/v1/me/eligibility").set("Cookie", cookies.investor!).expect(200);
+    expect(off.body).toMatchObject({ checksRequired: false, eligibleNow: true });
+    await prisma.chainEvent.create({
+      data: { chainId: 31337, blockNumber: 1n, blockHash: "0x1", txHash: "0xc4ec", logIndex: 0, address: ADDR(0x1d).toLowerCase(), name: "ChecksRequiredSet", args: { required: true, admin: SAFE } },
+    });
+    const on = await http().get("/api/v1/me/eligibility").set("Cookie", cookies.investor!).expect(200);
+    expect(on.body.checksRequired).toBe(true);
     const blocked = await http().post(`/api/v1/admin/offerings/${PID2}/settle`).set("Cookie", cookies.operator!).expect(409);
     expect(blocked.body.error).toMatchObject({ code: "NOT_ELIGIBLE", details: { wallets: [late.address] } });
 

@@ -152,6 +152,8 @@ mapping(bytes32 projectId => mapping(bytes32 periodKey => bytes32 recordId)) act
 
 ## 5. IdentityRegistry
 
+> **资格检查开关（2026-10-11）：** `checksRequired` 为 `false` 时，认购、结算、份额转让（含转让市场）只拒绝**被冻结**的钱包，不再检查投资资格和类别；为 `true` 时恢复下表描述的完整检查。推荐奖励和收益领取本来就只检查冻结。
+
 ```solidity
 enum EligibilityStatus { NONE, ELIGIBLE, FROZEN }
 struct Eligibility {
@@ -170,6 +172,8 @@ mapping(address => Eligibility) eligibility;
 | `batchSetEligibility(...)` | COMPLIANCE_AGENT，每次调用最多 50 个 |
 | `revoke(wallet, reasonCode)` → 状态 `NONE` | COMPLIANCE_AGENT |
 | `freeze(wallet, reasonCode)` / `unfreeze(wallet)` | COMPLIANCE_AGENT（冻结）、GOV（解冻） |
+| `setChecksRequired(bool)` | GOV（Safe 多签）。打开或关闭所有项目的投资资格和类别检查 |
+| `checksRequired() → bool` | 只读。**默认 `false`**（2026-10-11 Charlene 决定不做 KYC），部署时可用 `REQUIRE_ELIGIBILITY=true` 打开 |
 | `isEligible(wallet) → bool` | 只读：`status == ELIGIBLE && block.timestamp < expiresAt` |
 | `isFrozen(wallet) → bool` | 只读 |
 | `classOf(wallet)`、`jurisdictionOf(wallet)` | 只读 |

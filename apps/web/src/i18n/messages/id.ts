@@ -327,7 +327,7 @@ export const id: Messages = {
     unknownDate: "Tanggal bergabung sedang disinkronkan",
     referredBy: "Perujuk Anda: ",
     rulesTitle: "Aturan",
-    rules: ["Maksimal dua level: teman Anda (level 1) dan orang yang mereka undang (level 2). Level di bawahnya tidak memberi hadiah.", "Hadiah berasal dari biaya platform dan tidak mengubah harga atau penghasilan teman Anda.", "Kelayakan investasi Anda harus tetap berlaku, jika tidak hadiah periode itu tidak dihitung.", "Penghasilan bisa diklaim setelah platform memublikasikan tiap periode; klaim memerlukan sedikit BNB untuk gas."],
+    rules: ["Maksimal dua level: teman Anda (level 1) dan orang yang mereka undang (level 2). Level di bawahnya tidak memberi hadiah.", "Hadiah berasal dari biaya platform dan tidak mengubah harga atau penghasilan teman Anda.", "Penghasilan bisa diklaim setelah platform memublikasikan tiap periode; klaim memerlukan sedikit BNB untuk gas."],
   },
   market: {
     refPrice: (amt: string) => `Referensi: harga langganan ${amt} USDT per unit`,
@@ -392,10 +392,9 @@ export const id: Messages = {
         "Setiap transaksi on-chain butuh sedikit BNB sebagai biaya jaringan, biasanya di bawah US$0,01 per transaksi.",
         "Beli BNB senilai US$1–2 di bursa dan tarik ke dompet juga lewat BSC (BEP20).",
       ] },
-      { id: "eligibility", title: "4. Aktifkan hak berlangganan", body: [
+      { id: "eligibility", title: "4. Masuk dengan tanda tangan", body: [
         "Setelah terhubung, ketuk “Masuk dengan tanda tangan”. Tanda tangan hanya untuk membuktikan ini Anda, gratis dan tidak memindahkan aset.",
-        "Sebelum langganan pertama, operator perlu mengaktifkan dompet Anda: salin alamat dompet dan kirim ke kami.",
-        "Setelah aktif, muat ulang halaman dan berlangganan.",
+        "Setelah masuk, Anda bisa langsung berlangganan tanpa aktivasi terpisah.",
       ] },
       { id: "subscribe", title: "5. Berlangganan dan klaim hasil", body: [
         "Buka proyek, pilih jumlah unit, centang konfirmasi, lalu berlangganan. Pertama kali Anda menyetujui USDT lalu berlangganan, masing-masing dikonfirmasi di dompet.",
@@ -467,7 +466,7 @@ export const id: Messages = {
       ["Kontrak pintar", ["Kontrak mungkin memiliki cacat yang belum ditemukan; kontrak tidak bisa di-upgrade, sehingga perbaikan mungkin memerlukan migrasi."]],
       ["Hak admin", ["Multisig tata kelola dapat menjeda kontrak atau mengubah peran (tidak dapat memindahkan unit); hak ini berpotensi disalahgunakan atau dibobol."]],
       ["Regulasi dan pajak", ["Hukum terkait bisa berubah dan dapat membatasi atau mengakhiri proyek; Anda bertanggung jawab atas pajak sendiri."]],
-      ["Verifikasi identitas", ["Selama tahap uji, layanan KYC/AML pihak ketiga belum terhubung; staf operasional mengatur kelayakan dompet secara manual. Layanan akan dihubungkan sebelum peluncuran resmi."]],
+      ["Verifikasi identitas", ["Saat ini tidak ada verifikasi identitas KYC/AML; dompet mana pun dapat berlangganan dan mentransfer. Jika kelak hukum mewajibkan verifikasi, dompet yang belum terverifikasi mungkin tidak dapat lagi menerima unit."]],
     ],
     translationNote: "Halaman ini adalah terjemahan untuk kemudahan. Jika berbeda dengan versi bahasa Tionghoa Sederhana atau ketentuan penggalangan proyek, versi tersebut yang berlaku.",
     viewProjects: "Lihat proyek kendaraan",

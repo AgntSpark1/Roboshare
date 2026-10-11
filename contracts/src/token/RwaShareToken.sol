@@ -132,8 +132,12 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
         if (value == 0) return (false, REASON_ZERO_AMOUNT);
         if (!_transfersOpen()) return (false, REASON_STATE);
         if (identityRegistry.isFrozen(from)) return (false, REASON_SENDER_FROZEN);
-        if (!identityRegistry.isEligible(to)) return (false, REASON_RECEIVER_NOT_ELIGIBLE);
-        if (!isClassAllowed(identityRegistry.classOf(to))) return (false, REASON_CLASS);
+        if (identityRegistry.checksRequired()) {
+            if (!identityRegistry.isEligible(to)) return (false, REASON_RECEIVER_NOT_ELIGIBLE);
+            if (!isClassAllowed(identityRegistry.classOf(to))) return (false, REASON_CLASS);
+        } else if (identityRegistry.isFrozen(to)) {
+            return (false, REASON_RECEIVER_NOT_ELIGIBLE);
+        }
         if (balanceOf(from) < value) return (false, REASON_BALANCE);
         return (true, REASON_OK);
     }
@@ -165,6 +169,10 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
     }
 
     function _checkReceiver(address to) private view {
+        if (!identityRegistry.checksRequired()) {
+            if (identityRegistry.isFrozen(to)) revert NotEligible(to);
+            return;
+        }
         if (!identityRegistry.isEligible(to)) revert NotEligible(to);
         uint16 cls = identityRegistry.classOf(to);
         if (!isClassAllowed(cls)) revert ClassNotAllowed(to, cls);

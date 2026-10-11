@@ -90,6 +90,8 @@ export function useUsdtState(owner: Address | undefined) {
 
 export interface Eligibility {
   status: string;
+  /** False while KYC checks are off on chain: every wallet that is not frozen may invest. */
+  checksRequired?: boolean;
   eligibleNow: boolean;
   expiresAt: string | null;
 }

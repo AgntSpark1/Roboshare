@@ -8,6 +8,9 @@ import {IIdentityRegistry} from "../interfaces/IRoboShare.sol";
 /// @title IdentityRegistry
 /// @notice Records whether a wallet may hold or receive restricted RoboShare tokens.
 /// Stores only codes, an expiry and a hash reference to an off-chain attestation. No personal data.
+/// Eligibility and class checks apply only while `checksRequired` is on. It is off by default (Charlene,
+/// 2026-10-11: no KYC for now), so any wallet that is not frozen may subscribe, hold and receive units.
+/// Governance can switch checks back on, e.g. if counsel requires KYC before a public offering.
 contract IdentityRegistry is IIdentityRegistry, AccessControl, Pausable {
     bytes32 public constant COMPLIANCE_AGENT_ROLE = keccak256("COMPLIANCE_AGENT_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -28,6 +31,8 @@ contract IdentityRegistry is IIdentityRegistry, AccessControl, Pausable {
     }
 
     mapping(address => Eligibility) private _eligibility;
+    /// @notice When false, consumers skip eligibility and class checks; frozen wallets stay blocked.
+    bool public checksRequired;
 
     event EligibilitySet(
         address indexed wallet,
@@ -40,6 +45,7 @@ contract IdentityRegistry is IIdentityRegistry, AccessControl, Pausable {
     event EligibilityRevoked(address indexed wallet, bytes32 reasonCode, address indexed agent);
     event WalletFrozen(address indexed wallet, bytes32 reasonCode, address indexed agent);
     event WalletUnfrozen(address indexed wallet, address indexed admin);
+    event ChecksRequiredSet(bool required, address indexed admin);
 
     error ZeroAddress();
     error InvalidClass(uint16 investorClass);
@@ -108,6 +114,12 @@ contract IdentityRegistry is IIdentityRegistry, AccessControl, Pausable {
         if (_eligibility[wallet].status != EligibilityStatus.FROZEN) revert WalletNotFrozen(wallet);
         _eligibility[wallet].status = EligibilityStatus.NONE;
         emit WalletUnfrozen(wallet, msg.sender);
+    }
+
+    /// @notice Governance turns eligibility and class checks on or off for every project at once.
+    function setChecksRequired(bool required) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        checksRequired = required;
+        emit ChecksRequiredSet(required, msg.sender);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {

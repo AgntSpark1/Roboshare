@@ -47,7 +47,7 @@ describe("investor notes", () => {
     expect(screen.getByRole("heading", { level: 1, name: "投资须知" })).toBeInTheDocument();
     expect(screen.getByText("投资可能亏损，收益不作保证。")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "未成团全额退款" })).toBeInTheDocument();
-    expect(screen.getByText(/尚未接入第三方 KYC\/AML/)).toBeInTheDocument();
+    expect(screen.getByText(/目前不做 KYC\/AML 身份认证/)).toBeInTheDocument();
     expect(screen.getByText(/不提供任何找回功能/)).toBeInTheDocument();
     expect(screen.getAllByRole("group").length).toBeGreaterThanOrEqual(10);
   });

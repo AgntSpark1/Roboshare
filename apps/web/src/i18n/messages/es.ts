@@ -327,7 +327,7 @@ export const es: Messages = {
     unknownDate: "Fecha de alta sincronizándose",
     referredBy: "Te refirió: ",
     rulesTitle: "Reglas",
-    rules: ["Dos niveles como máximo: tus amigos (nivel 1) y las personas que ellos invitan (nivel 2). Más abajo no hay recompensa.", "Las recompensas salen de la comisión de la plataforma y no cambian el precio ni las ganancias de tu amigo.", "Tu propia elegibilidad debe seguir vigente; si no, la recompensa de ese periodo no se cuenta.", "Las ganancias se cobran después de que la plataforma publique cada periodo; cobrar cuesta un poco de BNB de gas."],
+    rules: ["Dos niveles como máximo: tus amigos (nivel 1) y las personas que ellos invitan (nivel 2). Más abajo no hay recompensa.", "Las recompensas salen de la comisión de la plataforma y no cambian el precio ni las ganancias de tu amigo.", "Las ganancias se cobran después de que la plataforma publique cada periodo; cobrar cuesta un poco de BNB de gas."],
   },
   market: {
     refPrice: (amt: string) => `Referencia: precio de suscripción ${amt} USDT por participación`,
@@ -392,10 +392,9 @@ export const es: Messages = {
         "Cada operación en cadena necesita un poco de BNB como comisión de red, normalmente menos de 0,01 US$.",
         "Compra 1–2 US$ de BNB en un exchange y retíralos también por BSC (BEP20).",
       ] },
-      { id: "eligibility", title: "4. Activa tu acceso para suscribir", body: [
+      { id: "eligibility", title: "4. Inicia sesión", body: [
         "Tras conectar, toca “Iniciar sesión con firma”. La firma solo demuestra que eres tú; no cuesta nada ni mueve fondos.",
-        "Antes de tu primera suscripción, el operador debe habilitar tu billetera: copia tu dirección y envíanosla.",
-        "Una vez habilitada, recarga la página y suscribe.",
+        "Con la sesión iniciada puedes suscribir de inmediato, sin habilitación aparte.",
       ] },
       { id: "subscribe", title: "5. Suscribe y cobra", body: [
         "Abre un proyecto, elige las participaciones, marca la casilla y suscribe. La primera vez autorizas USDT y luego suscribes, confirmando cada paso en la billetera.",
@@ -467,7 +466,7 @@ export const es: Messages = {
       ["Contratos inteligentes", ["Los contratos pueden tener fallos no descubiertos. No se pueden actualizar, así que una corrección podría requerir una migración."]],
       ["Poderes de administración", ["La multifirma de gobernanza puede pausar contratos o cambiar roles (no puede mover participaciones). Estos poderes podrían usarse mal o verse comprometidos."]],
       ["Regulación e impuestos", ["Las leyes pueden cambiar y podrían limitar o poner fin a un proyecto. Tú eres responsable de tus impuestos."]],
-      ["Verificación de identidad", ["En la fase de pruebas aún no hay un servicio KYC/AML externo; el equipo de operaciones habilita las billeteras manualmente. Se conectará antes del lanzamiento público."]],
+      ["Verificación de identidad", ["Actualmente no hay verificación de identidad KYC/AML; cualquier billetera puede suscribir y transferir. Si en el futuro la ley exige activarla, las billeteras no verificadas podrían dejar de recibir participaciones."]],
     ],
     translationNote: "Esta página es una traducción de cortesía. Si difiere de la versión en chino simplificado o de las condiciones de oferta de un proyecto, prevalecen estas.",
     viewProjects: "Ver vehículos",

@@ -327,7 +327,7 @@ export const vi: Messages = {
     unknownDate: "Đang đồng bộ ngày tham gia",
     referredBy: "Người giới thiệu bạn: ",
     rulesTitle: "Quy tắc",
-    rules: ["Tối đa hai cấp: bạn bè (cấp 1) và người họ mời (cấp 2). Các cấp sau không được tính thưởng.", "Thưởng lấy từ phí nền tảng, không ảnh hưởng giá mua và thu nhập của bạn bè.", "Tư cách đầu tư của bạn phải còn hiệu lực, nếu không thưởng kỳ đó không được tính.", "Thu nhập chỉ nhận được sau khi nền tảng công bố mỗi kỳ; khi nhận cần một ít BNB làm phí gas."],
+    rules: ["Tối đa hai cấp: bạn bè (cấp 1) và người họ mời (cấp 2). Các cấp sau không được tính thưởng.", "Thưởng lấy từ phí nền tảng, không ảnh hưởng giá mua và thu nhập của bạn bè.", "Thu nhập chỉ nhận được sau khi nền tảng công bố mỗi kỳ; khi nhận cần một ít BNB làm phí gas."],
   },
   market: {
     refPrice: (amt: string) => `Tham khảo: giá đăng ký ${amt} USDT mỗi phần`,
@@ -392,10 +392,9 @@ export const vi: Messages = {
         "Mỗi thao tác trên chuỗi cần một ít BNB làm phí mạng, thường dưới 0,01 USD mỗi lần.",
         "Mua khoảng 1–2 USD BNB trên sàn và rút về ví cũng qua mạng BSC (BEP20).",
       ] },
-      { id: "eligibility", title: "4. Mở quyền đăng ký mua", body: [
+      { id: "eligibility", title: "4. Ký đăng nhập", body: [
         "Sau khi kết nối, bấm “Ký đăng nhập”. Chữ ký chỉ để xác nhận là bạn, không tốn phí và không di chuyển tài sản.",
-        "Trước lần mua đầu tiên, nhà vận hành cần mở quyền cho ví của bạn: hãy sao chép địa chỉ ví và gửi cho chúng tôi.",
-        "Sau khi mở, tải lại trang là có thể đăng ký mua.",
+        "Đăng nhập xong là có thể đăng ký mua ngay, không cần mở quyền riêng.",
       ] },
       { id: "subscribe", title: "5. Đăng ký mua và nhận lợi nhuận", body: [
         "Mở dự án, chọn số phần, đánh dấu xác nhận rồi bấm đăng ký. Lần đầu sẽ ủy quyền USDT rồi mới mua, mỗi bước xác nhận một lần trong ví.",
@@ -467,7 +466,7 @@ export const vi: Messages = {
       ["Hợp đồng thông minh", ["Hợp đồng có thể có lỗi chưa được phát hiện; hợp đồng không thể nâng cấp, việc sửa lỗi có thể cần di chuyển."]],
       ["Quyền quản trị", ["Ví đa chữ ký quản trị có thể tạm dừng hợp đồng hoặc thay đổi vai trò (không thể chuyển phần góp); các quyền này có khả năng bị lạm dụng hoặc bị xâm nhập."]],
       ["Pháp lý và thuế", ["Luật liên quan có thể thay đổi và có thể hạn chế hoặc chấm dứt dự án; bạn tự kê khai thuế."]],
-      ["Xác minh danh tính", ["Trong giai đoạn thử nghiệm chưa kết nối dịch vụ KYC/AML bên thứ ba, nhân viên vận hành đặt quyền ví thủ công; sẽ kết nối trước khi mở chính thức."]],
+      ["Xác minh danh tính", ["Hiện chưa áp dụng xác minh danh tính KYC/AML; ví nào cũng có thể đăng ký mua và chuyển nhượng. Nếu sau này pháp luật yêu cầu bật xác minh, ví chưa xác minh có thể không nhận được phần sở hữu."]],
     ],
     translationNote: "Trang này là bản dịch để tiện tham khảo. Nếu khác với bản tiếng Trung giản thể hoặc điều khoản huy động của dự án, bản đó được ưu tiên.",
     viewProjects: "Xem dự án xe",

@@ -31,6 +31,8 @@ contract Deploy is Script {
         address complianceAgent;
         address feeRecipient;
         address usdt;
+        /// Eligibility (KYC) checks start off unless REQUIRE_ELIGIBILITY=true; the Safe can switch them later.
+        bool requireEligibility;
     }
 
     struct Deployed {
@@ -104,6 +106,8 @@ contract Deploy is Script {
         d.audit.grantRole(d.audit.OPERATOR_ROLE(), c.operator);
         d.audit.grantRole(d.audit.REVIEWER_ROLE(), c.reviewer);
 
+        if (c.requireEligibility) d.identity.setChecksRequired(true);
+
         bytes32 admin = 0x00;
         d.identity.grantRole(admin, c.safe);
         d.assets.grantRole(admin, c.safe);
@@ -149,6 +153,7 @@ contract Deploy is Script {
         c.complianceAgent = _required("COMPLIANCE_AGENT");
         c.feeRecipient = _required("FEE_RECIPIENT");
         c.usdt = vm.envOr("USDT", address(0));
+        c.requireEligibility = vm.envOr("REQUIRE_ELIGIBILITY", false);
 
         if (block.chainid == BSC_MAINNET) {
             if (keccak256(bytes(vm.envOr("CONFIRM_MAINNET", string("")))) != MAINNET_CONFIRMATION) {

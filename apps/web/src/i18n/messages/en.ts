@@ -327,7 +327,7 @@ export const en: Messages = {
     unknownDate: "Join date syncing",
     referredBy: "Referred by: ",
     rulesTitle: "Rules",
-    rules: ["Two levels at most: your friends (level 1) and the people they invite (level 2). Nobody further down earns you a reward.", "Rewards come from the platform fee and never change your friend's price or earnings.", "Your own eligibility must stay valid, or that period's reward is not counted.", "Earnings can be claimed after the platform publishes each period; claiming costs a little BNB for gas."],
+    rules: ["Two levels at most: your friends (level 1) and the people they invite (level 2). Nobody further down earns you a reward.", "Rewards come from the platform fee and never change your friend's price or earnings.", "Earnings can be claimed after the platform publishes each period; claiming costs a little BNB for gas."],
   },
   market: {
     refPrice: (amt: string) => `For reference: subscription price ${amt} USDT per unit`,
@@ -392,10 +392,9 @@ export const en: Messages = {
         "Every on-chain action needs a little BNB as a network fee, usually under US$0.01 each.",
         "Buy US$1–2 of BNB on an exchange and withdraw it to your wallet on BSC (BEP20) as well.",
       ] },
-      { id: "eligibility", title: "4. Get approved to subscribe", body: [
+      { id: "eligibility", title: "4. Sign in", body: [
         "After connecting, tap “Sign in”. The signature only proves it is you. It costs nothing and moves no funds.",
-        "Before your first subscription the operator needs to approve your wallet: copy your wallet address and send it to us.",
-        "Once approved, refresh the page and subscribe.",
+        "Once signed in you can subscribe right away. No separate approval is needed.",
       ] },
       { id: "subscribe", title: "5. Subscribe and collect payouts", body: [
         "Open a project, choose the number of units, tick the box and subscribe. The first time you approve USDT and then subscribe, confirming each in your wallet.",
@@ -467,7 +466,7 @@ export const en: Messages = {
       ["Smart contracts", ["Contracts may contain undiscovered flaws. They cannot be upgraded, so a fix may require a migration."]],
       ["Admin powers", ["The governance multisig can pause contracts or change roles (it cannot move units). These powers could be misused or compromised."]],
       ["Regulation and tax", ["Laws may change and could restrict or end a project. You are responsible for your own taxes."]],
-      ["Identity checks", ["During testing no third-party KYC/AML service is connected yet; operators set wallet eligibility manually. One will be connected before public launch."]],
+      ["Identity checks", ["There is currently no KYC/AML identity check; any wallet can subscribe and transfer. If the law later requires checks to be switched on, unverified wallets may no longer be able to receive units."]],
     ],
     translationNote: "This page is a translation provided for convenience. If it differs from the Simplified Chinese version or a project's offering terms, those prevail.",
     viewProjects: "View vehicles",

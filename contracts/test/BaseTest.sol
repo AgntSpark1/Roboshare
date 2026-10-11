@@ -75,6 +75,8 @@ abstract contract BaseTest is Test {
         vm.startPrank(gov);
         identity.grantRole(identity.COMPLIANCE_AGENT_ROLE(), agent);
         identity.grantRole(identity.PAUSER_ROLE(), pauser);
+        // Most suites exercise the KYC-on mode; NoKycMode.t.sol covers the default (checks off).
+        identity.setChecksRequired(true);
         assets.grantRole(assets.OPERATOR_ROLE(), operator);
         assets.grantRole(assets.REVIEWER_ROLE(), reviewer);
         assets.grantRole(assets.PAUSER_ROLE(), pauser);

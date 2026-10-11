@@ -19,6 +19,7 @@ import { IdempotencyInterceptor } from "../common/idempotency.js";
 import { PrismaService } from "../common/prisma.service.js";
 import { lc, plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
+import { eligibilityChecksRequired } from "../common/compliance.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
 import { call, prepare, viaSafe } from "./prepare.js";
 
@@ -92,8 +93,12 @@ export class GovernanceController {
     // settle() reverts if any escrowed subscriber is no longer eligible; check first so staff can exclude them.
     const escrowed = offering.subscriptions.filter((s) => s.status === "ESCROWED");
     const elig = await this.prisma.eligibility.findMany({ where: { wallet: { in: escrowed.map((s) => s.wallet) } } });
-    const ok = new Set(elig.filter((e) => e.status === "ELIGIBLE" && (!e.expiresAt || e.expiresAt.getTime() > Date.now())).map((e) => e.wallet));
-    const blocked = escrowed.filter((s) => !ok.has(s.wallet)).map((s) => getAddress(s.wallet));
+    const checks = await eligibilityChecksRequired(this.prisma, this.cfg.chainId);
+    const ok = checks
+      ? new Set(elig.filter((e) => e.status === "ELIGIBLE" && (!e.expiresAt || e.expiresAt.getTime() > Date.now())).map((e) => e.wallet))
+      : null;
+    const frozen = new Set(elig.filter((e) => e.status === "FROZEN").map((e) => e.wallet));
+    const blocked = escrowed.filter((s) => (ok ? !ok.has(s.wallet) : frozen.has(s.wallet))).map((s) => getAddress(s.wallet));
     if (blocked.length) throw new ApiError(409, "NOT_ELIGIBLE", "some subscribers are no longer eligible; exclude them first", { wallets: blocked });
     await this.audit(req, "OFFERING_SETTLE_PREPARE", "project", id, {});
     return { tx: prepare(this.cfg.chainId, getAddress(p.offeringAddress!), offeringManagerAbi, "settle", [], "Settle the offering (operator wallet)") };

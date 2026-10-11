@@ -182,8 +182,12 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
 
         SubStatus status = statusOf[investor];
         if (status != SubStatus.NONE && status != SubStatus.ESCROWED) revert SubscriptionClosedForWallet(investor);
-        if (!identityRegistry.isEligible(investor)) revert NotEligible(investor);
-        if (!token.isClassAllowed(identityRegistry.classOf(investor))) revert ClassNotAllowed(investor);
+        if (identityRegistry.checksRequired()) {
+            if (!identityRegistry.isEligible(investor)) revert NotEligible(investor);
+            if (!token.isClassAllowed(identityRegistry.classOf(investor))) revert ClassNotAllowed(investor);
+        } else if (identityRegistry.isFrozen(investor)) {
+            revert NotEligible(investor);
+        }
 
         // `>=` rather than `==`: a direct USDT donation to this contract must not block subscriptions.
         // Any surplus stays outside `escrowed` and is never paid to anyone.
@@ -225,12 +229,15 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         outcome = Outcome.SETTLED;
         uint256 proceeds;
         uint256 n = _subscribers.length;
+        bool checks = identityRegistry.checksRequired();
         for (uint256 i; i < n; ++i) {
             address s = _subscribers[i];
             if (statusOf[s] != SubStatus.ESCROWED) continue;
-            if (!identityRegistry.isEligible(s) || !token.isClassAllowed(identityRegistry.classOf(s))) {
-                revert SubscriberIneligible(s);
-            }
+            if (
+                checks
+                    ? !identityRegistry.isEligible(s) || !token.isClassAllowed(identityRegistry.classOf(s))
+                    : identityRegistry.isFrozen(s)
+            ) revert SubscriberIneligible(s);
             statusOf[s] = SubStatus.SETTLED;
             proceeds += paidOf[s];
             token.mint(s, unitsOf[s]);

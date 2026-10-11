@@ -85,7 +85,7 @@ DATABASE_URL=<以 _test 结尾的数据库> pnpm test
 
 1. 第三方智能合约审计（需告知审计方：治理没有时间锁）。
 2. 法律审阅：份额的法律性质、募集合规、二手转让市场、推荐奖励、风险披露和各语言译文。
-3. 接入真实的 KYC/AML 服务商。
+3. 律师评估不做 KYC/AML 的合规风险（Charlene 2026-10-11 决定默认不做 KYC，资格检查由多签开关，默认关闭），据此决定主网是否开启资格检查并接入 KYC/AML 服务商。
 4. 主网多签签名人使用硬件钱包。
 5. 项目方书面批准主网部署。
 
@@ -103,4 +103,4 @@ DATABASE_URL=<以 _test 结尾的数据库> pnpm test
 
 RoboShare tokenizes individual Robotaxi vehicle projects as restricted-transfer shares on BNB Smart Chain. Investors subscribe with USDT (BEP20) and claim pro-rata audited profit on-chain. The repo contains Foundry contracts (registries, share token, USDT offering router, revenue distributor, a peer-to-peer share market with no buyback promise, and a single-level referral program that is off by default), a NestJS API, a chain indexer, a 9-language investor site that follows the device language, and an admin console. Governance is a 2-of-3 Safe multisig that acts immediately (no timelock).
 
-**Status: BSC testnet trial only, using test USDT.** Not deployed to mainnet, not audited, no legal review yet, and no real KYC/AML. Nothing here is an offer of securities. Testnet addresses: [`deployments/bsc-testnet.json`](deployments/bsc-testnet.json). Trial site: <https://web-production-eb5dab.up.railway.app>. See the local development section above for build and test commands.
+**Status: BSC testnet trial only, using test USDT.** Not deployed to mainnet, not audited, no legal review yet, and no KYC/AML: eligibility checks are a governance switch that is off by default, and counsel must assess this before mainnet. Nothing here is an offer of securities. Testnet addresses: [`deployments/bsc-testnet.json`](deployments/bsc-testnet.json). Trial site: <https://web-production-eb5dab.up.railway.app>. See the local development section above for build and test commands.
