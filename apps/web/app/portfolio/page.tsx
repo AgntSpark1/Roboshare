@@ -21,6 +21,7 @@ import {
 } from "@roboshare/ui";
 import { explorer } from "@/env";
 import { useEligibility, useMySubscriptions, usePaymentSetup, useRefreshAfterTx, useUsdtState } from "@/lib/data";
+import { EligibilityHelp } from "@/components/Help";
 import { ReferralPanel } from "@/components/ReferralPanel";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -97,6 +98,7 @@ function Dashboard() {
             {elig.data ? (elig.data.eligibleNow ? <span className="ok-t"> {c.eligible}</span> : <span className="warn-t"> {c.notEligible}</span>) : " —"}
           </p>
         </div>
+        {elig.data && !elig.data.eligibleNow && <EligibilityHelp wallet={wallet} />}
         <div className="tiles">
           <div className="tile hl"><span className="eyebrow">{c.claimable}</span><span className="num" data-testid="claimable-total">{formatUsdt(totalClaimable)}</span><small className="muted">USDT</small></div>
           <div className="tile"><span className="eyebrow">{c.claimed}</span><span className="num">{formatUsdt(totalClaimed)}</span><small className="muted">USDT</small></div>

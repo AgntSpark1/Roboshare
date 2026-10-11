@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { isTestChain } from "@/env";
+import { ContactLinks } from "@/components/Help";
 import { useI18n } from "@/i18n/I18nProvider";
 import { LOCALES } from "@/i18n/locales";
 
@@ -25,6 +26,11 @@ export function Footer() {
     <footer>
       <div className="wrap">
         <span>{t.layout.footerTag}</span>
+        <span className="links">
+          <Link href="/guide">{t.help.guideLink}</Link>
+          <Link href="/faq">{t.help.faqLink}</Link>
+          <ContactLinks />
+        </span>
         <span>
           {t.layout.footerRisk}<Link href="/risk">{t.layout.investorNotes}</Link>
         </span>

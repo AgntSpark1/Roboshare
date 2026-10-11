@@ -19,6 +19,7 @@ import {
   type ProjectDetail,
   type TxStep,
 } from "@roboshare/ui";
+import { EligibilityHelp } from "@/components/Help";
 import { explorer, RISK_VERSION } from "@/env";
 import { useEligibility, useMySubscriptions, usePaymentSetup, useRefreshAfterTx, useUsdtState } from "@/lib/data";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -209,7 +210,15 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
           {needApproval ? c.approveAndBuy : c.confirm}
         </button>
       )}
-      {reason && <p className="muted" style={{ fontSize: ".8rem" }} data-testid="block-reason">{reason}</p>}
+      {isConnected && !me && <p className="fine">{t.help.signHint}</p>}
+      {reason && (
+        <p className="muted" style={{ fontSize: ".8rem" }} data-testid="block-reason">
+          {reason}
+          {reason === c.block.balance && <> · <Link className="hintlink" href="/guide#usdt">{t.help.howUsdt}</Link></>}
+          {reason === c.block.gas && <> · <Link className="hintlink" href="/guide#bnb">{t.help.howBnb}</Link></>}
+        </p>
+      )}
+      {reason === c.block.ineligible && address && <EligibilityHelp wallet={address} />}
       {ackError && <p className="err" role="alert">{ackError}</p>}
       {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
       {done && (

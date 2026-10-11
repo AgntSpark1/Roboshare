@@ -40,7 +40,10 @@ export default function Home() {
 
       <section style={{ paddingTop: 0 }}>
         <div className="wrap">
-          <div className="sec-h"><h2>{h.stepsTitle}</h2></div>
+          <div className="sec-h">
+            <h2>{h.stepsTitle}</h2>
+            <Link className="btn sm ghost" href="/guide">{t.help.guideCta}</Link>
+          </div>
           <div className="steps">
             {h.steps.map(([title, text]) => (
               <div className="step" key={title}><div className="bar" /><h3>{title}</h3><p>{text}</p></div>
