@@ -86,7 +86,8 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
     setDone(null);
     setSteps(s);
     const ok = await start(s, (hash: Hash, i: number) => {
-      void api.post("/tx/pending", { hash, purpose: s[i]!.purpose }).catch(() => undefined);
+      // Approvals are not indexed, so they would stay "pending" forever.
+      if (s[i]!.purpose !== "APPROVE") void api.post("/tx/pending", { hash, purpose: s[i]!.purpose }).catch(() => undefined);
     });
     if (ok) {
       setDone(message);

@@ -1,8 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { erc20Abi, type Hash } from "viem";
+import { type Hash } from "viem";
 import { offeringManagerAbi, revenueDistributorAbi } from "@roboshare/shared";
 import {
   api,
@@ -20,7 +19,7 @@ import {
   type TxStep,
 } from "@roboshare/ui";
 import { explorer } from "@/env";
-import { useEligibility, useMySubscriptions, usePaymentSetup, useRefreshAfterTx, useUsdtState } from "@/lib/data";
+import { useEligibility, useMySubscriptions, useRefreshAfterTx } from "@/lib/data";
 import { EligibilityHelp } from "@/components/Help";
 import { ReferralPanel } from "@/components/ReferralPanel";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -151,22 +150,19 @@ function Dashboard() {
 
         <ReferralPanel wallet={wallet} />
 
-        <div className="cols2">
-          <ApprovalPanel wallet={wallet} />
-          <div className="panel">
-            <h2 className="h3">{c.txTitle}</h2>
-            {(txs.data?.pending ?? []).map((x) => (
-              <div className="tl new" key={x.hash}><i aria-hidden="true" /><span>{c.pendingPurpose[x.purpose] ?? x.purpose} · {c.awaiting}</span><span className="hash">{shortAddr(x.hash, 8, 6)}</span></div>
-            ))}
-            {(txs.data?.items ?? []).slice(0, 12).map((x, i) => (
-              <div className="tl" key={`${x.chain.txHash}-${i}`}>
-                <i aria-hidden="true" />
-                <span>{c.txKinds[x.kind] ?? x.kind}</span>
-                {explorer ? <a className="hash" href={`${explorer}/tx/${x.chain.txHash}`} target="_blank" rel="noreferrer">{shortAddr(x.chain.txHash, 8, 6)}</a> : <span className="hash">{shortAddr(x.chain.txHash, 8, 6)}</span>}
-              </div>
-            ))}
-            {!txs.data?.items.length && !txs.data?.pending.length && <p className="muted">{c.noTx}</p>}
-          </div>
+        <div className="panel">
+          <h2 className="h3">{c.txTitle}</h2>
+          {(txs.data?.pending ?? []).map((x) => (
+            <div className="tl new" key={x.hash}><i aria-hidden="true" /><span>{c.pendingPurpose[x.purpose] ?? x.purpose} · {c.awaiting}</span><span className="hash">{shortAddr(x.hash, 8, 6)}</span></div>
+          ))}
+          {(txs.data?.items ?? []).slice(0, 12).map((x, i) => (
+            <div className="tl" key={`${x.chain.txHash}-${i}`}>
+              <i aria-hidden="true" />
+              <span>{c.txKinds[x.kind] ?? x.kind}</span>
+              {explorer ? <a className="hash" href={`${explorer}/tx/${x.chain.txHash}`} target="_blank" rel="noreferrer">{shortAddr(x.chain.txHash, 8, 6)}</a> : <span className="hash">{shortAddr(x.chain.txHash, 8, 6)}</span>}
+            </div>
+          ))}
+          {!txs.data?.items.length && !txs.data?.pending.length && <p className="muted">{c.noTx}</p>}
         </div>
       </div>
     </section>
@@ -233,42 +229,3 @@ function SubscriptionRow({ s, name, project }: { s: { projectId: string; units: 
     </div>
   );
 }
-
-function ApprovalPanel({ wallet }: { wallet: `0x${string}` }) {
-  const pay = usePaymentSetup();
-  const st = useUsdtState(wallet);
-  const { run, start } = useTxRunner();
-  const refresh = useRefreshAfterTx();
-  const [confirm, setConfirm] = useState(false);
-  const c = useI18n().t.portfolio;
-  const allowance = st.data?.allowance ?? 0n;
-  const unlimited = allowance > 10n ** 60n;
-  const steps: TxStep[] = pay.usdt && pay.router ? [{ label: c.revokeStep, write: { address: pay.usdt, abi: erc20Abi, functionName: "approve", args: [pay.router, 0n] } }] : [];
-  return (
-    <div className="panel">
-      <h2 className="h3">{c.approvalTitle}</h2>
-      <div className="health">
-        <div><span>{c.router}</span><span className="hash">{shortAddr(pay.router)}</span></div>
-        <div><span>{c.allowance}</span><b data-testid="allowance">{st.data ? (unlimited ? c.unlimited : `${formatUsdt(allowance)} USDT`) : "—"}</b></div>
-        <div><span>{c.balance}</span><b>{st.data ? `${formatUsdt(st.data.balance)} USDT` : "—"}</b></div>
-      </div>
-      {allowance > 0n && (
-        <div className="row-actions" style={{ marginTop: 12 }}>
-          {!confirm ? (
-            <button type="button" className="btn danger sm" onClick={() => setConfirm(true)}>{c.revoke}</button>
-          ) : (
-            <>
-              <span className="muted" style={{ fontSize: ".8rem" }}>{c.revokeNote}</span>
-              <button type="button" className="btn danger sm" disabled={run.running} onClick={async () => (await start(steps, (hash: Hash) => void api.post("/tx/pending", { hash, purpose: "REVOKE_APPROVAL" }).catch(() => undefined))) && (setConfirm(false), refresh())}>
-                {c.confirmRevoke}
-              </button>
-              <button type="button" className="btn ghost sm" onClick={() => setConfirm(false)}>{c.cancel}</button>
-            </>
-          )}
-        </div>
-      )}
-      {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
-    </div>
-  );
-}
-
