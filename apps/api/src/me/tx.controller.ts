@@ -7,7 +7,7 @@ import { APP_CONFIG, type AppConfig } from "../config.js";
 
 const body = z.object({
   hash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
-  purpose: z.enum(["APPROVE", "SUBSCRIBE", "REFUND", "CLAIM", "TRANSFER", "REVOKE_APPROVAL", "REFERRAL_CLAIM"]),
+  purpose: z.enum(["APPROVE", "SUBSCRIBE", "REFUND", "CLAIM", "TRANSFER", "REVOKE_APPROVAL", "REFERRAL_CLAIM", "MARKET_LIST", "MARKET_BUY", "MARKET_CANCEL"]),
 });
 
 /** The UI registers a hash it just submitted so it can show "pending" until the indexer confirms it. */

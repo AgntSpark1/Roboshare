@@ -42,6 +42,7 @@ export class Indexer {
       ["PROJECT_FACTORY", this.cfg.projectFactory],
     ];
     if (this.cfg.referralRewards) singletons.push(["REFERRAL_REWARDS", this.cfg.referralRewards]);
+    if (this.cfg.shareMarket) singletons.push(["SHARE_MARKET", this.cfg.shareMarket]);
     const chainId = await this.client.getChainId();
     if (chainId !== this.cfg.chainId) {
       throw new Error(`RPC chainId ${chainId} does not match CHAIN_ID ${this.cfg.chainId}`);

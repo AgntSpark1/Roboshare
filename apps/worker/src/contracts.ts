@@ -7,6 +7,7 @@ import {
   referralRewardsAbi,
   revenueDistributorAbi,
   rwaShareTokenAbi,
+  shareMarketAbi,
   subscriptionRouterAbi,
 } from "@roboshare/shared";
 import type { Abi } from "viem";
@@ -18,6 +19,7 @@ export const CONTRACT_KINDS = {
   SUBSCRIPTION_ROUTER: subscriptionRouterAbi,
   PROJECT_FACTORY: projectFactoryAbi,
   REFERRAL_REWARDS: referralRewardsAbi,
+  SHARE_MARKET: shareMarketAbi,
   TOKEN: rwaShareTokenAbi,
   OFFERING: offeringManagerAbi,
   DISTRIBUTOR: revenueDistributorAbi,

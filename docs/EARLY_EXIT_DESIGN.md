@@ -1,6 +1,6 @@
 # RoboShare 提前退出（转让市场）设计
 
-状态：2026-10-11 Charlene 选定“两者结合”。合约 `ShareMarket` 已实现，前端待做。主网前需律师确认。
+状态：2026-10-11 Charlene 选定“两者结合”。合约 `ShareMarket` 和投资者页面已实现，测试网待部署。主网前需律师确认。
 
 ## 1. 结论
 
@@ -36,10 +36,11 @@
 
 ## 5. 部署
 
-`contracts/script/DeployShareMarket.s.sol`，在现有部署上追加，需要环境变量 `ASSET_REGISTRY`、`PAYMENT_TOKEN`、`TIMELOCK`、`PAUSER`。部署者不持有任何角色。测试网在 Charlene 的 Mac 上执行。
+新部署由 `Deploy.s.sol` 一并部署。已有部署用 `contracts/script/DeployShareMarket.s.sol` 追加，需要环境变量 `ASSET_REGISTRY`、`PAYMENT_TOKEN`、`TIMELOCK`、`PAUSER`。部署者不持有任何角色。测试网在 Charlene 的 Mac 上执行。部署后把地址填入索引器环境变量 `SHARE_MARKET`，投资者页面会自动显示转让市场；未配置时页面不显示。
 
 ## 6. 尚待完成
 
-- 投资者 DApp：挂单、我的挂单、购买页面；索引器和 API 记录挂单与成交。
+- 投资者页面（已完成）：项目页“转让市场”区块可挂单、撤单、购买；“我的资产”每个持仓有“转让”入口。挂单直接从合约读取。
+- 测试网部署 `ShareMarket`。
 - 律师确认：二级转让和平台自愿买入的合规定性、对外文案。
 - 主网前审计范围加入 `ShareMarket`。

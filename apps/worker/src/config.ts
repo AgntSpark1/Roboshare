@@ -16,6 +16,8 @@ export const indexerConfigSchema = z.object({
   projectFactory: address,
   /** Optional until the referral programme is deployed (REFERRAL_DESIGN.md). */
   referralRewards: address.optional(),
+  /** Optional until the share market is deployed (EARLY_EXIT_DESIGN.md). */
+  shareMarket: address.optional(),
   startBlock: z.coerce.bigint().nonnegative(),
   confirmations: z.coerce.number().int().nonnegative().default(15),
   batchSize: z.coerce.number().int().positive().default(2000),
@@ -33,6 +35,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): IndexerConfig 
     subscriptionRouter: env.SUBSCRIPTION_ROUTER,
     projectFactory: env.PROJECT_FACTORY,
     referralRewards: env.REFERRAL_REWARDS || undefined,
+    shareMarket: env.SHARE_MARKET || undefined,
     startBlock: env.START_BLOCK,
     confirmations: env.CONFIRMATIONS,
     batchSize: env.INDEXER_BATCH_SIZE,

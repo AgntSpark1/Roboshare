@@ -124,6 +124,9 @@ function Dashboard() {
                   <div>
                     <h3 className="h4"><Link href={`/projects/${h.projectId}`}>{name(h.projectId)}</Link></h3>
                     <small>{stateLabel(project(h.projectId)?.state ?? "")} · 占已发行 {formatBps(h.shareBps)}</small>
+                    {["FUNDED", "ACTIVE"].includes(project(h.projectId)?.state ?? "") && (
+                      <small> · <Link href={`/projects/${h.projectId}#market`} style={{ color: "var(--amber)" }}>转让</Link></small>
+                    )}
                   </div>
                   <div className="r"><b className="num">{h.units}</b> 份<br /><small>成本 {h.costBasis ? formatUsdt(h.costBasis) : "—"}</small></div>
                 </div>

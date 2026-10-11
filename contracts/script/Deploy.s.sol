@@ -10,6 +10,7 @@ import {AssetRegistry} from "../src/registry/AssetRegistry.sol";
 import {AuditRegistry} from "../src/registry/AuditRegistry.sol";
 import {SubscriptionRouter} from "../src/offering/SubscriptionRouter.sol";
 import {ReferralRewards} from "../src/referral/ReferralRewards.sol";
+import {ShareMarket} from "../src/market/ShareMarket.sol";
 import {ProjectFactory, TokenDeployer, OfferingDeployer, DistributorDeployer} from "../src/factory/ProjectFactory.sol";
 import {MockUSDT} from "../test/mocks/MockUSDT.sol";
 
@@ -40,6 +41,7 @@ contract Deploy is Script {
         SubscriptionRouter router;
         ProjectFactory factory;
         ReferralRewards referralRewards;
+        ShareMarket shareMarket;
         address usdt;
         bool usdtIsMock;
     }
@@ -75,6 +77,8 @@ contract Deploy is Script {
         d.router = new SubscriptionRouter(IERC20(d.usdt), d.assets, address(d.timelock), c.pauser);
         // Referrals ship switched off in both contracts; only the timelock can enable them.
         d.referralRewards = new ReferralRewards(IERC20(d.usdt), address(d.timelock), c.operator, c.pauser);
+        // Peer-to-peer resale for early exit (EARLY_EXIT_DESIGN.md); no fees, no custody.
+        d.shareMarket = new ShareMarket(IERC20(d.usdt), d.assets, address(d.timelock), c.pauser);
         d.factory = new ProjectFactory(
             d.assets,
             d.audit,
@@ -134,6 +138,9 @@ contract Deploy is Script {
         _check(d.referralRewards.hasRole(d.referralRewards.ROOT_SETTER_ROLE(), c.operator), "referral root setter");
         _check(address(d.referralRewards.paymentToken()) == d.usdt, "referral usdt");
         _check(!d.router.referralsEnabled() && !d.referralRewards.claimsEnabled(), "referrals start disabled");
+        _check(d.shareMarket.hasRole(admin, address(d.timelock)), "market admin");
+        _check(!d.shareMarket.hasRole(admin, deployer) || deployer == address(d.timelock), "market deployer");
+        _check(address(d.shareMarket.usdt()) == d.usdt, "market usdt");
         _check(d.assets.hasRole(d.assets.FACTORY_ROLE(), address(d.factory)), "factory role");
         _check(d.identity.hasRole(d.identity.COMPLIANCE_AGENT_ROLE(), c.complianceAgent), "agent role");
         _check(address(d.router.USDT()) == d.usdt, "router usdt");
@@ -178,6 +185,7 @@ contract Deploy is Script {
         console2.log("SubscriptionRouter", address(d.router));
         console2.log("ProjectFactory    ", address(d.factory));
         console2.log("ReferralRewards   ", address(d.referralRewards));
+        console2.log("ShareMarket       ", address(d.shareMarket));
         console2.log("USDT              ", d.usdt);
     }
 }
