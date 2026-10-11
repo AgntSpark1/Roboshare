@@ -232,7 +232,7 @@ export const ko: Messages = {
     approveAndBuy: "승인하고 청약",
     confirm: "청약 확정",
     success: "청약 완료! 모집이 끝나면 지분이 지갑으로 지급됩니다. ",
-    fine: (min, max) => `${min}좌 미달 시 전액 환불 · 지갑당 최대 ${max}좌`,
+    fine: (min, max) => `${min}좌 미달 시 전액 환불${max ? ` · 지갑당 최대 ${max}좌` : ""}`,
     stepApproveUnlimited: "USDT 승인(무제한)",
     stepApprove: (amt) => `${amt} USDT 승인`,
     stepBuy: (n) => `${n}좌 청약`,

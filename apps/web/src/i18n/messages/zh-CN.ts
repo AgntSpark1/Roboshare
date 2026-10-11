@@ -154,7 +154,7 @@ export const zhCN = {
     approveAndBuy: "授权并认购",
     confirm: "确认认购",
     success: "认购成功！募集结束后份额会发到你的钱包。",
-    fine: (min: number, max: number) => `未达到 ${min} 份全额退款 · 每个钱包最多 ${max} 份`,
+    fine: (min: number, max?: number) => `未达到 ${min} 份全额退款${max ? ` · 每个钱包最多 ${max} 份` : ""}`,
     stepApproveUnlimited: "授权 USDT（不限额）",
     stepApprove: (amt: string) => `授权 ${amt} USDT`,
     stepBuy: (n: number) => `认购 ${n} 份`,

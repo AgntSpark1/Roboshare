@@ -232,7 +232,7 @@ export const en: Messages = {
     approveAndBuy: "Approve and invest",
     confirm: "Confirm",
     success: "Done! Your units will arrive in your wallet when the offering closes. ",
-    fine: (min, max) => `Full refund below ${min} units · max ${max} units per wallet`,
+    fine: (min, max) => `Full refund below ${min} units${max ? ` · max ${max} units per wallet` : ""}`,
     stepApproveUnlimited: "Approve USDT (unlimited)",
     stepApprove: (amt) => `Approve ${amt} USDT`,
     stepBuy: (n) => `Buy ${n} ${n === 1 ? "unit" : "units"}`,

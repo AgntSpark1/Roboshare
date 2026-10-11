@@ -232,7 +232,7 @@ export const th: Messages = {
     approveAndBuy: "อนุมัติและลงทุน",
     confirm: "ยืนยันการลงทุน",
     success: "ลงทุนสำเร็จ! หน่วยลงทุนจะเข้าวอลเล็ตของคุณเมื่อปิดระดมทุน ",
-    fine: (min, max) => `ไม่ถึง ${min} หน่วยคืนเงินเต็มจำนวน · สูงสุด ${max} หน่วยต่อวอลเล็ต`,
+    fine: (min, max) => `ไม่ถึง ${min} หน่วยคืนเงินเต็มจำนวน${max ? ` · สูงสุด ${max} หน่วยต่อวอลเล็ต` : ""}`,
     stepApproveUnlimited: "อนุมัติ USDT (ไม่จำกัด)",
     stepApprove: (amt) => `อนุมัติ ${amt} USDT`,
     stepBuy: (n) => `ซื้อ ${n} หน่วย`,

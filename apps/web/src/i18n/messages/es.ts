@@ -232,7 +232,7 @@ export const es: Messages = {
     approveAndBuy: "Autorizar e invertir",
     confirm: "Confirmar inversión",
     success: "¡Listo! Tus participaciones llegarán a tu billetera cuando cierre la oferta. ",
-    fine: (min, max) => `Reembolso total por debajo de ${min} · máx. ${max} por billetera`,
+    fine: (min, max) => `Reembolso total por debajo de ${min}${max ? ` · máx. ${max} por billetera` : ""}`,
     stepApproveUnlimited: "Autorizar USDT (ilimitado)",
     stepApprove: (amt) => `Autorizar ${amt} USDT`,
     stepBuy: (n) => `Comprar ${n} ${n === 1 ? "participación" : "participaciones"}`,

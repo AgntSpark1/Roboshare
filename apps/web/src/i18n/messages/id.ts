@@ -232,7 +232,7 @@ export const id: Messages = {
     approveAndBuy: "Setujui dan beli",
     confirm: "Konfirmasi pembelian",
     success: "Berhasil! Unit akan dikirim ke dompet Anda setelah penggalangan selesai. ",
-    fine: (min, max) => `Refund penuh jika di bawah ${min} unit · maks. ${max} unit per dompet`,
+    fine: (min, max) => `Refund penuh jika di bawah ${min} unit${max ? ` · maks. ${max} unit per dompet` : ""}`,
     stepApproveUnlimited: "Setujui USDT (tanpa batas)",
     stepApprove: (amt) => `Setujui ${amt} USDT`,
     stepBuy: (n) => `Beli ${n} unit`,

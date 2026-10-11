@@ -232,7 +232,7 @@ export const vi: Messages = {
     approveAndBuy: "Cấp quyền và mua",
     confirm: "Xác nhận mua",
     success: "Đăng ký thành công! Phần góp sẽ được gửi vào ví khi kết thúc huy động. ",
-    fine: (min, max) => `Hoàn tiền đầy đủ nếu dưới ${min} phần · tối đa ${max} phần mỗi ví`,
+    fine: (min, max) => `Hoàn tiền đầy đủ nếu dưới ${min} phần${max ? ` · tối đa ${max} phần mỗi ví` : ""}`,
     stepApproveUnlimited: "Cấp quyền USDT (không giới hạn)",
     stepApprove: (amt) => `Cấp quyền ${amt} USDT`,
     stepBuy: (n) => `Mua ${n} phần`,

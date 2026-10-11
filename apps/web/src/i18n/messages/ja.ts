@@ -232,7 +232,7 @@ export const ja: Messages = {
     approveAndBuy: "承認して申込",
     confirm: "申込を確定",
     success: "申込が完了しました！募集終了後、持分があなたのウォレットに届きます。",
-    fine: (min, max) => `${min} 口未満なら全額返金 · 1ウォレット最大 ${max} 口`,
+    fine: (min, max) => `${min} 口未満なら全額返金${max ? ` · 1ウォレット最大 ${max} 口` : ""}`,
     stepApproveUnlimited: "USDT を承認（無制限）",
     stepApprove: (amt) => `${amt} USDT を承認`,
     stepBuy: (n) => `${n} 口を申込`,

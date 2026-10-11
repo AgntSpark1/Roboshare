@@ -30,7 +30,7 @@ const offeringBody = z
   .object({
     unitPrice: z.string().regex(/^[1-9][0-9]*$/),
     minUnits: z.number().int().min(1).max(SHARE_CAP),
-    perWalletMax: z.number().int().min(1).max(SHARE_CAP),
+    perWalletMax: z.number().int().min(1).max(SHARE_CAP).default(SHARE_CAP), // default: no per-wallet cap
     startTime: z.number().int().positive(),
     endTime: z.number().int().positive(),
     treasury: address,

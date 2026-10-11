@@ -232,7 +232,7 @@ export const zhTW: Messages = {
     approveAndBuy: "授權並認購",
     confirm: "確認認購",
     success: "認購成功！募集結束後份額會發到你的錢包。",
-    fine: (min, max) => `未達到 ${min} 份全額退款 · 每個錢包最多 ${max} 份`,
+    fine: (min, max) => `未達到 ${min} 份全額退款${max ? ` · 每個錢包最多 ${max} 份` : ""}`,
     stepApproveUnlimited: "授權 USDT（不限額）",
     stepApprove: (amt) => `授權 ${amt} USDT`,
     stepBuy: (n) => `認購 ${n} 份`,
