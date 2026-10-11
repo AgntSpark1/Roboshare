@@ -163,6 +163,9 @@ importers:
       three:
         specifier: 0.180.0
         version: 0.180.0
+      uqr:
+        specifier: 0.1.2
+        version: 0.1.2
       viem:
         specifier: 2.57.4
         version: 2.57.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.6.5)
@@ -2285,6 +2288,9 @@ packages:
       webpack:
         optional: true
 
+  uqr@0.1.2:
+    resolution: {integrity: sha512-MJu7ypHq6QasgF5YRTjqscSzQp/W11zoUk6kvmlH+fmWEs63Y0Eib13hYFwAzagRJcVY8WVnlV+eBDUGMJ5IbA==}
+
   use-sync-external-store@1.4.0:
     resolution: {integrity: sha512-9WXSPC5fMv61vaupRkCKCxsPxBocVnwakBEkMIHHpkTTg6icbJtg6jzgtLDm4bl3cSHAca52rYWih0k4K3PfHw==}
     peerDependencies:
@@ -4290,6 +4296,8 @@ snapshots:
       esbuild: 0.28.2
       rollup: 4.64.3
       vite: 7.3.7(@types/node@22.18.6)(jiti@2.7.0)
+
+  uqr@0.1.2: {}
 
   use-sync-external-store@1.4.0(react@19.2.8):
     dependencies:

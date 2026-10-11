@@ -44,6 +44,13 @@ html:lang(en),html:lang(vi),html:lang(id),html:lang(es){--f-display:"Chakra Petc
 .hintlink{color:var(--amber);font-size:.8rem}
 footer .links{display:inline-flex;gap:14px;flex-wrap:wrap}
 
+/* referral centre */
+.invite{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.invite-qr{background:#fff;border-radius:12px;padding:8px;line-height:0}
+.invite-qr .qr{display:block;width:180px;height:180px}
+.invite-link{word-break:break-all}
+.rules{margin:8px 0 0;padding-left:1.2em;display:grid;gap:6px;color:var(--dim);font-size:.86rem}
+@media (max-width:560px){.invite{grid-template-columns:1fr;justify-items:center;text-align:center}.invite .row-actions{justify-content:center}}
 /* whitepaper: home band, showcase page and page viewer */
 .wp-band{display:flex;align-items:center;gap:22px;text-decoration:none;padding:18px 22px;border-radius:var(--r);border:1px solid var(--glass-line);background:linear-gradient(110deg,rgba(60,240,255,.08),rgba(139,123,255,.12) 60%,rgba(20,30,58,.55));overflow:hidden;transition:border-color .2s}
 .wp-band:hover{border-color:var(--line2)}
