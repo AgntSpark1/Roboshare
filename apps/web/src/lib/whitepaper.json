@@ -1,0 +1,16 @@
+{
+  "version": "0.2",
+  "date": "2026-10",
+  "zh": {
+    "file": "/whitepaper/RoboShare-Whitepaper-zh.pdf",
+    "pages": 11,
+    "bytes": 2134401,
+    "sections": 13
+  },
+  "en": {
+    "file": "/whitepaper/RoboShare-Whitepaper-en.pdf",
+    "pages": 11,
+    "bytes": 584640,
+    "sections": 13
+  }
+}
