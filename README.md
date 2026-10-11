@@ -1,50 +1,106 @@
 # RoboShare
 
-RoboShare 是一个规划中的平台，用于在 BNB Smart Chain（BSC）上发行并管理针对单个 Robotaxi 车辆项目、具有法律定义的投资权益。
+RoboShare 是一个在 BNB Smart Chain（BSC）上把单个 Robotaxi 车辆项目做成链上投资份额（RWA）的平台：投资者用 USDT（BEP20）认购某个车辆项目的份额，项目运营产生的经审核利润按份额在链上分配。
 
-> **状态：第一阶段（需求与架构），等待评审。** 本仓库目前仅包含文档。尚不存在任何智能合约、后端或前端代码；没有任何内容经过编译、测试、部署或审计。本仓库中的任何内容均不构成证券要约。
+> **当前状态：BSC 测试网试运行。** 合约、后端、投资者网站和运营后台都已实现并部署在 BSC 测试网，只使用测试币（tUSDT）。**尚未部署主网，尚未经过第三方审计和法律审阅，也还没有接入真实的 KYC/AML。** 本仓库中的任何内容均不构成证券要约或投资建议。
 
-## 功能（目标设计）
+- 投资者试用站点：<https://web-production-eb5dab.up.railway.app>
+- 测试网合约地址：[`deployments/bsc-testnet.json`](deployments/bsc-testnet.json)（测试网正在重新部署，地址以该文件为准）
 
-- 为每个车辆项目登记资产 ID、发行方引用、文档哈希，并强制执行生命周期。
-- 为每个项目发行一个限制转让、采用 ERC-20 接口的代币：**100 个整数单位，decimals 为 0，上限不可更改**。
-- 以 USDT（BEP20）开展托管式募集，用户授权一次后可直接按份额购买（允许部分募集，最低成交量按项目设定）。
-- 将财务报告锚定上链，强制要求提交人 ≠ 审核人，并在链上分配经核实的利润，采用分档的运营方费用和主动领取（pull）模式。
-- 将链上状态索引到 PostgreSQL，支持链重组（reorg）处理与对账。
-- 展示来自经核实的 BNB Smart Chain（BSC）部署的只读 Aave V3 市场数据（不进行自动存款）。
+## 已实现的功能
+
+### 智能合约（`contracts/`，Solidity + Foundry + OpenZeppelin v5）
+
+| 合约 | 作用 |
+|---|---|
+| `AssetRegistry` / `AuditRegistry` | 登记车辆项目（资产 ID、文件哈希、生命周期）；财务报告上链存证，提交人与审核人必须是不同的人 |
+| `IdentityRegistry` | 投资者资格名单（目前由运营人工设置） |
+| `RwaShareToken` | 每个项目一个限制转让的 ERC-20 份额代币，decimals 为 0，只能在合格钱包之间转让 |
+| `OfferingManager` / `SubscriptionRouter` | USDT 募集：用户授权一次后按份数购买；允许部分募集（每个项目设最低成交份数，没卖出的份额不发行）；募集失败可退款。默认不设单个钱包上限 |
+| `RevenueDistributor` / `FeeTiers` | 按已发行份额分配经审核的利润，投资者主动领取；平台只收分档手续费，没有额外管理费 |
+| `ShareMarket` | 投资者之间的二手转让市场：卖家挂单（份数 + 价格），合格买家用 USDT 原子成交。平台不出资、不收手续费，**不承诺回购或保本赎回** |
+| `ReferralRewards` | 单级推荐奖励：被推荐人产生的平台手续费的 20%，12 个月，用 Merkle 证明领取 USDT；不动用投资者本金和收益；**全局开关默认关闭**，待律师确认后再开 |
+| `ProjectFactory` | 按项目部署代币、募集和分配合约 |
+
+**治理：** 所有合约的管理员是一个 2/3 Safe 多签，签名后**立即生效，不设时间锁**（2026-10-11 决定，测试网和主网相同）。部署者在部署结束时放弃全部权限。没有丢失私钥后的找回或强制转账功能。
+
+### 应用
+
+| 目录 | 说明 |
+|---|---|
+| `apps/web` | 投资者网站（Next.js + wagmi/viem）：项目列表与认购、我的资产与领取、二手转让市场、新手指南、常见问题、白皮书页面。支持 9 种语言（简体中文、繁体中文、English、日本語、한국어、Tiếng Việt、ไทย、Bahasa Indonesia、Español），默认跟随手机/电脑的系统语言，也可在页头手动切换 |
+| `apps/admin` | 运营后台（中文）：项目登记与审核、募集配置、报告与分配、生成 Safe 多签交易；员工登录需要 TOTP 二次验证 |
+| `apps/api` | 后端 API（NestJS + Prisma），钱包用 SIWE 登录 |
+| `apps/worker` | 链上索引器：只处理已确认区块，支持链重组处理和对账 |
+| `packages/*` | 共享的数据库模型、ABI/类型和 UI 组件 |
+| `e2e/` | Playwright 端到端测试 |
+
+## 本地开发
+
+需要：Node 22、pnpm 10.28.0、Foundry（forge / anvil）、Docker（或本机的 PostgreSQL 16 + Redis 7）。
+
+```bash
+# 合约
+cd contracts && forge build && forge test && cd ..
+
+# 应用
+docker compose up -d          # 本地 PostgreSQL + Redis（仅限本地的一次性账号）
+cp .env.example .env          # 填写数据库、RPC、合约地址、SESSION_SECRET 等（.env 不要提交）
+pnpm install
+pnpm db:generate
+pnpm db:migrate
+pnpm build
+node apps/worker/dist/main.js # 索引器
+node apps/api/dist/main.js    # API，默认端口 4000
+pnpm --filter @roboshare/web dev    # 投资者网站 http://localhost:3000
+pnpm --filter @roboshare/admin dev  # 运营后台 http://localhost:3001
+
+# 测试
+pnpm typecheck
+DATABASE_URL=<以 _test 结尾的数据库> pnpm test
+./scripts/local-deploy-sim.sh # 在本地 anvil 上完整彩排部署脚本
+```
+
+部署流程见 [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)。私钥、助记词、TOTP 密钥等任何秘密都不能提交到仓库。
 
 ## 文档
 
-| 文档 | 用途 |
+| 文档 | 内容 |
 |---|---|
-| [docs/PHASE1_ANALYSIS.md](docs/PHASE1_ANALYSIS.md) | **从这里开始。** 需求分析、图表、假设、待决事项、仓库结构、工具 |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统组件、数据层级、索引、对账 |
+| [docs/WHITEPAPER.md](docs/WHITEPAPER.md) | 白皮书（草案，待法律审阅；网站上有 PDF 版） |
+| [docs/PHASE1_ANALYSIS.md](docs/PHASE1_ANALYSIS.md) | 需求分析与已确认的设计决策（§8） |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构、索引与对账 |
 | [docs/SMART_CONTRACT_SPEC.md](docs/SMART_CONTRACT_SPEC.md) | 合约模块、角色、函数、事件、不变量 |
-| [docs/TOKENOMICS.md](docs/TOKENOMICS.md) | 单位结构、发行、费率档位、分配公式 |
-| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | PostgreSQL 实体与完整性规则 |
-| [docs/API_SPEC.md](docs/API_SPEC.md) | 按可见性层级划分的 REST 端点 |
-| [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) | 权限结构与控制措施 |
-| [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | 资产、参与者、威胁、缓解措施 |
-| [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md) | 阶段划分与退出标准 |
-| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) | 测试计划与必需用例 |
-| [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) | 部署流程（先测试网） |
-| [docs/ADMIN_OPERATIONS.md](docs/ADMIN_OPERATIONS.md) | 运营方操作手册 |
-| [docs/INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md) | 事件严重级别与应对手册 |
-| [docs/RISK_DISCLOSURES.md](docs/RISK_DISCLOSURES.md) | 投资者风险披露草案 |
-| [docs/WHITEPAPER.md](docs/WHITEPAPER.md) | 白皮书草案 |
+| [docs/TOKENOMICS.md](docs/TOKENOMICS.md) | 份额结构、费率档位、分配公式 |
+| [docs/EARLY_EXIT_DESIGN.md](docs/EARLY_EXIT_DESIGN.md) | 二手转让市场（提前退出）设计 |
+| [docs/REFERRAL_DESIGN.md](docs/REFERRAL_DESIGN.md) | 推荐奖励设计 |
+| [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) · [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) · [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md) | 权限结构、威胁模型、内部安全检查 |
+| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) · [docs/API_SPEC.md](docs/API_SPEC.md) | 数据库与 API |
+| [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) · [docs/ADMIN_OPERATIONS.md](docs/ADMIN_OPERATIONS.md) · [docs/INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md) | 部署、运营手册、事件应对 |
+| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) | 测试计划 |
+| [docs/RISK_DISCLOSURES.md](docs/RISK_DISCLOSURES.md) | 投资者风险披露 |
+| [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md) | 阶段划分 |
 
-## 规划技术栈
+## 上主网之前必须完成
 
-Solidity + Foundry + OpenZeppelin Contracts v5 · BNB Smart Chain（BSC）（测试网 97 → 获批后主网 56） · Next.js、React、TypeScript、Tailwind、shadcn/ui、wagmi/viem · NestJS、PostgreSQL、Prisma、Redis（BullMQ） · Docker Compose · GitHub Actions。
-
-## 快速开始（第二阶段开始后）
-
-参见 [PHASE1_ANALYSIS.md §10](docs/PHASE1_ANALYSIS.md)。
+1. 第三方智能合约审计（需告知审计方：治理没有时间锁）。
+2. 法律审阅：份额的法律性质、募集合规、二手转让市场、推荐奖励、风险披露和各语言译文。
+3. 接入真实的 KYC/AML 服务商。
+4. 主网多签签名人使用硬件钱包。
+5. 项目方书面批准主网部署。
 
 ## 重要限制
 
-- 除非项目的权益文件（Rights Document）另有规定，代币单位并不代表对车辆的所有权。
-- 文档哈希只能证明文件未被改动，不能证明其真实性。
-- 生命周期状态是授权角色作出的声明/证明（attestation），并非现实世界事件的证据。
-- 不假定存在任何 Tesla 合作关系、API、价格、收益或地点。
-- 限制转让的代币本身并不能使募集在法律上合规。
+- 份额代表的是合同约定的利润分配权，除非项目权益文件另有规定，不代表对车辆的所有权。
+- 文件哈希只能证明文件没有被改动，不能证明内容真实。
+- 生命周期状态是授权角色的声明，不是现实事件的证据。
+- RoboShare 与 Tesla 不存在任何合作关系；不承诺任何收益。
+- 限制转让的代币本身不能让募集在法律上合规。
+
+---
+
+## English summary
+
+RoboShare tokenizes individual Robotaxi vehicle projects as restricted-transfer shares on BNB Smart Chain. Investors subscribe with USDT (BEP20) and claim pro-rata audited profit on-chain. The repo contains Foundry contracts (registries, share token, USDT offering router, revenue distributor, a peer-to-peer share market with no buyback promise, and a single-level referral program that is off by default), a NestJS API, a chain indexer, a 9-language investor site that follows the device language, and an admin console. Governance is a 2-of-3 Safe multisig that acts immediately (no timelock).
+
+**Status: BSC testnet trial only, using test USDT.** Not deployed to mainnet, not audited, no legal review yet, and no real KYC/AML. Nothing here is an offer of securities. Testnet addresses: [`deployments/bsc-testnet.json`](deployments/bsc-testnet.json). Trial site: <https://web-production-eb5dab.up.railway.app>. See the local development section above for build and test commands.
