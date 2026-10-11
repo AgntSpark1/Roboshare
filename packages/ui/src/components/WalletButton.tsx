@@ -118,31 +118,33 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
     );
   }
   const wrongChain = chainId !== undefined && chainId !== target.id;
-  if (wrongChain) {
+  if (wrongChain || !me) {
+    const err = wrongChain ? switcher.error : signIn.error;
+    const busy = wrongChain ? switcher.pending : signIn.isPending;
+    // One row: the address chip (tap to disconnect) and the next step. Never wraps, so the header keeps its height.
     return (
-      <div className="row-actions">
-        <button type="button" className="btn primary" disabled={switcher.pending} onClick={() => void switcher.switchChain()}>
-          {switcher.pending ? <span className="spin" aria-hidden="true" /> : null}
-          切换到{chainName}
+      <div className="wallet-group">
+        <button type="button" className="btn ghost sm wg-addr" onClick={() => disconnect()} title="断开钱包" aria-label={`断开 ${address}`}>
+          <span className="avatar" aria-hidden="true" />
+          <span className="addr">{shortAddr(address)}</span>
         </button>
-        <button type="button" className="btn ghost sm" onClick={() => disconnect()} aria-label={`断开 ${address}`}>
-          {shortAddr(address)}
+        <button
+          type="button"
+          className="btn primary sm"
+          disabled={busy}
+          onClick={() => (wrongChain ? void switcher.switchChain() : signIn.mutate())}
+        >
+          {busy ? <span className="spin" aria-hidden="true" /> : null}
+          {wrongChain ? (
+            <>
+              <span className="wg-long">切换到{chainName}</span>
+              <span className="wg-short" aria-hidden="true">切换网络</span>
+            </>
+          ) : (
+            signInLabel
+          )}
         </button>
-        {switcher.error && <span className="err" role="alert">{walletErrorMessage(switcher.error)}</span>}
-      </div>
-    );
-  }
-  if (!me) {
-    return (
-      <div className="row-actions">
-        <button type="button" className="btn primary" disabled={signIn.isPending} onClick={() => signIn.mutate()}>
-          {signIn.isPending ? <span className="spin" aria-hidden="true" /> : null}
-          {signInLabel}
-        </button>
-        <button type="button" className="btn ghost sm" onClick={() => disconnect()} aria-label={`断开 ${address}`}>
-          {shortAddr(address)}
-        </button>
-        {signIn.error && <span className="err" role="alert">{walletErrorMessage(signIn.error)}</span>}
+        {err && <span className="err" role="alert">{walletErrorMessage(err)}</span>}
       </div>
     );
   }
