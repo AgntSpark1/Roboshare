@@ -21,12 +21,12 @@ function binanceLink(href: string, chainId: number) {
 }
 
 /** Deep links per wallet's developer docs. Order: most used in our market first. */
-export function walletApps(href: string, chainId: number): WalletApp[] {
+export function walletApps(href: string, chainId: number, names: { binance?: string } = {}): WalletApp[] {
   const bare = href.replace(/^https?:\/\//, "");
   const enc = encodeURIComponent(href);
   return [
     { name: "MetaMask", logo: svgUri(METAMASK_SVG), url: `https://metamask.app.link/dapp/${bare}` },
-    { name: "币安钱包", logo: svgUri(BINANCE_SVG), url: binanceLink(href, chainId) },
+    { name: names.binance ?? "币安钱包", logo: svgUri(BINANCE_SVG), url: binanceLink(href, chainId) },
     { name: "OKX Wallet", logo: svgUri(OKX_SVG), url: `okx://wallet/dapp/url?dappUrl=${enc}` },
     {
       name: "TokenPocket",

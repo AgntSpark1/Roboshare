@@ -7,8 +7,8 @@ import { shortAddr } from "../format";
 import { useSession, useSignIn, useSignOut } from "../session";
 import { TEST_WALLET_PREFIX } from "../wagmi";
 import { walletApps } from "../walletApps";
+import { useUiStrings } from "../i18n";
 
-const CHAIN_LABEL: Record<number, string> = { 56: "BNB 智能链", 97: "BSC 测试网", 31337: "本地测试链" };
 
 /**
  * One wallet per entry: wallets announced through EIP-6963 (with their own name and icon) replace the generic
@@ -20,7 +20,8 @@ function walletList(connectors: readonly Connector[]) {
 }
 
 /** Connect, switch to this site's network, sign in (SIWE) and sign out. Test wallets appear only on a local anvil chain. */
-export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: string }) {
+export function WalletButton({ signInLabel, compact = false }: { signInLabel?: string; compact?: boolean }) {
+  const t = useUiStrings();
   const { address, isConnected, chainId } = useAccount();
   const target = useTargetChain();
   const connectors = useConnectors();
@@ -40,20 +41,22 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
     setPage({ href: window.location.href, injected: Boolean((window as { ethereum?: unknown }).ethereum) });
   }, [open]);
 
-  const chainName = CHAIN_LABEL[target.id] ?? target.name;
+  const chainName = t.chainNames[target.id] ?? target.name;
 
   if (!isConnected) {
     const noWallet = page !== null && !page.injected;
     return (
       <>
-        <button type="button" className="btn primary wallet" onClick={() => setOpen(true)}>连接钱包</button>
+        <button type="button" className="btn primary wallet" onClick={() => setOpen(true)} aria-label={compact ? t.connectWallet : undefined}>
+          {compact ? t.connectShort : t.connectWallet}
+        </button>
         {open && (
-          <Modal title="连接钱包" onClose={() => setOpen(false)}>
+          <Modal title={t.connectWallet} onClose={() => setOpen(false)}>
             {noWallet && page && (
               <div className="wallet-apps">
-                <p className="muted">这个浏览器里没有钱包。手机上请用下面的钱包 App 打开本页，再点“连接钱包”。</p>
+                <p className="muted">{t.noWalletHint}</p>
                 <div className="app-grid">
-                  {walletApps(page.href, target.id).map((w) => (
+                  {walletApps(page.href, target.id, { binance: t.binanceWallet }).map((w) => (
                     <a key={w.name} className="app" href={w.url}>
                       <img src={w.logo} alt="" width={40} height={40} />
                       <span>{w.name}</span>
@@ -73,7 +76,7 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
                       }
                     }}
                   >
-                    {copied ? "已复制" : "复制网址"}
+                    {copied ? t.copied : t.copyUrl}
                   </button>
                 </div>
               </div>
@@ -100,10 +103,10 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
                       <span className="wl" style={{ background: test ? "#8B7BFF" : "#F6B53D" }} aria-hidden="true">{test ? "T" : "W"}</span>
                     )}
                     <span>
-                      <b>{test ? `测试钱包 ${shortAddr(acct)}` : c.name === "Injected" ? "浏览器钱包" : c.name}</b>
+                      <b>{test ? t.testWallet(shortAddr(acct)) : c.name === "Injected" ? t.browserWallet : c.name}</b>
                       <br />
                       <small className="muted">
-                        {busy ? "请在钱包里确认连接…" : test ? "仅本地测试链（TEST-ONLY）" : noWallet && c.id === "injected" ? "未检测到钱包" : "MetaMask、币安、OKX、TokenPocket、Bitget、Trust 等"}
+                        {busy ? t.confirmConnect : test ? t.testOnly : noWallet && c.id === "injected" ? t.noWalletDetected : t.walletsHint}
                       </small>
                     </span>
                     {busy && <span className="spin" aria-hidden="true" />}
@@ -111,7 +114,7 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
                 );
               })}
             </div>
-            {error && <p className="err" role="alert">{walletErrorMessage(error)}</p>}
+            {error && <p className="err" role="alert">{walletErrorMessage(error, t)}</p>}
           </Modal>
         )}
       </>
@@ -124,7 +127,7 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
     // One row: the address chip (tap to disconnect) and the next step. Never wraps, so the header keeps its height.
     return (
       <div className="wallet-group">
-        <button type="button" className="btn ghost sm wg-addr" onClick={() => disconnect()} title="断开钱包" aria-label={`断开 ${address}`}>
+        <button type="button" className="btn ghost sm wg-addr" onClick={() => disconnect()} title={t.disconnectWallet} aria-label={t.disconnect(address ?? "")}>
           <span className="avatar" aria-hidden="true" />
           <span className="addr">{shortAddr(address)}</span>
         </button>
@@ -137,14 +140,14 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
           {busy ? <span className="spin" aria-hidden="true" /> : null}
           {wrongChain ? (
             <>
-              <span className="wg-long">切换到{chainName}</span>
-              <span className="wg-short" aria-hidden="true">切换网络</span>
+              <span className="wg-long">{t.switchTo(chainName)}</span>
+              <span className="wg-short" aria-hidden="true">{t.switchNetwork}</span>
             </>
           ) : (
-            signInLabel
+            signInLabel ?? t.signIn
           )}
         </button>
-        {err && <span className="err" role="alert">{walletErrorMessage(err)}</span>}
+        {err && <span className="err" role="alert">{walletErrorMessage(err, t)}</span>}
       </div>
     );
   }
@@ -153,8 +156,8 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
       type="button"
       className="btn wallet"
       onClick={() => signOut.mutate(undefined, { onSuccess: () => disconnect() })}
-      title="退出登录并断开钱包"
-      aria-label={`已登录 ${address}，点击退出`}
+      title={t.signOutTitle}
+      aria-label={t.signedIn(address ?? "")}
     >
       <span className="avatar" aria-hidden="true" />
       <span className="addr">{shortAddr(address)}</span>

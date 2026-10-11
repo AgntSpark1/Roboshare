@@ -2,6 +2,7 @@
 import { useCallback, useState } from "react";
 import { sendTransaction, waitForTransactionReceipt, writeContract } from "@wagmi/core";
 import { useWalletConfig } from "./wallet";
+import { useUiStrings, zhUiStrings, type UiStrings } from "./i18n";
 import { BaseError, type Abi, type Hash } from "viem";
 import type { PreparedTx } from "./api";
 
@@ -20,14 +21,14 @@ export interface TxRun {
 }
 
 /** Human-readable reason for a wallet or contract error. */
-export function txErrorMessage(e: unknown): string {
+export function txErrorMessage(e: unknown, t: UiStrings = zhUiStrings): string {
   if (e instanceof BaseError) {
-    if (e.walk((x) => (x as { name?: string }).name === "UserRejectedRequestError")) return "你在钱包里拒绝了这笔交易";
+    if (e.walk((x) => (x as { name?: string }).name === "UserRejectedRequestError")) return t.txRejected;
     const revert = e.walk((x) => (x as { name?: string }).name === "ContractFunctionRevertedError") as
       | { data?: { errorName?: string }; reason?: string }
       | null;
-    if (revert?.data?.errorName) return `合约拒绝：${revert.data.errorName}`;
-    if (revert?.reason) return `合约拒绝：${revert.reason}`;
+    if (revert?.data?.errorName) return t.contractRejected(revert.data.errorName);
+    if (revert?.reason) return t.contractRejected(revert.reason);
     return e.shortMessage;
   }
   return e instanceof Error ? e.message : String(e);
@@ -39,6 +40,7 @@ export function txErrorMessage(e: unknown): string {
  */
 export function useTxRunner() {
   const config = useWalletConfig();
+  const t = useUiStrings();
   const [run, setRun] = useState<TxRun>({ states: [], hashes: [], error: null, running: false });
 
   const start = useCallback(
@@ -61,12 +63,12 @@ export function useTxRunner() {
           push(null, true);
           onSubmitted?.(hash, i);
           const receipt = await waitForTransactionReceipt(config, { hash });
-          if (receipt.status !== "success") throw new Error("交易在链上执行失败（reverted）");
+          if (receipt.status !== "success") throw new Error(t.txReverted);
           states[i] = "done";
           push(null, true);
         } catch (e) {
           states[i] = "error";
-          push(txErrorMessage(e), false);
+          push(txErrorMessage(e, t), false);
           return false;
         }
       }

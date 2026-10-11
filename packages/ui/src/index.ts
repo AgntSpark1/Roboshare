@@ -11,3 +11,4 @@ export { TxProgress } from "./components/TxProgress";
 export { WalletButton } from "./components/WalletButton";
 export * from "./wallet";
 export * from "./chaintime";
+export * from "./i18n";

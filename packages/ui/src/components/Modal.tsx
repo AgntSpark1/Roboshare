@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useUiStrings } from "../i18n";
 
 /**
  * Accessible dialog: labelled by its title, closes on Escape or the scrim, returns focus to the opener.
@@ -9,6 +10,7 @@ import { createPortal } from "react-dom";
  */
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const id = useId();
+  const t = useUiStrings();
   const ref = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -30,7 +32,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby={id} ref={ref}>
         <div className="mhead">
           <h3 id={id}>{title}</h3>
-          <button type="button" className="x" aria-label="关闭" onClick={onClose}>×</button>
+          <button type="button" className="x" aria-label={t.close} onClick={onClose}>×</button>
         </div>
         {children}
       </div>

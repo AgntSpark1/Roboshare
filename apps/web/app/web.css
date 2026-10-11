@@ -15,3 +15,19 @@
 .chain-info{margin-top:16px}
 .chain-info summary{cursor:pointer;color:var(--mute);font-size:.86rem;padding:6px 0}
 footer a{color:var(--mute)}
+
+/* type per language: the script's Noto family first (loaded by LocaleFont), then the platform's own font */
+html:lang(zh-TW){--f-display:"Chakra Petch","Noto Sans TC",system-ui,sans-serif;--f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+html:lang(ja){--f-display:"Chakra Petch","Noto Sans JP",system-ui,sans-serif;--f-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif}
+html:lang(ko){--f-display:"Chakra Petch","Noto Sans KR",system-ui,sans-serif;--f-body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+html:lang(th){--f-display:"Chakra Petch","Noto Sans Thai",system-ui,sans-serif;--f-body:"Noto Sans Thai","Noto Sans",Tahoma,system-ui,sans-serif}
+html:lang(en),html:lang(vi),html:lang(id),html:lang(es){--f-display:"Chakra Petch","Noto Sans",system-ui,sans-serif;--f-body:"Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+
+/* language picker */
+.lang-btn{display:inline-flex;align-items:center;gap:5px;flex:none;height:32px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--mute);font-family:var(--f-mono);font-size:.74rem;cursor:pointer}
+.lang-btn:hover{color:var(--ink);border-color:var(--line2)}
+.lang-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lang-list button{padding:12px;border-radius:var(--r-s);border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:.92rem;text-align:left;cursor:pointer}
+.lang-list button.on{border-color:var(--amber);color:var(--amber)}
+@media (max-width:820px){.top .wrap{gap:10px}}
+@media (max-width:480px){.lang-btn{padding:0 8px;gap:4px}.top .brand small{display:none}}

@@ -48,7 +48,7 @@ export function formatDate(d: string | number | Date | null | undefined): string
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} ${p(date.getHours())}:${p(date.getMinutes())}`;
 }
 
-export function countdown(to: string | number | Date, now = Date.now()): string {
+export function countdown(to: string | number | Date, now = Date.now(), days: (d: number) => string = (d) => `${d}天`): string {
   let s = Math.max(0, Math.floor((new Date(to).getTime() - now) / 1000));
   const d = Math.floor(s / 86400);
   s %= 86400;
@@ -57,7 +57,7 @@ export function countdown(to: string | number | Date, now = Date.now()): string 
   const m = Math.floor(s / 60);
   s %= 60;
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d ? `${d}天 ` : ""}${p(h)}:${p(m)}:${p(s)}`;
+  return `${d ? `${days(d)} ` : ""}${p(h)}:${p(m)}:${p(s)}`;
 }
 
 /** Chinese labels for on-chain project states (PROJECT_STATES in @roboshare/shared). */
@@ -75,6 +75,6 @@ export const STATE_LABEL: Record<string, string> = {
   CANCELLED: "已取消",
 };
 
-export function stateLabel(s: string): string {
-  return STATE_LABEL[s] ?? s;
+export function stateLabel(s: string, labels: Record<string, string> = STATE_LABEL): string {
+  return labels[s] ?? s;
 }

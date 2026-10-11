@@ -4,6 +4,7 @@ import { getChainId, signMessage } from "@wagmi/core";
 import { useAccount, useWalletConfig } from "./wallet";
 import { createSiweMessage } from "viem/siwe";
 import { api, ApiError } from "./api";
+import { useUiStrings } from "./i18n";
 
 export interface Me {
   userId: string;
@@ -39,9 +40,10 @@ export function useSignIn() {
   const { address } = useAccount();
   const config = useWalletConfig();
   const qc = useQueryClient();
+  const t = useUiStrings();
   return useMutation({
     mutationFn: async () => {
-      if (!address) throw new Error("请先连接钱包");
+      if (!address) throw new Error(t.connectFirst);
       const { nonce } = await api.get<{ nonce: string }>(`/auth/nonce?address=${address}`);
       const message = createSiweMessage({
         address,
@@ -50,7 +52,7 @@ export function useSignIn() {
         uri: window.location.origin,
         nonce,
         version: "1",
-        statement: "登录 RoboShare。此签名不会发起交易，也不会产生任何费用。",
+        statement: t.siweStatement,
       });
       const signature = await signMessage(config, { message });
       await api.post("/auth/verify", { message, signature });
