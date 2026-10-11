@@ -36,7 +36,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .top .wrap{display:flex;align-items:center;gap:18px;height:62px}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--f-display);font-weight:700;font-size:1.15rem;letter-spacing:.02em}
 .brand svg{flex:none}
-.brand small{display:block;font-family:var(--f-mono);font-weight:400;font-size:.62rem;color:var(--mute);letter-spacing:.12em}
+.brand small{display:block;white-space:nowrap;font-family:var(--f-mono);font-weight:400;font-size:.62rem;color:var(--mute);letter-spacing:.12em}
 .nav{display:flex;gap:4px;margin-left:12px}
 .nav a{text-decoration:none;padding:7px 12px;border-radius:999px;color:var(--mute);font-size:.9rem;transition:color .2s,background .2s}
 .nav a:hover{color:var(--ink)}
@@ -58,6 +58,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .btn.sm{padding:6px 12px;font-size:.8rem}
 .btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
 .wallet .addr{font-family:var(--f-mono);font-size:.82rem}
+.wallet-group{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;position:relative;min-width:0}
+.wallet-group .wg-addr{gap:6px}
+.wallet-group .wg-short{display:none}
+.wallet-group>.err{flex-basis:100%}
+.top .wallet-group>.err{position:absolute;top:calc(100% + 8px);right:0;width:max-content;max-width:min(280px,80vw);background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:.8rem}
+@media (max-width:480px){
+  .top .wallet-group .wg-addr .addr{display:none}
+  .top .wallet-group .wg-addr{padding:6px}
+  .top .wallet-group .wg-long{display:none}
+  .top .wallet-group .wg-short{display:inline}
+}
 .avatar{width:18px;height:18px;border-radius:50%;background:conic-gradient(from 40deg,var(--amber),var(--lidar),#7A5CFF,var(--amber))}
 
 /* bottom tabs (phone) */
