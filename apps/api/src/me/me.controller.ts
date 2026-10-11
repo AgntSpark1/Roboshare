@@ -34,7 +34,10 @@ export class MeController {
       orderBy: [{ blockNumber: "desc" }, { logIndex: "desc" }],
       take: 200,
     });
-    const pending = await this.prisma.pendingTx.findMany({ where: { userId: req.session!.userId, chainId: this.cfg.chainId } });
+    // USDT Approval events are not indexed, so approval txs would never leave the pending list.
+    const pending = await this.prisma.pendingTx.findMany({
+      where: { userId: req.session!.userId, chainId: this.cfg.chainId, purpose: { notIn: ["APPROVE", "REVOKE_APPROVAL"] } },
+    });
     const seen = new Set(events.map((e) => e.txHash.toLowerCase()));
     return plain({
       items: events.map((e) => {

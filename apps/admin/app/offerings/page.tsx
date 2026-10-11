@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { keccak256, stringToHex, isAddress } from "viem";
 import { api, countdown, useChainNow, formatUsdt, OfferingProgress, parseUsdt, type PreparedTx, type TimelockProposal } from "@roboshare/ui";
+import { SHARE_CAP } from "@roboshare/shared";
 import { ProposalView } from "@/components/Proposal";
 import { TxAction } from "@/components/TxAction";
 import { errorText, useRoles } from "@/lib/admin";
@@ -53,7 +54,7 @@ export default function Offerings() {
 }
 
 function ConfigureOffering({ projects }: { projects: { id: string; name: string }[] }) {
-  const [f, setF] = useState({ id: projects[0]!.id, price: "500", min: "60", perWallet: "40", days: "14", treasury: "", terms: "" });
+  const [f, setF] = useState({ id: projects[0]!.id, price: "500", min: "60", perWallet: "", days: "14", treasury: "", terms: "" });
   const [proposal, setProposal] = useState<TimelockProposal | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
@@ -64,7 +65,8 @@ function ConfigureOffering({ projects }: { projects: { id: string; name: string 
       const r = await api.post<{ proposal: TimelockProposal }>(`/admin/projects/${f.id}/offering`, {
         unitPrice: parseUsdt(f.price).toString(),
         minUnits: Number(f.min),
-        perWalletMax: Number(f.perWallet),
+        // Blank means no per-wallet cap: the contract caps at the total units.
+        perWalletMax: f.perWallet.trim() ? Number(f.perWallet) : SHARE_CAP,
         // The timelock delays execution by 24h, so the window opens after it.
         startTime: now + 86_400 + 3600,
         endTime: now + 86_400 + 3600 + Number(f.days) * 86_400,
@@ -86,7 +88,7 @@ function ConfigureOffering({ projects }: { projects: { id: string; name: string 
           </label>
           <label className="field"><span>每份价格（USDT）</span><input value={f.price} onChange={set("price")} inputMode="decimal" /></label>
           <label className="field"><span>最低成功份数（1–100）</span><input value={f.min} onChange={set("min")} inputMode="numeric" /></label>
-          <label className="field"><span>每钱包上限</span><input value={f.perWallet} onChange={set("perWallet")} inputMode="numeric" /></label>
+          <label className="field"><span>每钱包上限（留空为不限）</span><input value={f.perWallet} onChange={set("perWallet")} inputMode="numeric" placeholder="不限" /></label>
           <label className="field"><span>募集天数（时间锁到期后开始）</span><input value={f.days} onChange={set("days")} inputMode="numeric" /></label>
           <label className="field"><span>项目资金账户地址</span><input value={f.treasury} onChange={set("treasury")} placeholder="0x…" /></label>
         </div>
