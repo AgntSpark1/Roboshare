@@ -19,12 +19,13 @@ export interface PreparedTx {
   description: string;
 }
 
-export interface TimelockProposal {
-  timelock: `0x${string}`;
-  salt: `0x${string}`;
-  delaySeconds: number;
-  schedule: PreparedTx;
-  execute: PreparedTx;
+/** A governance action for the 2/3 Safe. There is no timelock: it takes effect as soon as two owners sign and execute. */
+export interface SafeProposal {
+  safe: `0x${string}`;
+  /** Each call, to add one by one in the Safe{Wallet} Transaction Builder. */
+  calls: { to: `0x${string}`; data: `0x${string}`; description: string }[];
+  /** The same as a single Safe transaction (operation 1 = DELEGATECALL to MultiSendCallOnly for a batch). */
+  tx: PreparedTx & { operation: 0 | 1 };
 }
 
 let base = "/api/v1";

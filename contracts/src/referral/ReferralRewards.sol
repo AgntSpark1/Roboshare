@@ -75,13 +75,13 @@ contract ReferralRewards is AccessControl, Pausable, ReentrancyGuard {
         emit ReferralRewardClaimed(account, amount, cumulativeAmount);
     }
 
-    /// @notice Governance (timelock) master switch. Off by default; mainnet needs legal sign-off first.
+    /// @notice Governance (Safe) master switch. Off by default; mainnet needs legal sign-off first.
     function setClaimsEnabled(bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
         claimsEnabled = enabled;
         emit ClaimsEnabledSet(enabled);
     }
 
-    /// @notice Governance (timelock) can take back platform funds, e.g. when the programme ends.
+    /// @notice Governance (Safe) can take back platform funds, e.g. when the programme ends.
     function withdraw(address to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (to == address(0) || amount == 0) revert ZeroValue();
         paymentToken.safeTransfer(to, amount);

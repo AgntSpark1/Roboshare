@@ -233,7 +233,7 @@ contract ShareMarketTest is BaseTest {
         new ShareMarket(IERC20(address(0)), assets, gov, pauser);
     }
 
-    function test_DeployScriptGivesAdminToTimelockOnly() public {
+    function test_DeployScriptGivesAdminToSafeOnly() public {
         DeployShareMarket script = new DeployShareMarket();
         ShareMarket m = script.deploy(address(usdt), address(assets), gov, pauser);
         assertTrue(m.hasRole(m.DEFAULT_ADMIN_ROLE(), gov));

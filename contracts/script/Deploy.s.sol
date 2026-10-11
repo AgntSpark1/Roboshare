@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {Script, console2} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IdentityRegistry} from "../src/identity/IdentityRegistry.sol";
 import {AssetRegistry} from "../src/registry/AssetRegistry.sol";
 import {AuditRegistry} from "../src/registry/AuditRegistry.sol";
@@ -14,13 +13,14 @@ import {ShareMarket} from "../src/market/ShareMarket.sol";
 import {ProjectFactory, TokenDeployer, OfferingDeployer, DistributorDeployer} from "../src/factory/ProjectFactory.sol";
 import {MockUSDT} from "../test/mocks/MockUSDT.sol";
 
-/// @notice Deploys the RoboShare singletons and hands admin to a 24h timelock controlled by the Safe (D-16).
+/// @notice Deploys the RoboShare singletons and hands admin straight to the 2/3 Safe (D-16, revised 2026-10-11:
+/// no timelock; governance actions take effect as soon as two Safe owners sign).
 /// @dev Required env: SAFE, OPERATOR, REVIEWER, PAUSER, COMPLIANCE_AGENT, FEE_RECIPIENT.
 ///      USDT is required on BSC mainnet (56). Elsewhere it is optional; when absent a TEST-ONLY MockUSDT
 ///      is deployed. Mainnet also requires CONFIRM_MAINNET=I_UNDERSTAND_THIS_IS_MAINNET.
 contract Deploy is Script {
     uint256 internal constant BSC_MAINNET = 56;
-    uint256 internal constant TIMELOCK_DELAY = 24 hours;
+    uint256 internal constant LOCAL_ANVIL = 31337;
     bytes32 internal constant MAINNET_CONFIRMATION = keccak256("I_UNDERSTAND_THIS_IS_MAINNET");
 
     struct Config {
@@ -34,7 +34,7 @@ contract Deploy is Script {
     }
 
     struct Deployed {
-        TimelockController timelock;
+        address admin; // the governance Safe
         IdentityRegistry identity;
         AssetRegistry assets;
         AuditRegistry audit;
@@ -47,6 +47,7 @@ contract Deploy is Script {
     }
 
     error MainnetNotConfirmed();
+    error SafeNotContract(address safe);
     error MissingUsdt();
     error MissingAddress(string name);
     error UnexpectedUsdtDecimals(uint8 decimals);
@@ -61,24 +62,21 @@ contract Deploy is Script {
     }
 
     function deploy(Config memory c, address deployer) public returns (Deployed memory d) {
+        d.admin = c.safe;
         d.usdt = c.usdt;
         if (d.usdt == address(0)) {
             d.usdt = address(new MockUSDT()); // reverts on chain 56
             d.usdtIsMock = true;
         }
 
-        address[] memory safeOnly = new address[](1);
-        safeOnly[0] = c.safe;
-        d.timelock = new TimelockController(TIMELOCK_DELAY, safeOnly, safeOnly, address(0));
-
         d.identity = new IdentityRegistry(deployer);
         d.assets = new AssetRegistry(deployer);
         d.audit = new AuditRegistry(deployer);
-        d.router = new SubscriptionRouter(IERC20(d.usdt), d.assets, address(d.timelock), c.pauser);
-        // Referrals ship switched off in both contracts; only the timelock can enable them.
-        d.referralRewards = new ReferralRewards(IERC20(d.usdt), address(d.timelock), c.operator, c.pauser);
+        d.router = new SubscriptionRouter(IERC20(d.usdt), d.assets, c.safe, c.pauser);
+        // Referrals ship switched off in both contracts; only the Safe can enable them.
+        d.referralRewards = new ReferralRewards(IERC20(d.usdt), c.safe, c.operator, c.pauser);
         // Peer-to-peer resale for early exit (EARLY_EXIT_DESIGN.md); no fees, no custody.
-        d.shareMarket = new ShareMarket(IERC20(d.usdt), d.assets, address(d.timelock), c.pauser);
+        d.shareMarket = new ShareMarket(IERC20(d.usdt), d.assets, c.safe, c.pauser);
         d.factory = new ProjectFactory(
             d.assets,
             d.audit,
@@ -88,13 +86,13 @@ contract Deploy is Script {
             new OfferingDeployer(),
             new DistributorDeployer(),
             ProjectFactory.Roles({
-                admin: address(d.timelock),
+                admin: c.safe,
                 operator: c.operator,
                 reviewer: c.reviewer,
                 pauser: c.pauser,
                 feeRecipient: c.feeRecipient
             }),
-            address(d.timelock)
+            c.safe
         );
 
         d.identity.grantRole(d.identity.COMPLIANCE_AGENT_ROLE(), c.complianceAgent);
@@ -107,9 +105,9 @@ contract Deploy is Script {
         d.audit.grantRole(d.audit.REVIEWER_ROLE(), c.reviewer);
 
         bytes32 admin = 0x00;
-        d.identity.grantRole(admin, address(d.timelock));
-        d.assets.grantRole(admin, address(d.timelock));
-        d.audit.grantRole(admin, address(d.timelock));
+        d.identity.grantRole(admin, c.safe);
+        d.assets.grantRole(admin, c.safe);
+        d.audit.grantRole(admin, c.safe);
         d.identity.renounceRole(admin, deployer);
         d.assets.renounceRole(admin, deployer);
         d.audit.renounceRole(admin, deployer);
@@ -119,27 +117,23 @@ contract Deploy is Script {
 
     function _verify(Deployed memory d, Config memory c, address deployer) internal view {
         bytes32 admin = 0x00;
-        _check(d.identity.hasRole(admin, address(d.timelock)), "identity admin");
-        _check(d.assets.hasRole(admin, address(d.timelock)), "assets admin");
-        _check(d.audit.hasRole(admin, address(d.timelock)), "audit admin");
-        _check(d.router.hasRole(admin, address(d.timelock)), "router admin");
-        _check(d.factory.hasRole(admin, address(d.timelock)), "factory admin");
+        _check(d.identity.hasRole(admin, c.safe), "identity admin");
+        _check(d.assets.hasRole(admin, c.safe), "assets admin");
+        _check(d.audit.hasRole(admin, c.safe), "audit admin");
+        _check(d.router.hasRole(admin, c.safe), "router admin");
+        _check(d.factory.hasRole(admin, c.safe), "factory admin");
         _check(!d.identity.hasRole(admin, deployer), "identity deployer renounced");
         _check(!d.assets.hasRole(admin, deployer), "assets deployer renounced");
         _check(!d.audit.hasRole(admin, deployer), "audit deployer renounced");
-        _check(!d.router.hasRole(admin, deployer) || deployer == address(d.timelock), "router deployer");
-        _check(!d.factory.hasRole(admin, deployer) || deployer == address(d.timelock), "factory deployer");
-        _check(d.timelock.getMinDelay() == TIMELOCK_DELAY, "timelock delay");
-        _check(d.timelock.hasRole(d.timelock.PROPOSER_ROLE(), c.safe), "safe proposer");
-        _check(d.timelock.hasRole(d.timelock.EXECUTOR_ROLE(), c.safe), "safe executor");
-        _check(!d.timelock.hasRole(admin, deployer), "timelock has no deployer admin");
-        _check(d.referralRewards.hasRole(admin, address(d.timelock)), "referral admin");
-        _check(!d.referralRewards.hasRole(admin, deployer) || deployer == address(d.timelock), "referral deployer");
+        _check(!d.router.hasRole(admin, deployer) || deployer == c.safe, "router deployer");
+        _check(!d.factory.hasRole(admin, deployer) || deployer == c.safe, "factory deployer");
+        _check(d.referralRewards.hasRole(admin, c.safe), "referral admin");
+        _check(!d.referralRewards.hasRole(admin, deployer) || deployer == c.safe, "referral deployer");
         _check(d.referralRewards.hasRole(d.referralRewards.ROOT_SETTER_ROLE(), c.operator), "referral root setter");
         _check(address(d.referralRewards.paymentToken()) == d.usdt, "referral usdt");
         _check(!d.router.referralsEnabled() && !d.referralRewards.claimsEnabled(), "referrals start disabled");
-        _check(d.shareMarket.hasRole(admin, address(d.timelock)), "market admin");
-        _check(!d.shareMarket.hasRole(admin, deployer) || deployer == address(d.timelock), "market deployer");
+        _check(d.shareMarket.hasRole(admin, c.safe), "market admin");
+        _check(!d.shareMarket.hasRole(admin, deployer) || deployer == c.safe, "market deployer");
         _check(address(d.shareMarket.usdt()) == d.usdt, "market usdt");
         _check(d.assets.hasRole(d.assets.FACTORY_ROLE(), address(d.factory)), "factory role");
         _check(d.identity.hasRole(d.identity.COMPLIANCE_AGENT_ROLE(), c.complianceAgent), "agent role");
@@ -165,6 +159,8 @@ contract Deploy is Script {
             uint8 dec = IERC20Metadata(c.usdt).decimals();
             if (dec != 18) revert UnexpectedUsdtDecimals(dec);
         }
+        // Admin goes straight to SAFE, so it must be the deployed multisig, not an EOA (anvil excepted).
+        if (block.chainid != LOCAL_ANVIL && c.safe.code.length == 0) revert SafeNotContract(c.safe);
     }
 
     function _required(string memory name) internal view returns (address a) {
@@ -178,7 +174,7 @@ contract Deploy is Script {
 
     function _log(Deployed memory d) internal pure {
         console2.log("chainId check passed; USDT is TEST-ONLY mock:", d.usdtIsMock);
-        console2.log("TimelockController", address(d.timelock));
+        console2.log("Admin (Safe)      ", d.admin);
         console2.log("IdentityRegistry  ", address(d.identity));
         console2.log("AssetRegistry     ", address(d.assets));
         console2.log("AuditRegistry     ", address(d.audit));

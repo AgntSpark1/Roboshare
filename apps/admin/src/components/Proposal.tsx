@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { shortAddr, type PreparedTx, type TimelockProposal } from "@roboshare/ui";
+import { shortAddr, type PreparedTx, type SafeProposal } from "@roboshare/ui";
 
 function Copy({ text, label }: { text: string; label: string }) {
   const [ok, setOk] = useState(false);
@@ -38,16 +38,28 @@ function TxBlock({ title, tx }: { title: string; tx: PreparedTx }) {
   );
 }
 
-/** A timelock proposal for the 2/3 governance Safe. Nothing is sent from here; signers propose it in the Safe. */
-export function ProposalView({ proposal }: { proposal: TimelockProposal }) {
+/**
+ * A governance action for the 2/3 Safe. There is no timelock: it takes effect as soon as two owners sign and
+ * execute it. Nothing is sent from here.
+ */
+export function ProposalView({ proposal }: { proposal: SafeProposal }) {
+  const batch = proposal.calls.length > 1;
   return (
     <div className="panel stack" data-testid="proposal">
       <div className="warnbox">
-        这是交给治理 Safe（3 人中 2 人签名）的时间锁提案。在 Safe 里新建交易并粘贴下面的地址和 calldata；schedule 执行后需等待 {Math.round(proposal.delaySeconds / 3600)} 小时，才能执行 execute。本页面不会发送任何交易。
+        这是交给治理 Safe（{shortAddr(proposal.safe)}，3 人中 2 人签名）的操作，签够 2 人并执行后<b>立即生效</b>，没有等待期，请核对无误再签。
+        {batch ? `在 Safe 的 Transaction Builder 里按顺序添加下面 ${proposal.calls.length} 笔调用（会合并成一笔交易）。` : "在 Safe 里新建交易，粘贴下面的地址和 calldata。"}
+        本页面不会发送任何交易。
       </div>
-      <TxBlock title="1. schedule（现在提交）" tx={proposal.schedule} />
-      <TxBlock title="2. execute（时间锁到期后）" tx={proposal.execute} />
-      <p className="muted small">salt {proposal.salt}</p>
+      {proposal.calls.map((c, i) => (
+        <TxBlock key={i} title={batch ? `${i + 1}. ${c.description}` : c.description} tx={{ ...proposal.tx, to: c.to, data: c.data, description: c.description }} />
+      ))}
+      {batch && (
+        <details>
+          <summary className="muted small">合并后的单笔 Safe 交易（MultiSendCallOnly，operation 1，供脚本使用）</summary>
+          <TxBlock title={proposal.tx.description} tx={proposal.tx} />
+        </details>
+      )}
     </div>
   );
 }

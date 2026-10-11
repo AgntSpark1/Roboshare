@@ -6,16 +6,15 @@
 
 ```mermaid
 flowchart TB
-  GS[治理 Safe<br/>2-of-3，硬件钱包] --> TL[TimelockController<br/>24 小时延迟]
-  TL -->|DEFAULT_ADMIN_ROLE| C[所有 RoboShare 合约]
+  GS[治理 Safe<br/>2-of-3，硬件钱包] -->|DEFAULT_ADMIN_ROLE，签名后立即执行| C[所有 RoboShare 合约]
   GUARD[守护者 Guardian Safe<br/>建议 2-of-3] -->|PAUSER_ROLE| C
   OPS[运营方 Safe 或 EOA] -->|OPERATOR_ROLE| C
   REVS[审核人 Safe] -->|REVIEWER_ROLE| C
   REL[合规中继器<br/>KMS 托管密钥] -->|COMPLIANCE_AGENT_ROLE| IR[IdentityRegistry]
 ```
 
-- 部署 EOA 在同一脚本中授予各角色、将 `DEFAULT_ADMIN_ROLE` 转移给时间锁，并放弃自身所有权限。部署后检查会断言没有任何 EOA 保留管理权限。
-- 时间锁的取消者（canceller）角色由守护者（Guardian）Safe 持有，以便在延迟期内取消恶意的已排期操作。
+- 部署 EOA 在同一脚本中授予各角色、将 `DEFAULT_ADMIN_ROLE` 直接交给治理 Safe，并放弃自身所有权限。部署后检查会断言没有任何 EOA 保留管理权限。
+- 没有时间锁（D-16，2026-10-11 Charlene 决定）：治理操作在 2 名签名人签名并执行后立即生效，用户和守护者都没有提前预警或取消的窗口。因此签名人密钥必须使用硬件钱包、分开保管，并对每笔 Safe 交易实时告警。
 - 治理、守护者、运营方和审核人的签名者集合不得存在文档记录以外的重叠。
 
 ## 2. 最小权限矩阵
@@ -64,7 +63,7 @@ flowchart TB
 
 ## 6. 监控
 
-对以下情况发出告警：任何 `RoleGranted/RoleRevoked`、时间锁上的 `CallScheduled`、`Paused`、`WalletFrozen`、超过阈值的批次提案、对账不一致、索引器延迟 > N 个区块、中继交易失败、投资资格更新量异常。
+对以下情况发出告警：任何 `RoleGranted/RoleRevoked`、治理 Safe 上的 `ExecutionSuccess`/`ApproveHash`、`Paused`、`WalletFrozen`、超过阈值的批次提案、对账不一致、索引器延迟 > N 个区块、中继交易失败、投资资格更新量异常。
 
 ## 7. 上主网前必须完成的审查
 

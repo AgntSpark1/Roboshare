@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { keccak256, stringToHex } from "viem";
-import { api, shortAddr, StatePill, type PreparedTx, type TimelockProposal } from "@roboshare/ui";
+import { api, shortAddr, StatePill, type PreparedTx, type SafeProposal } from "@roboshare/ui";
 import { ProposalView } from "@/components/Proposal";
 import { TxAction } from "@/components/TxAction";
 import { errorText, useRoles } from "@/lib/admin";
@@ -11,7 +11,7 @@ export default function Projects() {
   const projects = useProjects();
   const { can } = useRoles();
   const refresh = useRefresh();
-  const [proposal, setProposal] = useState<TimelockProposal | null>(null);
+  const [proposal, setProposal] = useState<SafeProposal | null>(null);
   const [err, setErr] = useState<string | null>(null);
   return (
     <>
@@ -44,7 +44,7 @@ export default function Projects() {
                           onClick={async () => {
                             setErr(null);
                             try {
-                              setProposal((await api.post<{ proposal: TimelockProposal }>(`/admin/projects/${p.id}/transition`, { to: "ACTIVE", reason: "vehicle in service" })).proposal);
+                              setProposal((await api.post<{ proposal: SafeProposal }>(`/admin/projects/${p.id}/transition`, { to: "ACTIVE", reason: "vehicle in service" })).proposal);
                             } catch (e) {
                               setErr(errorText(e));
                             }

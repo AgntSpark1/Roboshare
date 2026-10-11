@@ -18,7 +18,7 @@ import {MockUSDT} from "./mocks/MockUSDT.sol";
 
 /// @notice Shared fixture: full RoboShare deployment with distinct role holders.
 abstract contract BaseTest is Test {
-    address internal gov = makeAddr("gov"); // stands in for the timelock
+    address internal gov = makeAddr("gov"); // stands in for the governance Safe
     address internal operator = makeAddr("operator");
     address internal reviewer = makeAddr("reviewer");
     address internal pauser = makeAddr("pauser");

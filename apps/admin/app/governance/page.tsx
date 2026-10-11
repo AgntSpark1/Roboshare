@@ -31,8 +31,8 @@ export default function Governance() {
         <h2 id="gov">治理规则</h2>
         <div className="health">
           <div><span>治理 Safe</span><span>3 人中 2 人签名</span></div>
-          <div><span>时间锁</span><span>24 小时后执行</span></div>
-          <div><span>紧急暂停</span><span>Guardian Safe 直接执行，不等时间锁</span></div>
+          <div><span>生效时间</span><span>2 人签名并执行后立即生效</span></div>
+          <div><span>紧急暂停</span><span>Guardian Safe 直接执行</span></div>
           <div><span>强制转移 / 私钥找回</span><span className="c-good">不存在（合约不支持）</span></div>
         </div>
         <p className="muted small" style={{ marginTop: 10 }}>本控制台只生成待签名的交易数据，从不代签或发送治理交易。</p>

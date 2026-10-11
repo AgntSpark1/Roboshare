@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, formatUsdt, shortAddr, type PreparedTx, type TimelockProposal } from "@roboshare/ui";
+import { api, formatUsdt, shortAddr, type PreparedTx, type SafeProposal } from "@roboshare/ui";
 import { ProposalView } from "@/components/Proposal";
 import { TxAction } from "@/components/TxAction";
 import { errorText, useRoles } from "@/lib/admin";
@@ -103,13 +103,13 @@ function TermsProposal() {
   const [enabled, setEnabled] = useState(false);
   const [share, setShare] = useState("20");
   const [days, setDays] = useState("365");
-  const [proposal, setProposal] = useState<TimelockProposal | null>(null);
+  const [proposal, setProposal] = useState<SafeProposal | null>(null);
   const [err, setErr] = useState<string | null>(null);
   async function prepare() {
     setErr(null);
     setProposal(null);
     try {
-      setProposal(await api.post<TimelockProposal>("/admin/referrals/terms", { enabled, shareBps: Math.round(Number(share) * 100), windowDays: Number(days) }));
+      setProposal(await api.post<SafeProposal>("/admin/referrals/terms", { enabled, shareBps: Math.round(Number(share) * 100), windowDays: Number(days) }));
     } catch (e) {
       setErr(errorText(e));
     }
@@ -129,7 +129,7 @@ function TermsProposal() {
           <label className="field"><span>绑定后有效天数</span><input value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} /></label>
         </div>
         <p className="muted small">新条款只影响之后的新绑定。同时开关邀请绑定和奖励领取。</p>
-        <div><button type="button" className="btn sm" onClick={prepare}>生成时间锁提案</button></div>
+        <div><button type="button" className="btn sm" onClick={prepare}>生成 Safe 提案</button></div>
         {err && <p className="err" role="alert">{err}</p>}
         {proposal && <ProposalView proposal={proposal} />}
       </div>
