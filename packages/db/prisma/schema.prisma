@@ -431,7 +431,8 @@ model DistributionAllocation {
 
 // ---------------------------------------------------------------- app: referrals (REFERRAL_DESIGN.md)
 
-/// Projection of SubscriptionRouter.ReferralBound. Single tier: one referrer per referee, forever.
+/// Projection of SubscriptionRouter.ReferralBound: one referrer per referee, forever. The referrer's own
+/// referrer is the second level (REFERRAL_DESIGN.md §8).
 model Referral {
   referee     String   @id
   referrer    String
@@ -447,16 +448,18 @@ model Referral {
 }
 
 /// A referrer's cut of the platform fee on one referee allocation, accrued when the batch is approved.
+/// level 1: the referee's own referrer; level 2: that referrer's referrer.
 model ReferralAccrual {
   projectIdOnchain String
   batchIdOnchain   Int
   referee          String
+  level            Int     @default(1)
   referrer         String
   fee              Decimal @db.Decimal(78, 0)
   shareBps         Int
   reward           Decimal @db.Decimal(78, 0)
 
-  @@id([projectIdOnchain, batchIdOnchain, referee])
+  @@id([projectIdOnchain, batchIdOnchain, referee, level])
   @@index([referrer])
   @@map("referral_accrual")
   @@schema("app")

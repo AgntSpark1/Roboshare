@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "@roboshare/db";
-import { PROJECT_STATES, RECORD_KINDS, RECORD_STATUSES, referralReward } from "@roboshare/shared";
+import { PROJECT_STATES, RECORD_KINDS, RECORD_STATUSES, referralReward, REFERRAL_LEVEL2_SHARE_BPS } from "@roboshare/shared";
 import type { ContractKind } from "./contracts.js";
 
 type Tx = Prisma.TransactionClient;
@@ -415,9 +415,10 @@ async function ensureBatch(tx: Tx, e: StoredEvent) {
 }
 
 /**
- * Accrues each referrer's share of the platform fee charged to their referees in this batch.
- * Skipped when the binding window has passed at approval time or the referrer is not eligible then
- * (frozen, revoked or expired), so rewards only go to whitelisted wallets.
+ * Accrues each referrer's share of the platform fee charged to their referees in this batch, and the
+ * second-level share for the referrer's own referrer. Both use the referee's binding window; a level is
+ * skipped when its receiver is not eligible at approval time (frozen, revoked or expired), so rewards
+ * only go to whitelisted wallets. There is no third level.
  */
 async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
   const allocations = await tx.distributionAllocation.findMany({
@@ -430,25 +431,38 @@ async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
   if (!block) throw new Error(`block ${e.blockNumber} not stored before BatchApproved`);
   const at = block.timestamp.getTime();
   const byReferee = new Map(referrals.map((r) => [r.referee, r]));
+  const upline = new Map(
+    (await tx.referral.findMany({ where: { referee: { in: [...new Set(referrals.map((r) => r.referrer))] } } })).map((r) => [r.referee, r.referrer]),
+  );
+  const eligible = async (wallet: string) => {
+    const elig = await tx.eligibility.findUnique({ where: { wallet } });
+    return elig?.status === "ELIGIBLE" && !(elig.expiresAt && elig.expiresAt.getTime() <= at);
+  };
   for (const alloc of allocations) {
     const ref = byReferee.get(alloc.wallet);
     if (!ref || ref.expiresAt.getTime() <= at) continue;
-    const elig = await tx.eligibility.findUnique({ where: { wallet: ref.referrer } });
-    if (elig?.status !== "ELIGIBLE" || (elig.expiresAt && elig.expiresAt.getTime() <= at)) continue;
     const fee = BigInt(alloc.gross.toFixed()) - BigInt(alloc.net.toFixed());
-    const reward = referralReward(fee, ref.shareBps);
-    if (reward === 0n) continue;
-    await tx.referralAccrual.create({
-      data: {
-        projectIdOnchain: alloc.projectIdOnchain,
-        batchIdOnchain: batchId,
-        referee: alloc.wallet,
-        referrer: ref.referrer,
-        fee: fee.toString(),
-        shareBps: ref.shareBps,
-        reward: reward.toString(),
-      },
-    });
+    const levels: [number, string | undefined, number][] = [
+      [1, ref.referrer, ref.shareBps],
+      [2, upline.get(ref.referrer), REFERRAL_LEVEL2_SHARE_BPS],
+    ];
+    for (const [level, receiver, shareBps] of levels) {
+      if (!receiver || !(await eligible(receiver))) continue;
+      const reward = referralReward(fee, shareBps);
+      if (reward === 0n) continue;
+      await tx.referralAccrual.create({
+        data: {
+          projectIdOnchain: alloc.projectIdOnchain,
+          batchIdOnchain: batchId,
+          referee: alloc.wallet,
+          level,
+          referrer: receiver,
+          fee: fee.toString(),
+          shareBps,
+          reward: reward.toString(),
+        },
+      });
+    }
   }
 }
 

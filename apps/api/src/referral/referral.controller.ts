@@ -4,6 +4,7 @@ import {
   buildReferralTree,
   canonicalJson,
   referralRewardsAbi,
+  REFERRAL_LEVEL2_SHARE_BPS,
   subscriptionRouterAbi,
   verifyReferralProof,
 } from "@roboshare/shared";
@@ -31,7 +32,7 @@ async function contractOf(prisma: PrismaService, chainId: number, kind: string):
   return row ? getAddress(row.address) : null;
 }
 
-/** Investor view of the single-tier referral programme (REFERRAL_DESIGN.md). */
+/** Investor view of the two-level referral programme (REFERRAL_DESIGN.md). */
 @Controller("me")
 @UseGuards(InvestorGuard)
 export class MeReferralController {
@@ -46,15 +47,20 @@ export class MeReferralController {
     const [mine, referees, accruals, claim, latestRoot] = await Promise.all([
       this.prisma.referral.findUnique({ where: { referee: wallet } }),
       this.prisma.referral.findMany({ where: { referrer: wallet }, orderBy: { boundBlock: "asc" } }),
-      this.prisma.referralAccrual.groupBy({ by: ["referee"], where: { referrer: wallet }, _sum: { reward: true } }),
+      this.prisma.referralAccrual.groupBy({ by: ["referee", "level"], where: { referrer: wallet }, _sum: { reward: true } }),
       this.prisma.referralClaim.findUnique({ where: { account: wallet } }),
       this.prisma.referralRoot.findFirst({ orderBy: { epoch: "desc" } }),
     ]);
+    // Second level: people your direct referrals invited. Nothing deeper is tracked or paid.
+    const second = await this.prisma.referral.findMany({
+      where: { referrer: { in: referees.map((r) => r.referee) } },
+      orderBy: { boundBlock: "asc" },
+    });
     const [blocks, history] = await Promise.all([
-      this.prisma.chainBlock.findMany({ where: { chainId: this.cfg.chainId, number: { in: referees.map((r) => r.boundBlock) } } }),
+      this.prisma.chainBlock.findMany({ where: { chainId: this.cfg.chainId, number: { in: [...referees, ...second].map((r) => r.boundBlock) } } }),
       this.prisma.referralAccrual.findMany({
         where: { referrer: wallet },
-        orderBy: [{ projectIdOnchain: "asc" }, { batchIdOnchain: "desc" }],
+        orderBy: [{ projectIdOnchain: "asc" }, { batchIdOnchain: "desc" }, { level: "asc" }],
         take: 100,
       }),
     ]);
@@ -62,8 +68,17 @@ export class MeReferralController {
     const titles = new Map(
       (await this.prisma.projectMeta.findMany({ where: { projectIdOnchain: { in: [...new Set(history.map((h) => h.projectIdOnchain))] } } })).map((m) => [m.projectIdOnchain, m.title]),
     );
-    const earnedBy = new Map(accruals.map((a) => [a.referee, dec(a._sum.reward)]));
+    const earnedBy = new Map(accruals.map((a) => [`${a.level}:${a.referee}`, dec(a._sum.reward)]));
     const earned = [...earnedBy.values()].reduce((s, x) => s + x, 0n);
+    const member = (level: number) => (r: (typeof referees)[number]) => ({
+      wallet: getAddress(r.referee),
+      shareBps: level === 1 ? r.shareBps : REFERRAL_LEVEL2_SHARE_BPS,
+      expiresAt: r.expiresAt,
+      boundAt: boundAt.get(r.boundBlock) ?? null,
+      active: r.expiresAt.getTime() > Date.now(),
+      earned: (earnedBy.get(`${level}:${r.referee}`) ?? 0n).toString(),
+      ...(level === 2 ? { via: getAddress(r.referrer) } : {}),
+    });
     const claimed = dec(claim?.claimed);
 
     // A proof is only served for the root that is live on chain, and only after checking it.
@@ -80,20 +95,16 @@ export class MeReferralController {
       wallet: getAddress(wallet),
       contract: await contractOf(this.prisma, this.cfg.chainId, "REFERRAL_REWARDS"),
       referredBy: mine ? { referrer: getAddress(mine.referrer), shareBps: mine.shareBps, expiresAt: mine.expiresAt } : null,
-      referees: referees.map((r) => ({
-        wallet: getAddress(r.referee),
-        shareBps: r.shareBps,
-        expiresAt: r.expiresAt,
-        boundAt: boundAt.get(r.boundBlock) ?? null,
-        active: r.expiresAt.getTime() > Date.now(),
-        earned: (earnedBy.get(r.referee) ?? 0n).toString(),
-      })),
+      level2ShareBps: REFERRAL_LEVEL2_SHARE_BPS,
+      referees: referees.map(member(1)),
+      level2: second.map(member(2)),
       // Most recent first within each project: one row per referee allocation that earned a reward.
       history: history.map((h) => ({
         projectId: h.projectIdOnchain,
         projectTitle: titles.get(h.projectIdOnchain) ?? null,
         batchId: h.batchIdOnchain,
         referee: getAddress(h.referee),
+        level: h.level,
         fee: h.fee,
         shareBps: h.shareBps,
         reward: h.reward,

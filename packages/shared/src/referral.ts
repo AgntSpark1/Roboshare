@@ -1,5 +1,5 @@
 /**
- * Referral rewards (REFERRAL_DESIGN.md): single tier, paid from the platform fee only.
+ * Referral rewards (REFERRAL_DESIGN.md): two levels, paid from the platform fee only.
  * Mirrors the leaf layout ReferralRewards.sol verifies with OpenZeppelin MerkleProof.
  */
 import { encodeAbiParameters, getAddress, keccak256, type Address, type Hex } from "viem";
@@ -8,6 +8,11 @@ import { BPS_DENOMINATOR } from "./fees.js";
 /** Default terms; the binding event carries the terms actually in force for each referee. */
 export const REFERRAL_DEFAULT_SHARE_BPS = 2_000;
 export const REFERRAL_DEFAULT_WINDOW_SECONDS = 365 * 24 * 60 * 60;
+/**
+ * Second level: the referrer's own referrer gets this share of the same platform fee, within the
+ * referee's binding window. Set in code (accrual is off-chain, like the Merkle root); there is no third level.
+ */
+export const REFERRAL_LEVEL2_SHARE_BPS = 500;
 
 /** Referrer's cut of one platform fee: floor(fee * shareBps / 10000). Never more than the fee. */
 export function referralReward(fee: bigint, shareBps: number): bigint {

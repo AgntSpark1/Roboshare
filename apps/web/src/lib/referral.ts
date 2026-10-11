@@ -69,12 +69,24 @@ export function useShowReferrals(isTestChain: boolean) {
   return isTestChain || enabled;
 }
 
+export interface ReferralMember {
+  wallet: Address;
+  shareBps: number;
+  expiresAt: string;
+  boundAt: string | null;
+  active: boolean;
+  earned: string;
+}
+
 export interface MyReferrals {
   wallet: Address;
   contract: Address | null;
   referredBy: { referrer: Address; shareBps: number; expiresAt: string } | null;
-  referees: { wallet: Address; shareBps: number; expiresAt: string; boundAt: string | null; active: boolean; earned: string }[];
-  history: { projectId: string; projectTitle: string | null; batchId: number; referee: Address; fee: string; shareBps: number; reward: string }[];
+  /** Share of the platform fee paid on second-level referees (people your referrals invited). */
+  level2ShareBps: number;
+  referees: ReferralMember[];
+  level2: (ReferralMember & { via: Address })[];
+  history: { projectId: string; projectTitle: string | null; batchId: number; referee: Address; level: 1 | 2; fee: string; shareBps: number; reward: string }[];
   earned: string;
   claimed: string;
   pendingPublication: string;

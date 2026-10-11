@@ -290,6 +290,13 @@ export const id: Messages = {
   promo: {
     title: "Pusat referal",
     intro: (pct, months) => `Bagikan tautan atau kode QR pribadi Anda. Setelah teman membeli pertama kali lewat tautan itu, selama ${months} bulan berikutnya Anda menerima ${pct} dari biaya platform atas setiap pembayaran mereka, dibayar dalam USDT.`,
+    intro2: (pct2) => `Saat orang yang diundang teman Anda berlangganan, Anda juga mendapat ${pct2} dari biaya platform.`,
+    level1: "Level 1",
+    level2: "Level 2",
+    level1Title: "Level 1 (Anda undang langsung)",
+    level2Title: "Level 2 (diundang teman Anda)",
+    level2Empty: "Belum ada anggota level 2.",
+    via: (a) => `diundang oleh ${a}`,
     signIn: "Hubungkan dompet dan masuk dengan tanda tangan untuk mendapatkan tautan dan kode QR referal, serta melihat anggota dan penghasilan referal Anda.",
     preview: "Pratinjau testnet: hadiah referal belum diaktifkan. Anda bisa mencoba tautan dan kode QR, tetapi pembelian teman belum terhubung ke Anda sampai diaktifkan.",
     closed: "Fitur referal belum dibuka.",
@@ -322,7 +329,7 @@ export const id: Messages = {
     unknownDate: "Tanggal bergabung sedang disinkronkan",
     referredBy: "Perujuk Anda: ",
     rulesTitle: "Aturan",
-    rules: ["Hanya satu tingkat: orang yang diundang teman Anda bukan anggota Anda dan tidak memberi hadiah.", "Hadiah berasal dari biaya platform dan tidak mengubah harga atau penghasilan teman Anda.", "Kelayakan investasi Anda harus tetap berlaku, jika tidak hadiah periode itu tidak dihitung.", "Penghasilan bisa diklaim setelah platform memublikasikan tiap periode; klaim memerlukan sedikit BNB untuk gas."],
+    rules: ["Maksimal dua level: teman Anda (level 1) dan orang yang mereka undang (level 2). Level di bawahnya tidak memberi hadiah.", "Hadiah berasal dari biaya platform dan tidak mengubah harga atau penghasilan teman Anda.", "Kelayakan investasi Anda harus tetap berlaku, jika tidak hadiah periode itu tidak dihitung.", "Penghasilan bisa diklaim setelah platform memublikasikan tiap periode; klaim memerlukan sedikit BNB untuk gas."],
   },
   market: {
     refPrice: (amt: string) => `Referensi: harga langganan ${amt} USDT per unit`,

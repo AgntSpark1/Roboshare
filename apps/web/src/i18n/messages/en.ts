@@ -290,6 +290,13 @@ export const en: Messages = {
   promo: {
     title: "Referral center",
     intro: (pct, months) => `Share your personal link or QR code. After a friend's first purchase through it, for the next ${months} months you receive ${pct} of the platform fee charged on each of their payouts, paid in USDT.`,
+    intro2: (pct2) => `When someone your friend invites subscribes, you also get ${pct2} of the platform fee.`,
+    level1: "Level 1",
+    level2: "Level 2",
+    level1Title: "Level 1 (invited by you)",
+    level2Title: "Level 2 (invited by your friends)",
+    level2Empty: "No level-2 members yet.",
+    via: (a) => `invited by ${a}`,
     signIn: "Connect your wallet and sign in to get your referral link and QR code, and to see your referrals and earnings.",
     preview: "Testnet preview: referral rewards are not switched on yet. You can try the link and QR code, but friends' purchases will not be linked to you until they are.",
     closed: "Referrals are not open yet.",
@@ -322,7 +329,7 @@ export const en: Messages = {
     unknownDate: "Join date syncing",
     referredBy: "Referred by: ",
     rulesTitle: "Rules",
-    rules: ["One level only: people your friends invite are not your referrals and earn you nothing.", "Rewards come from the platform fee and never change your friend's price or earnings.", "Your own eligibility must stay valid, or that period's reward is not counted.", "Earnings can be claimed after the platform publishes each period; claiming costs a little BNB for gas."],
+    rules: ["Two levels at most: your friends (level 1) and the people they invite (level 2). Nobody further down earns you a reward.", "Rewards come from the platform fee and never change your friend's price or earnings.", "Your own eligibility must stay valid, or that period's reward is not counted.", "Earnings can be claimed after the platform publishes each period; claiming costs a little BNB for gas."],
   },
   market: {
     refPrice: (amt: string) => `For reference: subscription price ${amt} USDT per unit`,

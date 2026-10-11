@@ -63,7 +63,14 @@ const mine = {
     { wallet: A, shareBps: 2_000, boundAt: "2026-10-01T00:00:00.000Z", expiresAt: "2027-10-01T00:00:00.000Z", active: true, earned: (16n * ONE).toString() },
     { wallet: "0x00000000000000000000000000000000000000C3", shareBps: 2_000, boundAt: null, expiresAt: "2026-01-01T00:00:00.000Z", active: false, earned: "0" },
   ],
-  history: [{ projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: A, fee: (80n * ONE).toString(), shareBps: 2_000, reward: (16n * ONE).toString() }],
+  level2ShareBps: 500,
+  level2: [
+    { wallet: "0x00000000000000000000000000000000000000D4", via: A, shareBps: 500, boundAt: "2026-10-05T00:00:00.000Z", expiresAt: "2027-10-05T00:00:00.000Z", active: true, earned: (2n * ONE).toString() },
+  ],
+  history: [
+    { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: A, level: 1, fee: (80n * ONE).toString(), shareBps: 2_000, reward: (16n * ONE).toString() },
+    { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: "0x00000000000000000000000000000000000000D4", level: 2, fee: (40n * ONE).toString(), shareBps: 500, reward: (2n * ONE).toString() },
+  ],
   earned: (16n * ONE).toString(),
   claimed: "0",
   pendingPublication: "0",
@@ -101,7 +108,11 @@ describe("referral centre", () => {
     expect(screen.getByTestId("members-summary")).toHaveTextContent("共 2 人，1 人在奖励期内");
     expect(screen.getByText(/星港 01 号 第 3 期 · 平台手续费 80.00 · 你得 16.00 USDT/)).toBeInTheDocument();
     expect(screen.getByText(/加入时间待同步/)).toBeInTheDocument();
-    expect(screen.getByText(/只有一层/)).toBeInTheDocument();
+    expect(screen.getByTestId("level2-summary")).toHaveTextContent("共 1 人，1 人在奖励期内");
+    expect(screen.getByText(/由 0x.*邀请/)).toBeInTheDocument();
+    expect(screen.getByText(/星港 01 号 第 3 期 · 平台手续费 40.00 · 你得 2.00 USDT/)).toBeInTheDocument();
+    expect(screen.getByText(/最多两层/)).toBeInTheDocument();
+    expect(screen.getByText(/好友再邀请的人认购，你也能拿到平台手续费的 5%/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "领取 16.00 USDT" })).toBeEnabled();
   });
 });

@@ -8,6 +8,7 @@ import {
   offeringManagerAbi,
   projectFactoryAbi,
   referralReward,
+  REFERRAL_LEVEL2_SHARE_BPS,
   referralRewardsAbi,
   revenueDistributorAbi,
   subscriptionRouterAbi,
@@ -35,8 +36,8 @@ beforeAll(async () => {
   c = await startAnvil(18546);
   prisma = new PrismaClient();
   await resetDb(prisma);
-  const [treasury, , operator, reviewer, , agent, feeRecipient, alice, bob, carol] = c.accounts; // anvil has 10 accounts
-  A = { operator: operator!, reviewer: reviewer!, agent: agent!, feeRecipient: feeRecipient!, alice: alice!, bob: bob!, carol: carol!, treasury: treasury! };
+  const [treasury, dave, operator, reviewer, , agent, feeRecipient, alice, bob, carol] = c.accounts; // anvil has 10 accounts
+  A = { operator: operator!, reviewer: reviewer!, agent: agent!, feeRecipient: feeRecipient!, alice: alice!, bob: bob!, carol: carol!, dave: dave!, treasury: treasury! };
   indexer = new Indexer(prisma, c.pub as any, {
     chainId: 31337,
     rpcUrl: c.rpcUrl,
@@ -89,11 +90,12 @@ describe("referral rewards against a local chain", () => {
       await send(c, tl, { address: offering, abi: offeringManagerAbi, functionName: "open" });
       await send(c, tl, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "setReferralTerms", args: [true, 2_000, 365n * 86_400n] });
     });
-    for (const who of [A.alice!, A.bob!, A.carol!]) {
+    for (const who of [A.alice!, A.bob!, A.carol!, A.dave!]) {
       await send(c, A.agent!, { address: c.addr.IdentityRegistry!, abi: identityRegistryAbi, functionName: "setEligibility", args: [who, 1, 840, now + 3_650n * 86_400n, bytes32("kyc")] });
     }
-    await subscribe(A.alice!, 50);
+    await subscribe(A.alice!, 40);
     await subscribe(A.bob!, 30, A.alice!);
+    await subscribe(A.dave!, 10, A.bob!); // alice is dave's second level
     // Shorter terms apply only to bindings made from now on.
     await asSafe(c, (tl) =>
       send(c, tl, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "setReferralTerms", args: [true, 2_000, 3_600n] }),
@@ -106,12 +108,13 @@ describe("referral rewards against a local chain", () => {
     const refs = await prisma.referral.findMany({ orderBy: { boundBlock: "asc" } });
     expect(refs.map((r) => [r.referee, r.referrer])).toEqual([
       [lc(A.bob!), lc(A.alice!)],
+      [lc(A.dave!), lc(A.bob!)],
       [lc(A.carol!), lc(A.bob!)],
     ]);
-    expect(refs[1]!.expiresAt.getTime() - refs[0]!.expiresAt.getTime()).toBeLessThan(0);
+    expect(refs[2]!.expiresAt.getTime() - refs[0]!.expiresAt.getTime()).toBeLessThan(0);
   }, 90_000);
 
-  it("accrues the fee share on approval, skipping expired bindings", async () => {
+  it("accrues both levels on approval, skipping expired bindings", async () => {
     await c.test.increaseTime({ seconds: 7_200 }); // carol's 1h binding lapses, bob's 1y binding does not
     await c.test.mine({ blocks: 1 });
     const amount = 10_000n * ONE;
@@ -125,23 +128,34 @@ describe("referral rewards against a local chain", () => {
     await send(c, A.treasury!, { address: c.addr.MockUSDT!, abi: mintAbi, functionName: "mint", args: [A.treasury!, amount] });
     await send(c, A.treasury!, { address: c.addr.MockUSDT!, abi: erc20Abi, functionName: "approve", args: [distributor, amount] });
     const snap = (await c.pub.getBlockNumber()) - 1n;
-    const holders = [A.alice!, A.bob!, A.carol!].sort((x, y) => (lc(x) < lc(y) ? -1 : 1));
+    const holders = [A.alice!, A.bob!, A.carol!, A.dave!].sort((x, y) => (lc(x) < lc(y) ? -1 : 1));
     await send(c, A.operator!, { address: distributor, abi: revenueDistributorAbi, functionName: "proposeBatch", args: [recordId, amount, snap, holders] });
     await send(c, A.reviewer!, { address: distributor, abi: revenueDistributorAbi, functionName: "approveBatch", args: [1n] });
 
     await indexer.catchUp();
-    const accruals = await prisma.referralAccrual.findMany();
-    const bobFee = allocate(amount, 0n, [{ address: "bob", units: 30 }, { address: "x", units: 70 }]).allocations[0]!.fee;
-    expect(accruals).toHaveLength(1);
-    expect(accruals[0]!.referee).toBe(lc(A.bob!));
-    expect(accruals[0]!.referrer).toBe(lc(A.alice!));
-    expect(accruals[0]!.fee.toFixed()).toBe(bobFee.toString());
-    expect(accruals[0]!.reward.toFixed()).toBe(referralReward(bobFee, 2_000).toString());
+    const accruals = await prisma.referralAccrual.findMany({ orderBy: [{ referee: "asc" }, { level: "asc" }] });
+    const fees = allocate(amount, 0n, [
+      { address: "alice", units: 40 },
+      { address: "bob", units: 30 },
+      { address: "carol", units: 20 },
+      { address: "dave", units: 10 },
+    ]).allocations;
+    const feeOf = (who: string) => fees.find((f) => f.address === who)!.fee;
+    // carol's binding lapsed, so neither bob nor alice earns on her; no third level exists.
+    const expected = [
+      { referee: lc(A.bob!), level: 1, referrer: lc(A.alice!), fee: feeOf("bob"), bps: 2_000 },
+      { referee: lc(A.dave!), level: 1, referrer: lc(A.bob!), fee: feeOf("dave"), bps: 2_000 },
+      { referee: lc(A.dave!), level: 2, referrer: lc(A.alice!), fee: feeOf("dave"), bps: REFERRAL_LEVEL2_SHARE_BPS },
+    ].sort((x, y) => (x.referee < y.referee ? -1 : x.referee > y.referee ? 1 : x.level - y.level));
+    expect(
+      accruals.map((a) => ({ referee: a.referee, level: a.level, referrer: a.referrer, fee: BigInt(a.fee.toFixed()), bps: a.shareBps })),
+    ).toEqual(expected);
+    for (const a of accruals) expect(a.reward.toFixed()).toBe(referralReward(BigInt(a.fee.toFixed()), a.shareBps).toString());
   }, 90_000);
 
   it("pays the referrer by Merkle proof from platform-funded balance", async () => {
-    const accrual = await prisma.referralAccrual.findFirstOrThrow();
-    const reward = BigInt(accrual.reward.toFixed());
+    const sum = await prisma.referralAccrual.aggregate({ where: { referrer: lc(A.alice!) }, _sum: { reward: true } });
+    const reward = BigInt(sum._sum.reward!.toFixed()); // alice: level 1 on bob + level 2 on dave
     const tree = buildReferralTree([{ account: A.alice!, cumulative: reward }]);
     const rewards = c.addr.ReferralRewards!;
     await send(c, A.operator!, { address: rewards, abi: referralRewardsAbi, functionName: "setRoot", args: [tree.root, bytes32("file"), tree.totalCumulative] });
