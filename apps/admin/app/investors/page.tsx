@@ -35,7 +35,7 @@ export default function Investors() {
       <section className="panel" aria-labelledby="inv">
         <h2 id="inv">投资者资格</h2>
         <p className="muted small" style={{ marginBottom: 10 }}>
-          投资者登录网站后会出现在这里。开通资格后才能认购。目前没有接入实名认证（KYC），开通即代表运营方人工审核通过；正式公开发行前必须接入真实 KYC。
+          可选功能。平台默认不做资格审批（不需要 KYC），这里只在合约的资格检查开关打开时才需要用。投资者登录网站后会出现在这里。
         </p>
         <div className="row" style={{ marginBottom: 8 }}>
           <button type="button" className={tab === "pending" ? "btn primary sm" : "btn sm"} onClick={() => setTab("pending")}>待开通（{q.data?.counts.pending ?? "—"}）</button>

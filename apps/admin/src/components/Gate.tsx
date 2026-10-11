@@ -11,7 +11,6 @@ const NAV: { href: string; label: string; group: string }[] = [
   { href: "/", label: "概览", group: "运营" },
   { href: "/projects", label: "车辆项目", group: "运营" },
   { href: "/offerings", label: "募集结算", group: "运营" },
-  { href: "/investors", label: "投资者资格", group: "运营" },
   { href: "/reports", label: "财务报告", group: "资金" },
   { href: "/distributions", label: "分配批次", group: "资金" },
   { href: "/referrals", label: "邀请奖励", group: "资金" },
@@ -19,6 +18,7 @@ const NAV: { href: string; label: string; group: string }[] = [
   { href: "/governance", label: "治理提案", group: "治理" },
   { href: "/roles", label: "角色与权限", group: "治理" },
   { href: "/audit", label: "对账与审计日志", group: "治理" },
+  { href: "/investors", label: "投资者资格（可选）", group: "高级" },
 ];
 
 export function Gate({ children }: { children: ReactNode }) {
