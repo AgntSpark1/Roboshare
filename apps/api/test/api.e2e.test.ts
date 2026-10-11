@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@roboshare/db";
-import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
+import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
 import { createHmac, randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
@@ -610,6 +610,24 @@ describe("referrals", () => {
     expect(terms.functionName).toBe("setReferralTerms");
     expect(terms.args).toEqual([true, 2_000, 365n * 86_400n]);
     expect(decodeFunctionData({ abi: referralRewardsAbi, data: r.body.calls[1].data }).functionName).toBe("setClaimsEnabled");
+  });
+
+  it("lists the second level: people your referrals invited", async () => {
+    const inv = investor.address.toLowerCase();
+    const third = ADDR(0xc3);
+    await prisma.referral.create({ data: { referee: third, referrer: other.address.toLowerCase(), shareBps: 2_000, expiresAt: new Date(Date.now() + 86_400_000), boundBlock: 12n, boundTxHash: "0x12" } });
+    await prisma.referralAccrual.create({
+      data: { projectIdOnchain: PID, batchIdOnchain: 3, referee: third, level: 2, referrer: inv, fee: (100n * ONE).toString(), shareBps: REFERRAL_LEVEL2_SHARE_BPS, reward: (5n * ONE).toString() },
+    });
+    const r = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
+    expect(r.body.level2ShareBps).toBe(REFERRAL_LEVEL2_SHARE_BPS);
+    expect(r.body.referees).toHaveLength(1);
+    expect(r.body.referees[0].earned).toBe((135n * ONE).toString());
+    expect(r.body.level2).toEqual([
+      expect.objectContaining({ wallet: getAddress(third), via: other.address, shareBps: REFERRAL_LEVEL2_SHARE_BPS, active: true, earned: (5n * ONE).toString() }),
+    ]);
+    expect(r.body.history[0]).toEqual(expect.objectContaining({ batchId: 3, level: 2, referee: getAddress(third), reward: (5n * ONE).toString() }));
+    expect(r.body.earned).toBe((140n * ONE).toString());
   });
 });
 

@@ -290,6 +290,13 @@ export const vi: Messages = {
   promo: {
     title: "Trung tâm giới thiệu",
     intro: (pct, months) => `Chia sẻ liên kết hoặc mã QR riêng của bạn. Sau khi bạn bè mua lần đầu qua đó, trong ${months} tháng tiếp theo bạn nhận ${pct} phí nền tảng thu từ mỗi kỳ chi trả của họ, thanh toán bằng USDT.`,
+    intro2: (pct2) => `Khi người do bạn bè của bạn mời đăng ký mua, bạn cũng nhận ${pct2} phí nền tảng.`,
+    level1: "Cấp 1",
+    level2: "Cấp 2",
+    level1Title: "Cấp 1 (bạn mời trực tiếp)",
+    level2Title: "Cấp 2 (do bạn bè bạn mời)",
+    level2Empty: "Chưa có thành viên cấp 2.",
+    via: (a) => `do ${a} mời`,
     signIn: "Kết nối ví và ký đăng nhập để lấy liên kết, mã QR giới thiệu và xem thành viên cấp dưới cùng thu nhập giới thiệu.",
     preview: "Bản xem trước trên testnet: thưởng giới thiệu chưa được bật. Bạn có thể thử liên kết và mã QR, nhưng giao dịch mua của bạn bè sẽ chưa được gắn với bạn cho đến khi bật.",
     closed: "Tính năng giới thiệu chưa mở.",
@@ -322,7 +329,7 @@ export const vi: Messages = {
     unknownDate: "Đang đồng bộ ngày tham gia",
     referredBy: "Người giới thiệu bạn: ",
     rulesTitle: "Quy tắc",
-    rules: ["Chỉ một cấp: người do bạn bè giới thiệu không phải cấp dưới của bạn và không mang lại thưởng.", "Thưởng lấy từ phí nền tảng, không ảnh hưởng giá mua và thu nhập của bạn bè.", "Tư cách đầu tư của bạn phải còn hiệu lực, nếu không thưởng kỳ đó không được tính.", "Thu nhập chỉ nhận được sau khi nền tảng công bố mỗi kỳ; khi nhận cần một ít BNB làm phí gas."],
+    rules: ["Tối đa hai cấp: bạn bè (cấp 1) và người họ mời (cấp 2). Các cấp sau không được tính thưởng.", "Thưởng lấy từ phí nền tảng, không ảnh hưởng giá mua và thu nhập của bạn bè.", "Tư cách đầu tư của bạn phải còn hiệu lực, nếu không thưởng kỳ đó không được tính.", "Thu nhập chỉ nhận được sau khi nền tảng công bố mỗi kỳ; khi nhận cần một ít BNB làm phí gas."],
   },
   market: {
     refPrice: (amt: string) => `Tham khảo: giá đăng ký ${amt} USDT mỗi phần`,

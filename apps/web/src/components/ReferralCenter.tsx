@@ -1,17 +1,17 @@
 "use client";
 import { useState } from "react";
 import type { Hash } from "viem";
-import { referralRewardsAbi, REFERRAL_DEFAULT_SHARE_BPS, REFERRAL_DEFAULT_WINDOW_SECONDS } from "@roboshare/shared";
+import { referralRewardsAbi, REFERRAL_DEFAULT_SHARE_BPS, REFERRAL_DEFAULT_WINDOW_SECONDS, REFERRAL_LEVEL2_SHARE_BPS } from "@roboshare/shared";
 import { api, formatBps, formatUsdt, shortAddr, TxProgress, useAccount, useSession, useTxRunner, WalletButton, type TxStep } from "@roboshare/ui";
 import { explorer, isTestChain } from "@/env";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useRefreshAfterTx } from "@/lib/data";
-import { inviteLink, useMyReferrals, useReferralTerms, type MyReferrals } from "@/lib/referral";
+import { inviteLink, useMyReferrals, useReferralTerms, type MyReferrals, type ReferralMember } from "@/lib/referral";
 import { QrCode, qrPng, useQrMatrix } from "./QrCode";
 
 const MONTH = 30 * 24 * 60 * 60;
 
-/** Referral centre: invite link and QR code, direct referrals (single tier) and referral earnings. */
+/** Referral centre: invite link and QR code, referrals on both levels and referral earnings. */
 export function ReferralCenter() {
   const { t } = useI18n();
   const c = t.promo;
@@ -27,7 +27,7 @@ export function ReferralCenter() {
       <div className="wrap stack">
         <div className="sec-h">
           <h1 className="h2">{c.title}</h1>
-          <p>{c.intro(pct, months)}</p>
+          <p>{c.intro(pct, months)} {c.intro2(formatBps(REFERRAL_LEVEL2_SHARE_BPS))}</p>
         </div>
         {!enabled && terms.data && (
           <div className="warnbox" role="note" data-testid="referral-off">{isTestChain ? c.preview : c.closed}</div>
@@ -150,9 +150,9 @@ function Earnings({ wallet, r }: { wallet: `0x${string}`; r: MyReferrals | undef
         <p className="muted small">{c.historyEmpty}</p>
       ) : (
         r!.history.map((h) => (
-          <div className="tl" key={`${h.projectId}-${h.batchId}-${h.referee}`}>
+          <div className="tl" key={`${h.projectId}-${h.batchId}-${h.referee}-${h.level}`}>
             <i aria-hidden="true" />
-            <span className="mono">{shortAddr(h.referee)}</span>
+            <span className="mono">{shortAddr(h.referee)} · {h.level === 2 ? c.level2 : c.level1}</span>
             <span>{c.historyRow(h.projectTitle ?? shortAddr(h.projectId), h.batchId, formatUsdt(h.fee), formatUsdt(h.reward))}</span>
           </div>
         ))
@@ -162,32 +162,50 @@ function Earnings({ wallet, r }: { wallet: `0x${string}`; r: MyReferrals | undef
 }
 
 function Members({ r }: { r: MyReferrals | undefined }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const c = t.promo;
   const list = r?.referees ?? [];
-  const date = (iso: string) => new Date(iso).toLocaleDateString(locale);
+  const second = r?.level2 ?? [];
   return (
     <div className="panel">
       <h2 className="h3">{c.membersTitle}</h2>
-      {list.length === 0 ? (
+      {list.length === 0 && second.length === 0 ? (
         <p className="muted">{c.membersEmpty}</p>
       ) : (
         <>
+          <h3 className="h4">{c.level1Title}</h3>
           <p className="muted small" data-testid="members-summary">{c.membersSummary(list.length, list.filter((m) => m.active).length)}</p>
-          {list.map((m) => (
-            <div className="hold" key={m.wallet}>
-              <span className="ic" aria-hidden="true">👤</span>
-              <div>
-                <h3 className="h4 mono">{shortAddr(m.wallet)}</h3>
-                <small>
-                  {m.boundAt ? c.joined(date(m.boundAt)) : c.unknownDate} · {m.active ? c.activeUntil(date(m.expiresAt)) : c.expired(date(m.expiresAt))}
-                </small>
-              </div>
-              <div className="r"><small>{c.memberEarned(formatUsdt(m.earned))}</small></div>
-            </div>
-          ))}
+          {list.map((m) => <Member key={m.wallet} m={m} />)}
+          <h3 className="h4" style={{ marginTop: 16 }}>{c.level2Title}</h3>
+          {second.length === 0 ? (
+            <p className="muted small">{c.level2Empty}</p>
+          ) : (
+            <>
+              <p className="muted small" data-testid="level2-summary">{c.membersSummary(second.length, second.filter((m) => m.active).length)}</p>
+              {second.map((m) => <Member key={m.wallet} m={m} via={m.via} />)}
+            </>
+          )}
         </>
       )}
+    </div>
+  );
+}
+
+function Member({ m, via }: { m: ReferralMember; via?: string }) {
+  const { t, locale } = useI18n();
+  const c = t.promo;
+  const date = (iso: string) => new Date(iso).toLocaleDateString(locale);
+  return (
+    <div className="hold">
+      <span className="ic" aria-hidden="true">👤</span>
+      <div>
+        <h3 className="h4 mono">{shortAddr(m.wallet)}</h3>
+        <small>
+          {via && <>{c.via(shortAddr(via))} · </>}
+          {m.boundAt ? c.joined(date(m.boundAt)) : c.unknownDate} · {m.active ? c.activeUntil(date(m.expiresAt)) : c.expired(date(m.expiresAt))}
+        </small>
+      </div>
+      <div className="r"><small>{c.memberEarned(formatUsdt(m.earned))}</small></div>
     </div>
   );
 }

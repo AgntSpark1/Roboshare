@@ -32,7 +32,7 @@ export default function Referrals() {
       <section className="panel" aria-labelledby="ref">
         <h2 id="ref">邀请奖励概况</h2>
         <div className="warnbox">
-          只有一层邀请；奖励 = 被邀请人每期分配中平台手续费的一部分，由平台手续费钱包充值到奖励合约后才能领取。主网开启前须完成法律审查（多级返佣有传销风险，按成交付佣金可能构成无牌经纪）。
+          两级邀请：一级 = 被邀请人每期分配中平台手续费的一部分，二级 = 邀请人的邀请人再得同一笔手续费的 5%，没有第三级；由平台手续费钱包充值到奖励合约后才能领取。主网开启前须完成法律审查（多级返佣有传销风险，按成交付佣金可能构成无牌经纪）。
         </div>
         {s.error && <p className="err" role="alert">{errorText(s.error)}</p>}
         {d && (

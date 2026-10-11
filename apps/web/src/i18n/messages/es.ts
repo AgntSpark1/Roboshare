@@ -290,6 +290,13 @@ export const es: Messages = {
   promo: {
     title: "Centro de referidos",
     intro: (pct, months) => `Comparte tu enlace o código QR personal. Tras la primera compra de un amigo a través de él, durante los siguientes ${months} meses recibes el ${pct} de la comisión de la plataforma sobre cada uno de sus pagos, en USDT.`,
+    intro2: (pct2) => `Cuando alguien invitado por tus amigos suscribe, también recibes el ${pct2} de la comisión de la plataforma.`,
+    level1: "Nivel 1",
+    level2: "Nivel 2",
+    level1Title: "Nivel 1 (invitados por ti)",
+    level2Title: "Nivel 2 (invitados por tus amigos)",
+    level2Empty: "Aún no hay miembros de nivel 2.",
+    via: (a) => `invitado por ${a}`,
     signIn: "Conecta tu cartera e inicia sesión con tu firma para obtener tu enlace y código QR, y ver tus referidos y ganancias.",
     preview: "Vista previa en testnet: las recompensas por referidos aún no están activadas. Puedes probar el enlace y el código QR, pero las compras de tus amigos no se vincularán contigo hasta que se activen.",
     closed: "Los referidos aún no están disponibles.",
@@ -322,7 +329,7 @@ export const es: Messages = {
     unknownDate: "Fecha de alta sincronizándose",
     referredBy: "Te refirió: ",
     rulesTitle: "Reglas",
-    rules: ["Un solo nivel: las personas que invitan tus amigos no son tus referidos y no te generan nada.", "Las recompensas salen de la comisión de la plataforma y no cambian el precio ni las ganancias de tu amigo.", "Tu propia elegibilidad debe seguir vigente; si no, la recompensa de ese periodo no se cuenta.", "Las ganancias se cobran después de que la plataforma publique cada periodo; cobrar cuesta un poco de BNB de gas."],
+    rules: ["Dos niveles como máximo: tus amigos (nivel 1) y las personas que ellos invitan (nivel 2). Más abajo no hay recompensa.", "Las recompensas salen de la comisión de la plataforma y no cambian el precio ni las ganancias de tu amigo.", "Tu propia elegibilidad debe seguir vigente; si no, la recompensa de ese periodo no se cuenta.", "Las ganancias se cobran después de que la plataforma publique cada periodo; cobrar cuesta un poco de BNB de gas."],
   },
   market: {
     refPrice: (amt: string) => `Referencia: precio de suscripción ${amt} USDT por participación`,
