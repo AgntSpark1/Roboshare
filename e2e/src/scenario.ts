@@ -110,6 +110,11 @@ export function scenario(state: StackState) {
       await send(ROLES.treasury, { address: A.MockUSDT!, abi: erc20Abi as Abi, functionName: "approve", args: [distributor, amount] });
     },
 
+    async tokenOf(pid: Hex) {
+      const p = (await pub.readContract({ address: A.AssetRegistry!, abi: assetRegistryAbi, functionName: "getProject", args: [pid] })) as { token: Address };
+      return p.token;
+    },
+
     async distributorOf(pid: Hex) {
       const p = (await pub.readContract({ address: A.AssetRegistry!, abi: assetRegistryAbi, functionName: "getProject", args: [pid] })) as { distributor: Address };
       return p.distributor;

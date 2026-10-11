@@ -27,6 +27,7 @@ ASSETS=$(addr AssetRegistry)
 FACTORY=$(addr ProjectFactory)
 ROUTER=$(addr SubscriptionRouter)
 REFERRAL=$(addr ReferralRewards)
+MARKET=$(addr ShareMarket)
 ADMIN=0x0000000000000000000000000000000000000000000000000000000000000000
 
 # cast prints big numbers as "86400 [8.64e4]"; compare the first field only.
@@ -38,6 +39,8 @@ check "timelock is factory admin" "$(cast call "$FACTORY" 'hasRole(bytes32,addre
 check "timelock is router admin" "$(cast call "$ROUTER" 'hasRole(bytes32,address)(bool)' $ADMIN "$TIMELOCK" --rpc-url "$RPC")" true
 check "timelock is referral rewards admin" "$(cast call "$REFERRAL" 'hasRole(bytes32,address)(bool)' $ADMIN "$TIMELOCK" --rpc-url "$RPC")" true
 check "referral claims start disabled" "$(cast call "$REFERRAL" 'claimsEnabled()(bool)' --rpc-url "$RPC")" false
+check "timelock is share market admin" "$(cast call "$MARKET" 'hasRole(bytes32,address)(bool)' $ADMIN "$TIMELOCK" --rpc-url "$RPC")" true
+check "deployer is not share market admin" "$(cast call "$MARKET" 'hasRole(bytes32,address)(bool)' $ADMIN "$DEPLOYER" --rpc-url "$RPC")" false
 check "referral binding starts disabled" "$(cast call "$ROUTER" 'referralsEnabled()(bool)' --rpc-url "$RPC")" false
 
 # A direct admin call from the deployer must now fail; only the timelock (via the Safe) can do it.

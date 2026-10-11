@@ -31,6 +31,8 @@ contract DeployScriptTest is Test {
         assertTrue(d.assets.hasRole(0x00, address(d.timelock)));
         assertTrue(d.referralRewards.hasRole(0x00, address(d.timelock)));
         assertFalse(d.referralRewards.claimsEnabled());
+        assertTrue(d.shareMarket.hasRole(0x00, address(d.timelock)));
+        assertFalse(d.shareMarket.hasRole(0x00, address(this)));
         assertFalse(d.router.referralsEnabled());
     }
 

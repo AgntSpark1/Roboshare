@@ -196,3 +196,42 @@ test("investor claims the distribution in USDT", async () => {
   await page.reload();
   await expect(page.getByTestId("claimable-total")).toHaveText("0.00");
 });
+
+test("investor lists units for early exit and another investor buys them", async ({ browser }) => {
+  const pid = projectIdOf(SLUG);
+  await s.kyc(ROLES.bob);
+  await s.mintUsdt(ROLES.bob, 10_000n * ONE);
+  await s.indexed();
+
+  // Seller: from the portfolio to the project's resale market.
+  const seller = pages.alice!;
+  await seller.getByRole("link", { name: "转让" }).first().click();
+  await expect(seller.getByRole("heading", { name: "转让市场" })).toBeVisible();
+  await seller.getByLabel("出售份数").fill("10");
+  await seller.getByLabel("每份价格（USDT）").fill("900");
+  await expect(seller.getByText("全部卖出可得 9,000.00 USDT")).toBeVisible();
+  await runTx(seller, seller.getByRole("button", { name: "挂单出售" }));
+  await expect(seller.getByRole("status").filter({ hasText: "挂单成功" })).toBeVisible();
+  await expect(seller.locator('[data-testid^="my-listing-"]')).toContainText("10 份");
+  await axe(seller, "project market (seller)");
+
+  // Buyer: a second eligible investor buys 4 of them.
+  const buyer = await open(browser, "bob");
+  await buyer.goto(`${WEB}/projects/${pid}`);
+  await buyer.getByRole("button", { name: "连接钱包" }).first().click();
+  await buyer.getByRole("button", { name: new RegExp(`测试钱包 ${ROLES.bob.slice(0, 6)}`, "i") }).click();
+  await buyer.getByRole("button", { name: /签名登录/ }).first().click();
+  const row = buyer.locator('[data-testid^="listing-"]').first();
+  await expect(row).toContainText("10 份");
+  await row.getByRole("button", { name: "购买", exact: true }).click();
+  await buyer.getByLabel("购买份数").fill("4");
+  await expect(buyer.getByText("3,600.00 USDT").first()).toBeVisible();
+  await buyer.getByRole("checkbox", { name: /投资须知/ }).check();
+  await runTx(buyer, buyer.getByRole("button", { name: "授权并购买" }));
+  await expect(buyer.getByRole("status").filter({ hasText: "购买成功" })).toBeVisible();
+
+  const token = await s.tokenOf(pid);
+  const units = (who: `0x${string}`) => s.pub.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [who] });
+  expect(await units(ROLES.bob)).toBe(4n);
+  expect(await units(ROLES.alice)).toBe(BigInt(UNITS - 4));
+});

@@ -189,6 +189,7 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
         SUBSCRIPTION_ROUTER: addr.SubscriptionRouter!,
         PROJECT_FACTORY: addr.ProjectFactory!,
         REFERRAL_REWARDS: addr.ReferralRewards!,
+        SHARE_MARKET: addr.ShareMarket!,
         START_BLOCK: "0",
         CONFIRMATIONS: "0",
         INDEXER_POLL_MS: "400",
