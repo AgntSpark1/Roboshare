@@ -9,7 +9,7 @@ export default ({ icon, structure }) => ({
     eyebrow: "WHITEPAPER",
     title: `Robo<span>Share</span>`,
     sub: "Unit-based participation in the operating profit of autonomous ride-hailing vehicles.<br>Settled in USDT, governed by smart contracts, auditable on-chain.",
-    chips: ["1 vehicle = 100 units", "USDT (BEP20) in and out", "BNB Smart Chain", "2-of-3 multisig + 24 h timelock"],
+    chips: ["1 vehicle = 100 units", "USDT (BEP20) in and out", "BNB Smart Chain", "2-of-3 multisig governance"],
     ver: `Version <b>0.2 draft</b><br>October 2026`,
     note: "This document is a draft that describes the product design. It is not an offer or solicitation to buy or sell any security or investment. Subject to legal review before any offering.",
   },
@@ -26,7 +26,7 @@ export default ({ icon, structure }) => ({
   <div class="stat"><b>100<em>units</em></b><span>Per project, capped in the contract; no further issuance</span></div>
   <div class="stat"><b>USDT</b><span>Subscriptions, refunds and payouts all use BEP20 USDT</span></div>
   <div class="stat"><b>0<em>mgmt fee</em></b><span>The platform only takes a tiered share of profit</span></div>
-  <div class="stat"><b>2/3</b><span>Multisig plus a 24-hour timelock controls every contract</span></div>
+  <div class="stat"><b>2/3</b><span>Multisig controls every contract; each admin action needs 2 of 3 signers</span></div>
 </div>
 <p>Transparency is the core of the platform: who holds what, what each period reported, who approved it and what was paid are all linked through on-chain transactions and document hashes that anyone can check.</p>
 <p>Units sit in the investor's own wallet and the platform cannot move them. Distribution rules are fixed in the contracts at deployment.</p>`,
@@ -80,7 +80,7 @@ export default ({ icon, structure }) => ({
   <tr><td class="k">Supply</td><td>100 whole units per project, capped in the contract, no further issuance</td></tr>
   <tr><td class="k">Price</td><td>A fixed unit price in USDT, set before each offering opens</td></tr>
   <tr><td class="k">Minimum units</td><td>Set before launch (1–100); reached at close means success, otherwise full refund</td></tr>
-  <tr><td class="k">Per-wallet limit</td><td>Each project can cap how many units one wallet may buy</td></tr>
+  <tr><td class="k">Per wallet</td><td>No per-wallet limit by default; a wallet can buy until the offering sells out</td></tr>
   <tr><td class="k">Escrow</td><td>Subscriptions are held by the offering contract until settlement; no role can divert them</td></tr>
   <tr><td class="k">Minting</td><td>Only at settlement, to subscribers who are still eligible, and only by that project's offering contract</td></tr>
   <tr><td class="k">Unsold units</td><td>Never issued, no follow-on offering; profit is shared over units actually issued</td></tr>
@@ -149,7 +149,7 @@ export default ({ icon, structure }) => ({
 <div class="cards">
   <div class="card"><div class="ic">${icon("doc")}</div><h4>Evidence, not claims</h4><p>Purchase, insurance and operating documents are hashed on-chain. A hash proves a file is unchanged, not that it is genuine, so each change is attested by a named role.</p></div>
   <div class="card"><div class="ic">${icon("users")}</div><h4>Four-eyes rule</h4><p>Reports, payout batches and project verification are submitted by the operator and approved by a reviewer; one key cannot do both.</p></div>
-  <div class="card"><div class="ic">${icon("clock")}</div><h4>Multisig + timelock</h4><p>Admin rights over every contract sit with a 2-of-3 multisig behind a 24-hour timelock, so changes are public in advance. The deployer keeps no roles.</p></div>
+  <div class="card"><div class="ic">${icon("lock")}</div><h4>Multisig governance</h4><p>Admin rights over every contract sit with a 2-of-3 multisig: any admin action needs at least 2 of 3 signers, so no single person can make changes. The deployer keeps no roles.</p></div>
   <div class="card"><div class="ic">${icon("shield")}</div><h4>Bounded powers</h4><p>No role can mint above the cap, divert escrow, rewrite records or move an investor's units. Contracts are built on OpenZeppelin and are not upgradeable.</p></div>
   <div class="card"><div class="ic">${icon("pause")}</div><h4>Emergency pause</h4><p>A separate pauser can halt contracts during an incident; unpausing requires governance.</p></div>
   <div class="card"><div class="ic">${icon("key")}</div><h4>Self-custody</h4><p>Units and payouts live in the investor's own wallet. There is no key recovery and no forced transfer.</p></div>
@@ -177,7 +177,7 @@ export default ({ icon, structure }) => ({
 <ol class="road">
   <li class="done"><h4>Architecture and product design <small>done</small></h4><p>Rights structure, fees, offering and distribution rules defined.</p></li>
   <li class="done"><h4>Core contracts, backend and apps <small>done</small></h4><p>Unit, offering, distribution and transfer-market contracts; indexer and API; investor site and operations console.</p></li>
-  <li class="done"><h4>Security testing and BSC testnet <small>Oct 2026</small></h4><p>All contracts governed by a 2-of-3 multisig and 24-hour timelock; the deployer holds no roles.</p></li>
+  <li class="done"><h4>Security testing and BSC testnet <small>Oct 2026</small></h4><p>All contracts governed by a 2-of-3 multisig; the deployer holds no roles.</p></li>
   <li class="now"><h4>Testnet trial <small>in progress</small></h4><p>End-to-end subscribe, distribute, claim and transfer with test USDT.</p></li>
   <li><h4>Launch readiness</h4><p>External security audit, legal opinion, KYC/AML integration, professional review of translations.</p></li>
   <li><h4>Mainnet</h4><p>Only after all of the above and explicit written approval.</p></li>

@@ -379,7 +379,7 @@ export const vi: Messages = {
     faqIntro: "Những câu hỏi hay gặp trước khi đầu tư. Điều khoản của từng dự án là căn cứ cuối cùng.",
     faq: [
       ["Lợi nhuận đến từ đâu?", "Từ lợi nhuận vận hành thực tế của xe: doanh thu trừ chi phí, dự phòng và phần của nền tảng, chia theo số phần bạn nắm giữ. Kỳ không có lãi thì không chia."],
-      ["Tối thiểu bao nhiêu?", "Từ 1 phần, giá xem trên trang dự án. Mỗi ví có giới hạn trong mỗi dự án."],
+      ["Tối thiểu bao nhiêu?", "Từ 1 phần, giá xem trên trang dự án."],
       ["Bao lâu chia một lần?", "Sau khi báo cáo vận hành mỗi kỳ được duyệt; nhận bằng một chạm ở “Tài sản của tôi”."],
       ["Không đủ tối thiểu thì sao?", "Nếu hết thời gian huy động mà chưa đủ số phần tối thiểu, bạn nhận lại toàn bộ USDT ở “Tài sản của tôi”."],
       ["Có rút vốn sớm được không?", "Bạn có thể rao bán phần trên chợ chuyển nhượng của dự án cho nhà đầu tư khác. Bán được hay không và giá bao nhiêu tùy người mua; nền tảng không cam kết mua lại."],
@@ -424,7 +424,7 @@ export const vi: Messages = {
       ["Hoàn tiền đầy đủ nếu không thành công", "Nếu hết thời gian huy động mà chưa đạt số phần tối thiểu, USDT được hoàn lại đầy đủ."],
       ["Phần góp nằm trong ví của bạn", "Cả nền tảng lẫn bên quản trị đều không thể chuyển phần góp của bạn."],
       ["Sổ sách công khai", "Báo cáo vận hành mỗi kỳ được ghi trên chuỗi, chỉ phân phối thu nhập sau khi được duyệt."],
-      ["Quy tắc không thể tùy ý thay đổi", "Hợp đồng dự án không thể nâng cấp sau khi triển khai; thao tác quản trị của nền tảng cần nhiều chữ ký và được công bố trước 24 giờ."],
+      ["Quy tắc không thể tùy ý thay đổi", "Hợp đồng dự án không thể nâng cấp sau khi triển khai; thao tác quản trị của nền tảng cần 2/3 chữ ký đa chữ ký mới được thực hiện."],
     ],
     risksTitle: "Những điều cần biết",
     mayLose: "Đầu tư có thể thua lỗ, lợi nhuận không được đảm bảo.",

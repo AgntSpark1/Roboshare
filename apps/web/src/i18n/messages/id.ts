@@ -379,7 +379,7 @@ export const id: Messages = {
     faqIntro: "Pertanyaan yang paling sering diajukan sebelum berinvestasi. Ketentuan tiap proyek yang berlaku.",
     faq: [
       ["Hasil berasal dari mana?", "Dari laba operasi nyata kendaraan: pendapatan dikurangi biaya, cadangan, dan bagian platform, dibagi menurut unit yang Anda pegang. Periode tanpa laba tidak dibagikan."],
-      ["Minimal berapa?", "Mulai 1 unit; harga ada di halaman proyek. Tiap dompet punya batas per proyek."],
+      ["Minimal berapa?", "Mulai 1 unit; harga ada di halaman proyek."],
       ["Seberapa sering hasil dibagikan?", "Setelah laporan operasi tiap periode disetujui; klaim dengan satu ketukan di “Aset saya”."],
       ["Bagaimana jika minimum tidak tercapai?", "Jika penawaran berakhir di bawah minimum, Anda bisa mengambil kembali semua USDT di “Aset saya”."],
       ["Bisakah menarik dana lebih awal?", "Anda bisa memasang unit di pasar pengalihan proyek untuk dibeli investor lain. Laku atau tidak dan berapa harganya tergantung pembeli; platform tidak menjanjikan pembelian kembali."],
@@ -424,7 +424,7 @@ export const id: Messages = {
       ["Refund penuh jika gagal", "Jika minimum tidak tercapai saat penggalangan berakhir, USDT Anda dikembalikan penuh."],
       ["Unit di dompet Anda sendiri", "Baik platform maupun pihak tata kelola tidak dapat memindahkan unit Anda."],
       ["Pembukuan terbuka", "Setiap laporan operasional dicatat di chain, dan pendapatan baru dibagikan setelah laporan disetujui."],
-      ["Aturan tidak bisa diubah sesuka hati", "Kontrak proyek tidak bisa di-upgrade setelah diterapkan; tindakan admin platform memerlukan banyak tanda tangan dan diumumkan 24 jam sebelumnya."],
+      ["Aturan tidak bisa diubah sesuka hati", "Kontrak proyek tidak bisa di-upgrade setelah diterapkan; tindakan admin platform memerlukan 2 dari 3 tanda tangan multisig untuk dijalankan."],
     ],
     risksTitle: "Hal yang perlu diketahui",
     mayLose: "Investasi bisa merugi; imbal hasil tidak dijamin.",

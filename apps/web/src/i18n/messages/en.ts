@@ -379,7 +379,7 @@ export const en: Messages = {
     faqIntro: "The questions we hear most before people invest. Each project's offering terms prevail.",
     faq: [
       ["Where do payouts come from?", "From the vehicle's actual operating profit: revenue minus costs, reserves and the platform's share, split by the units you hold. Periods without profit pay nothing."],
-      ["What is the minimum?", "One unit; see the project page for the price. Each wallet has a per-project limit."],
+      ["What is the minimum?", "One unit; see the project page for the price."],
       ["How often are payouts?", "After each period's operating report is approved. Collect it in “My assets” with one tap."],
       ["What if the minimum is not reached?", "If the offering ends below its minimum, you can take back all your USDT in “My assets”."],
       ["Can I get my money back early?", "You can list units on the project's resale market for other investors to buy. Whether and at what price they sell depends on buyers; the platform does not promise to buy them back."],
@@ -424,7 +424,7 @@ export const en: Messages = {
       ["Full refund if not funded", "If the minimum is not reached by the end of the offering, your USDT is refunded in full."],
       ["Units stay in your wallet", "Neither the platform nor governance can move your units."],
       ["Open books", "Every operating report is recorded on chain, and income is paid only after the report is approved."],
-      ["Rules can't change at will", "Project contracts cannot be upgraded after deployment; platform admin actions need multiple signatures and are announced 24 hours in advance."],
+      ["Rules can't change at will", "Project contracts cannot be upgraded after deployment; platform admin actions need 2-of-3 multisig signatures to execute."],
     ],
     risksTitle: "Things to know",
     mayLose: "You may lose money; returns are not guaranteed.",

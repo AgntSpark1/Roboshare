@@ -10,7 +10,7 @@ export default ({ icon, structure }) => ({
     eyebrow: "WHITEPAPER · 白皮书",
     title: `Robo<span>Share</span>`,
     sub: "按份参与自动驾驶网约车的运营收益。<br>USDT 结算，规则写在合约里，账目链上可查。",
-    chips: ["一辆车 = 100 份", "USDT（BEP20）认购与分配", "BNB Smart Chain", "2/3 多签 + 24 小时时间锁"],
+    chips: ["一辆车 = 100 份", "USDT（BEP20）认购与分配", "BNB Smart Chain", "2/3 多签治理"],
     ver: `版本 <b>0.2 草案</b><br>2026 年 10 月`,
     note: "本文件为草案，仅用于介绍项目设计，不构成任何证券或投资的要约或邀约。正式募集前须经律师审阅。",
   },
@@ -27,7 +27,7 @@ export default ({ icon, structure }) => ({
   <div class="stat"><b>100<em>份</em></b><span>每个项目的份额总数，写死在合约里，不能增发</span></div>
   <div class="stat"><b>USDT</b><span>认购、退款、分配全部使用 BEP20 USDT</span></div>
   <div class="stat"><b>0<em>管理费</em></b><span>平台只按档位从利润中分成，不另收费用</span></div>
-  <div class="stat"><b>2/3</b><span>多签 + 24 小时时间锁管理全部合约</span></div>
+  <div class="stat"><b>2/3</b><span>多签管理全部合约，每项管理操作需 3 人中 2 人签名</span></div>
 </div>
 <p>平台的核心是透明：谁持有多少份、每期报告了什么、由谁批准、分了多少钱，都通过链上交易和文件哈希相互关联，任何人都能核对。</p>
 <p>份额放在投资者自己的钱包里，平台无法转走；分配规则在部署时写入合约，之后不能随意修改。</p>`,
@@ -81,7 +81,7 @@ export default ({ icon, structure }) => ({
   <tr><td class="k">总量</td><td>每个项目 100 份，合约强制上限，不可增发；份额为整数</td></tr>
   <tr><td class="k">价格</td><td>每次募集启动前设定固定单价，以 USDT 计</td></tr>
   <tr><td class="k">最低成团份数</td><td>启动前设定（1–100 份）；截止时达到即成功，否则全额退款</td></tr>
-  <tr><td class="k">每个钱包上限</td><td>每个项目可设置单个钱包最多认购的份数</td></tr>
+  <tr><td class="k">每个钱包</td><td>默认不限制单个钱包的认购份数，可一直买到售完</td></tr>
   <tr><td class="k">资金托管</td><td>认购款在结算前由募集合约托管，任何角色都不能挪用</td></tr>
   <tr><td class="k">铸造</td><td>仅在结算时发给仍具备投资资格的认购人；只有该项目的募集合约能铸造</td></tr>
   <tr><td class="k">未售出份额</td><td>永不发行，不追加募集；收益按实际发行份数分配</td></tr>
@@ -150,7 +150,7 @@ export default ({ icon, structure }) => ({
 <div class="cards">
   <div class="card"><div class="ic">${icon("doc")}</div><h4>证据，而不是声称</h4><p>购车、保险、运营等文件经哈希后记录在链上。哈希能证明文件没被改过，并不证明文件本身真实，因此每项变更都由具名角色签署证明。</p></div>
   <div class="card"><div class="ic">${icon("users")}</div><h4>双人规则</h4><p>财务报告、分配批次和项目核验都由运营方提交、审核人批准，同一把密钥不能兼任两者。</p></div>
-  <div class="card"><div class="ic">${icon("clock")}</div><h4>多签 + 时间锁</h4><p>所有合约的管理权由 2/3 多签持有，并经过 24 小时时间锁，任何改动都提前公开。部署账户不保留任何权限。</p></div>
+  <div class="card"><div class="ic">${icon("lock")}</div><h4>多签治理</h4><p>所有合约的管理权由 2/3 多签持有：任何管理操作都要 3 位签名人中至少 2 位签名才能执行，一个人无法单独改动。部署账户不保留任何权限。</p></div>
   <div class="card"><div class="ic">${icon("shield")}</div><h4>权限有边界</h4><p>任何角色都不能超过上限铸造份额、挪用托管资金、改写记录，也不能转走投资者的份额。</p></div>
   <div class="card"><div class="ic">${icon("pause")}</div><h4>紧急暂停</h4><p>出现安全事件时，独立的暂停角色可以暂停合约；解除暂停必须经过治理。</p></div>
   <div class="card"><div class="ic">${icon("key")}</div><h4>资产自管</h4><p>份额和收益都在投资者自己的钱包里。平台不提供私钥找回，也没有强制转移功能。</p></div>
@@ -179,7 +179,7 @@ export default ({ icon, structure }) => ({
 <ol class="road">
   <li class="done"><h4>架构与产品设计 <small>已完成</small></h4><p>权益结构、费率、发行与分配规则确定。</p></li>
   <li class="done"><h4>核心合约、后端与网站 <small>已完成</small></h4><p>份额、募集、分配、转让市场合约；索引与 API；投资者网站和运营后台。</p></li>
-  <li class="done"><h4>安全测试与 BSC 测试网部署 <small>2026 年 10 月</small></h4><p>全部合约由 2/3 多签 + 24 小时时间锁管理，部署账户无权限。</p></li>
+  <li class="done"><h4>安全测试与 BSC 测试网部署 <small>2026 年 10 月</small></h4><p>全部合约由 2/3 多签管理，部署账户无权限。</p></li>
   <li class="now"><h4>测试网试运行 <small>进行中</small></h4><p>使用测试 USDT 走通认购、分配、领取和转让全流程。</p></li>
   <li><h4>上线准备</h4><p>外部安全审计、法律意见、接入 KYC/AML、多语言文本专业审校。</p></li>
   <li><h4>主网上线</h4><p>以上条件全部满足并获得书面批准后进行。</p></li>

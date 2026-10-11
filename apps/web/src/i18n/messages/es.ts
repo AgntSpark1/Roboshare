@@ -379,7 +379,7 @@ export const es: Messages = {
     faqIntro: "Las preguntas más habituales antes de invertir. Prevalecen las condiciones de cada proyecto.",
     faq: [
       ["¿De dónde salen los pagos?", "Del beneficio real de operar el vehículo: ingresos menos costes, reservas y la parte de la plataforma, repartido según tus participaciones. Sin beneficio no hay reparto."],
-      ["¿Cuál es el mínimo?", "Una participación; el precio está en la página del proyecto. Cada billetera tiene un límite por proyecto."],
+      ["¿Cuál es el mínimo?", "Una participación; el precio está en la página del proyecto."],
       ["¿Cada cuánto se paga?", "Tras aprobarse el informe de cada periodo; se cobra con un toque en “Mis activos”."],
       ["¿Y si no se alcanza el mínimo?", "Si la oferta termina por debajo del mínimo, recuperas todos tus USDT en “Mis activos”."],
       ["¿Puedo recuperar mi dinero antes?", "Puedes poner tus participaciones a la venta en el mercado de reventa del proyecto. Que se vendan y a qué precio depende de los compradores; la plataforma no promete recomprarlas."],
@@ -424,7 +424,7 @@ export const es: Messages = {
       ["Reembolso total si no se completa", "Si al cerrar la oferta no se alcanza el mínimo, se te devuelve todo tu USDT."],
       ["Las participaciones están en tu billetera", "Ni la plataforma ni la gobernanza pueden moverlas."],
       ["Cuentas abiertas", "Cada informe de operación queda en la cadena, y los ingresos solo se reparten tras aprobarse el informe."],
-      ["Las reglas no cambian a voluntad", "Los contratos de cada proyecto no se pueden actualizar tras desplegarse; las acciones de administración de la plataforma requieren varias firmas y se anuncian con 24 horas de antelación."],
+      ["Las reglas no cambian a voluntad", "Los contratos de cada proyecto no se pueden actualizar tras desplegarse; las acciones de administración de la plataforma requieren 2 de 3 firmas del multisig para ejecutarse."],
     ],
     risksTitle: "Lo que debes saber",
     mayLose: "Puedes perder dinero; la rentabilidad no está garantizada.",
