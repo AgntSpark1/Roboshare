@@ -424,7 +424,7 @@ export const en: Messages = {
       ["Full refund if not funded", "If the minimum is not reached by the end of the offering, your USDT is refunded in full."],
       ["Units stay in your wallet", "Neither the platform nor governance can move your units."],
       ["Open books", "Every operating report is recorded on chain, and income is paid only after the report is approved."],
-      ["Rules can't change at will", "Project contracts cannot be upgraded after deployment; platform admin actions need 2-of-3 multisig signatures to execute."],
+      ["Rules can't change at will", "Project contracts cannot be upgraded after deployment; platform admin actions need multiple signatures (2 of 3)."],
     ],
     risksTitle: "Things to know",
     mayLose: "You may lose money; returns are not guaranteed.",
