@@ -50,6 +50,18 @@ export class MeReferralController {
       this.prisma.referralClaim.findUnique({ where: { account: wallet } }),
       this.prisma.referralRoot.findFirst({ orderBy: { epoch: "desc" } }),
     ]);
+    const [blocks, history] = await Promise.all([
+      this.prisma.chainBlock.findMany({ where: { chainId: this.cfg.chainId, number: { in: referees.map((r) => r.boundBlock) } } }),
+      this.prisma.referralAccrual.findMany({
+        where: { referrer: wallet },
+        orderBy: [{ projectIdOnchain: "asc" }, { batchIdOnchain: "desc" }],
+        take: 100,
+      }),
+    ]);
+    const boundAt = new Map(blocks.map((b) => [b.number, b.timestamp]));
+    const titles = new Map(
+      (await this.prisma.projectMeta.findMany({ where: { projectIdOnchain: { in: [...new Set(history.map((h) => h.projectIdOnchain))] } } })).map((m) => [m.projectIdOnchain, m.title]),
+    );
     const earnedBy = new Map(accruals.map((a) => [a.referee, dec(a._sum.reward)]));
     const earned = [...earnedBy.values()].reduce((s, x) => s + x, 0n);
     const claimed = dec(claim?.claimed);
@@ -72,7 +84,19 @@ export class MeReferralController {
         wallet: getAddress(r.referee),
         shareBps: r.shareBps,
         expiresAt: r.expiresAt,
+        boundAt: boundAt.get(r.boundBlock) ?? null,
+        active: r.expiresAt.getTime() > Date.now(),
         earned: (earnedBy.get(r.referee) ?? 0n).toString(),
+      })),
+      // Most recent first within each project: one row per referee allocation that earned a reward.
+      history: history.map((h) => ({
+        projectId: h.projectIdOnchain,
+        projectTitle: titles.get(h.projectIdOnchain) ?? null,
+        batchId: h.batchIdOnchain,
+        referee: getAddress(h.referee),
+        fee: h.fee,
+        shareBps: h.shareBps,
+        reward: h.reward,
       })),
       // earned counts every accrual; only amounts in a published root can be claimed yet.
       earned: earned.toString(),

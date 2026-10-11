@@ -41,22 +41,40 @@ export function inviteLink(origin: string, wallet: string) {
   return `${origin}/?ref=${getAddress(wallet)}`;
 }
 
-/** Whether governance has switched referral binding on (off by default; see REFERRAL_DESIGN.md). */
-export function useReferralsEnabled() {
+/** Referral terms on the router (read from the indexed contract list, never a fixed address). Off by default; see REFERRAL_DESIGN.md. */
+export function useReferralTerms() {
   const config = useWalletConfig();
   const { router } = usePaymentSetup();
   return useQuery({
-    queryKey: ["referrals-enabled", router],
+    queryKey: ["referral-terms", router],
     enabled: !!router,
-    queryFn: () => readContract(config, { address: router!, abi: subscriptionRouterAbi, functionName: "referralsEnabled" }) as Promise<boolean>,
+    queryFn: async () => {
+      const read = (functionName: "referralsEnabled" | "referralShareBps" | "referralWindow") =>
+        readContract(config, { address: router!, abi: subscriptionRouterAbi, functionName });
+      const [enabled, shareBps, window] = await Promise.all([read("referralsEnabled"), read("referralShareBps"), read("referralWindow")]);
+      return { enabled: enabled as boolean, shareBps: Number(shareBps), windowSeconds: Number(window) };
+    },
   });
+}
+
+/** Whether governance has switched referral binding on. */
+export function useReferralsEnabled() {
+  const terms = useReferralTerms();
+  return { ...terms, data: terms.data?.enabled };
+}
+
+/** The referral tab is shown on test chains as a preview, and on mainnet only once the programme is on. */
+export function useShowReferrals(isTestChain: boolean) {
+  const enabled = useReferralsEnabled().data === true;
+  return isTestChain || enabled;
 }
 
 export interface MyReferrals {
   wallet: Address;
   contract: Address | null;
   referredBy: { referrer: Address; shareBps: number; expiresAt: string } | null;
-  referees: { wallet: Address; shareBps: number; expiresAt: string; earned: string }[];
+  referees: { wallet: Address; shareBps: number; expiresAt: string; boundAt: string | null; active: boolean; earned: string }[];
+  history: { projectId: string; projectTitle: string | null; batchId: number; referee: Address; fee: string; shareBps: number; reward: string }[];
   earned: string;
   claimed: string;
   pendingPublication: string;

@@ -3,16 +3,30 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Modal, WalletButton } from "@roboshare/ui";
-import { walletEnv } from "@/env";
+import { isTestChain, walletEnv } from "@/env";
 import { useI18n } from "@/i18n/I18nProvider";
 import { LOCALES } from "@/i18n/locales";
 import type { Messages } from "@/i18n/messages";
+import { useShowReferrals } from "@/lib/referral";
 
 const NAV = [
   { href: "/", label: (t: Messages) => t.nav.home, tab: (t: Messages) => t.nav.home, icon: "M4 11l8-7 8 7v9h-5v-6H9v6H4z" },
   { href: "/projects", label: (t: Messages) => t.nav.projects, tab: (t: Messages) => t.nav.tabProjects, icon: "M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16v3H5z" },
   { href: "/portfolio", label: (t: Messages) => t.nav.portfolio, tab: (t: Messages) => t.nav.tabPortfolio, icon: "M3 9h18v10H3zM16 13.5h2M3 6h18" },
+  {
+    href: "/referral",
+    label: (t: Messages) => t.nav.referral,
+    tab: (t: Messages) => t.nav.tabReferral,
+    icon: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7M22 21v-1a6 6 0 0 0-4-5.6",
+    referral: true,
+  },
 ];
+
+/** Navigation items; the referral entry is a preview on test chains and follows the programme switch on mainnet. */
+function useNav() {
+  const showReferrals = useShowReferrals(isTestChain);
+  return NAV.filter((n) => !("referral" in n) || showReferrals);
+}
 
 function active(path: string, href: string) {
   return href === "/" ? path === "/" : path.startsWith(href);
@@ -72,6 +86,7 @@ export function LanguageSwitch() {
 export function Header() {
   const path = usePathname() ?? "/";
   const { t } = useI18n();
+  const nav = useNav();
   return (
     <header className="top">
       <div className="wrap">
@@ -82,7 +97,7 @@ export function Header() {
           </span>
         </Link>
         <nav className="nav" aria-label={t.nav.main}>
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <Link key={n.href} href={n.href} className={active(path, n.href) ? "on" : ""} aria-current={active(path, n.href) ? "page" : undefined}>
               {n.label(t)}
             </Link>
@@ -103,9 +118,10 @@ export function Header() {
 export function Tabs() {
   const path = usePathname() ?? "/";
   const { t } = useI18n();
+  const nav = useNav();
   return (
     <nav className="tabs" aria-label={t.nav.bottom}>
-      {NAV.map((n) => (
+      {nav.map((n) => (
         <Link key={n.href} href={n.href} className={active(path, n.href) ? "on" : ""} aria-current={active(path, n.href) ? "page" : undefined}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
             <path d={n.icon} />

@@ -546,7 +546,11 @@ describe("referrals", () => {
     const r = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
     expect(r.body.contract).toBe(REWARDS);
     expect(r.body.referredBy).toBeNull();
-    expect(r.body.referees).toEqual([expect.objectContaining({ wallet: other.address, shareBps: 2_000, earned: (135n * ONE).toString() })]);
+    expect(r.body.referees).toEqual([expect.objectContaining({ wallet: other.address, shareBps: 2_000, active: true, boundAt: null, earned: (135n * ONE).toString() })]);
+    expect(r.body.history.map((h: any) => [h.batchId, h.projectTitle, h.reward])).toEqual([
+      [2, "Robotaxi 001", (10n * ONE).toString()],
+      [1, "Robotaxi 001", (125n * ONE).toString()],
+    ]);
     expect(r.body.earned).toBe((135n * ONE).toString());
     expect(r.body.pendingPublication).toBe((135n * ONE).toString());
     expect(r.body.claimable).toBeNull();

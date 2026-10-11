@@ -21,7 +21,6 @@ import {
 import { explorer } from "@/env";
 import { useEligibility, useMySubscriptions, useRefreshAfterTx } from "@/lib/data";
 import { EligibilityHelp } from "@/components/Help";
-import { ReferralPanel } from "@/components/ReferralPanel";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface Holding {
@@ -147,8 +146,6 @@ function Dashboard() {
             )}
           </div>
         </div>
-
-        <ReferralPanel wallet={wallet} />
 
         <div className="panel">
           <h2 className="h3">{c.txTitle}</h2>

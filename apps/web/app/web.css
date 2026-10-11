@@ -42,3 +42,11 @@ html:lang(en),html:lang(vi),html:lang(id),html:lang(es){--f-display:"Chakra Petc
 .contact-links{display:inline-flex;gap:12px;flex-wrap:wrap}
 .hintlink{color:var(--amber);font-size:.8rem}
 footer .links{display:inline-flex;gap:14px;flex-wrap:wrap}
+
+/* referral centre */
+.invite{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.invite-qr{background:#fff;border-radius:12px;padding:8px;line-height:0}
+.invite-qr .qr{display:block;width:180px;height:180px}
+.invite-link{word-break:break-all}
+.rules{margin:8px 0 0;padding-left:1.2em;display:grid;gap:6px;color:var(--dim);font-size:.86rem}
+@media (max-width:560px){.invite{grid-template-columns:1fr;justify-items:center;text-align:center}.invite .row-actions{justify-content:center}}
