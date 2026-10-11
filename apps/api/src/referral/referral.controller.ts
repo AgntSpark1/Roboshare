@@ -17,7 +17,7 @@ import { PrismaService } from "../common/prisma.service.js";
 import { plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
-import { call, prepare, viaSafe } from "../admin/prepare.js";
+import { call, prepare, queueSafe, viaSafe } from "../admin/prepare.js";
 
 interface TreeEntry {
   account: Address;
@@ -209,7 +209,7 @@ export class AdminReferralController {
       call(rewards, referralRewardsAbi, "setClaimsEnabled", [body.enabled]),
     ];
     await this.audit(req, "REFERRAL_TERMS_PREPARE", "referral", "terms", body);
-    return viaSafe(this.cfg.chainId, safe, calls, `referral terms ${body.enabled ? "on" : "off"}`);
+    return queueSafe(this.prisma, viaSafe(this.cfg.chainId, safe, calls, `referral terms ${body.enabled ? "on" : "off"}`), req.session!.wallet);
   }
 
   private async audit(req: AuthedRequest, action: string, targetType: string, targetId: string, payload: unknown) {

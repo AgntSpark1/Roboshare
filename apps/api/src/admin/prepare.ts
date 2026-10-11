@@ -48,3 +48,28 @@ export const call = (to: Address, abi: Abi, functionName: string, args: unknown[
   to,
   data: encodeFunctionData({ abi, functionName, args } as any),
 });
+
+/** Anything with a Prisma client; kept structural so the helper needs no Nest wiring. */
+interface SafeTxStore {
+  safeTx: { create(args: { data: Record<string, unknown> }): Promise<{ id: string }> };
+}
+
+/**
+ * Puts a proposal on the console's Safe queue so owners can confirm and execute it there (no copy-paste into the
+ * Safe web app). The server still never signs: owners send approveHash / execTransaction from their own wallets.
+ */
+export async function queueSafe(store: SafeTxStore, proposal: SafeProposal, createdBy: string): Promise<SafeProposal & { queueId: string }> {
+  const row = await store.safeTx.create({
+    data: {
+      chainId: proposal.tx.chainId,
+      safe: proposal.safe.toLowerCase(),
+      to: proposal.tx.to.toLowerCase(),
+      data: proposal.tx.data,
+      operation: proposal.tx.operation,
+      description: proposal.tx.description,
+      calls: proposal.calls,
+      createdBy: createdBy.toLowerCase(),
+    },
+  });
+  return { ...proposal, queueId: row.id };
+}

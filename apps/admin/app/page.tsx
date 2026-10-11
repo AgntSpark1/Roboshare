@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api, formatDate, formatUsdt, StatePill } from "@roboshare/ui";
-import { useHealth, useProjects, useReports, projectName } from "@/lib/data";
+import { useHealth, useInvestors, useProjects, useReports, projectName } from "@/lib/data";
+import { safeTxTitle, usePendingSafeTxs } from "@/lib/safe";
 import { useRoles } from "@/lib/admin";
 
 interface Recon {
@@ -15,6 +16,9 @@ export default function Overview() {
   const submitted = useReports("SUBMITTED");
   const recon = useQuery({ queryKey: ["admin", "recon"], queryFn: () => api.get<Recon>("/admin/reconciliation") });
   const { can } = useRoles();
+  const safeTxs = usePendingSafeTxs();
+  const investors = useInvestors();
+  const pendingInvestors = investors.data?.counts.pending ?? 0;
   const items = projects.data?.items ?? [];
   const settleable = items.filter((p) => p.state === "OFFERING" && p.offering && p.offering.status === "OPEN" && p.offering.unitsSold >= p.offering.minUnits);
   const lastRun = recon.data?.items[0];
@@ -46,7 +50,21 @@ export default function Overview() {
               {can("REVIEWER") ? <Link className="btn sm" href="/reports">去审核</Link> : <span className="lab">需审核角色</span>}
             </div>
           ))}
-          {settleable.length === 0 && !submitted.data?.items.length && <p className="empty">暂无待办。</p>}
+          {(safeTxs.data?.items ?? []).map((t) => (
+            <div className="q" key={t.id}>
+              <span className="ic" aria-hidden="true">签</span>
+              <div><h3 className="h4">多签待签：{safeTxTitle(t.description)}</h3><small>多签 owner 确认够人数后执行，立即生效</small></div>
+              <Link className="btn sm" href="/safe">去确认</Link>
+            </div>
+          ))}
+          {pendingInvestors > 0 && (
+            <div className="q">
+              <span className="ic" aria-hidden="true">资</span>
+              <div><h3 className="h4">{pendingInvestors} 位投资者等待开通资格</h3><small>开通后才能认购</small></div>
+              {can("COMPLIANCE") ? <Link className="btn sm" href="/investors">去开通</Link> : <span className="lab">需合规角色</span>}
+            </div>
+          )}
+          {settleable.length === 0 && !submitted.data?.items.length && !safeTxs.data?.items.length && pendingInvestors === 0 && <p className="empty">暂无待办。</p>}
         </section>
         <section className="panel" aria-labelledby="sys">
           <h2 id="sys">系统状态</h2>

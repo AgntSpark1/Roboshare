@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { api, type PreparedTx } from "@roboshare/ui";
 import { PreparedList } from "@/components/Proposal";
+import { TxAction } from "@/components/TxAction";
 import { errorText, useRoles } from "@/lib/admin";
 import { projectName, useProjects } from "@/lib/data";
 
@@ -59,7 +60,15 @@ export default function Governance() {
             <label className="field"><span>原因（记入审计日志）</span><input value={reason} onChange={(e) => setReason(e.target.value)} /></label>
             <div><button type="button" className="btn danger sm" disabled={reason.trim().length < 3 || (scope === "project" && !project)} onClick={prepare}>生成暂停交易</button></div>
             {err && <p className="err" role="alert">{err}</p>}
-            {txs && <PreparedList txs={txs} />}
+            {txs && (
+              <>
+                <TxAction label={`用暂停钱包直接签名（${txs.length} 笔）`} className="btn danger sm" confirm="立即暂停？" prepare={async () => txs} />
+                <details>
+                  <summary className="muted small">暂停权限在多签里时：复制交易数据手动提交</summary>
+                  <PreparedList txs={txs} />
+                </details>
+              </>
+            )}
           </div>
         )}
       </section>
