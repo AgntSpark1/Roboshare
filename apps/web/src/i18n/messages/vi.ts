@@ -404,7 +404,7 @@ export const vi: Messages = {
       ["Hoàn tiền đầy đủ nếu không thành công", "Nếu hết thời gian huy động mà chưa đạt số phần tối thiểu, USDT được hoàn lại đầy đủ."],
       ["Phần góp nằm trong ví của bạn", "Cả nền tảng lẫn bên quản trị đều không thể chuyển phần góp của bạn."],
       ["Sổ sách công khai", "Báo cáo vận hành mỗi kỳ được ghi trên chuỗi, chỉ phân phối thu nhập sau khi được duyệt."],
-      ["Quy tắc không thể tùy ý thay đổi", "Hợp đồng dự án không thể nâng cấp sau khi triển khai; thao tác quản trị của nền tảng cần nhiều chữ ký và được công bố trước 24 giờ."],
+      ["Quy tắc không thể tùy ý thay đổi", "Hợp đồng dự án không thể nâng cấp sau khi triển khai; thao tác quản trị của nền tảng cần nhiều chữ ký (2 trên 3)."],
     ],
     risksTitle: "Những điều cần biết",
     mayLose: "Đầu tư có thể thua lỗ, lợi nhuận không được đảm bảo.",
