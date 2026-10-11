@@ -264,6 +264,8 @@ export const en: Messages = {
     claimableTitle: "Income to claim",
     noClaimable: "Nothing to claim right now.",
     noHoldings: "No units yet.",
+    pendingUnits: (n) => `${n} pending`,
+    pendingNote: (n) => `Your ${n} subscribed units arrive in your wallet once the offering settles.`,
     browse: "Browse vehicles",
     shareOfIssued: (pct) => `${pct} of issued`,
     cost: "Cost",

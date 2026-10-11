@@ -186,6 +186,8 @@ export const zhCN = {
     claimableTitle: "可领取收益",
     noClaimable: "暂时没有可领取的收益。",
     noHoldings: "还没有份额。",
+    pendingUnits: (n: number) => `待发放 ${n} 份`,
+    pendingNote: (n: number) => `你认购的 ${n} 份将在募集结算后发到钱包。`,
     browse: "去看看车辆项目",
     shareOfIssued: (pct: string) => `占已发行 ${pct}`,
     cost: "成本",

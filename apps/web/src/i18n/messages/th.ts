@@ -264,6 +264,8 @@ export const th: Messages = {
     claimableTitle: "รายได้ที่รับได้",
     noClaimable: "ขณะนี้ยังไม่มีรายได้ให้รับ",
     noHoldings: "ยังไม่มีหน่วยลงทุน",
+    pendingUnits: (n) => `รอรับ ${n} หน่วย`,
+    pendingNote: (n) => `${n} หน่วยที่คุณจองจะเข้ากระเป๋าหลังปิดการระดมทุน`,
     browse: "ดูโครงการรถ",
     shareOfIssued: (pct) => `${pct} ของที่ออกแล้ว`,
     cost: "ต้นทุน",

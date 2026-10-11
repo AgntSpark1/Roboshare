@@ -264,6 +264,8 @@ export const vi: Messages = {
     claimableTitle: "Thu nhập có thể nhận",
     noClaimable: "Hiện chưa có thu nhập để nhận.",
     noHoldings: "Bạn chưa có phần góp nào.",
+    pendingUnits: (n) => `${n} phần chờ nhận`,
+    pendingNote: (n) => `${n} phần bạn đã đăng ký sẽ về ví sau khi đợt huy động được tất toán.`,
     browse: "Xem các dự án xe",
     shareOfIssued: (pct) => `chiếm ${pct} số đã phát hành`,
     cost: "Giá vốn",
