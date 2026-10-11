@@ -1,4 +1,4 @@
-// TEST-ONLY chain steps the browser suite does not drive through a UI: governance (the 2/3 Safe + timelock,
+// TEST-ONLY chain steps the browser suite does not drive through a UI: governance (the 2/3 Safe,
 // impersonated here), the compliance agent's eligibility updates, test USDT minting and the treasury's funding.
 import { PrismaClient } from "@roboshare/db";
 import { assetRegistryAbi, identityRegistryAbi, offeringManagerAbi, projectFactoryAbi } from "@roboshare/shared";
@@ -24,8 +24,9 @@ export function scenario(state: StackState) {
     return r;
   }
 
-  async function asTimelock<T>(fn: (tl: Address) => Promise<T>) {
-    const tl = A.TimelockController!;
+  /** Governance: the Safe holds admin directly. On anvil it is an unlocked account standing in for the 2/3 Safe. */
+  async function asSafe<T>(fn: (safe: Address) => Promise<T>) {
+    const tl = ROLES.safe;
     await test.impersonateAccount({ address: tl });
     await test.setBalance({ address: tl, value: 10n ** 20n });
     try {
@@ -61,7 +62,7 @@ export function scenario(state: StackState) {
       });
       await prisma.$disconnect();
       await send(ROLES.reviewer, { address: A.AssetRegistry!, abi: assetRegistryAbi as Abi, functionName: "transition", args: [pid, 2, bytes32("kyb ok")] });
-      await asTimelock((tl) =>
+      await asSafe((tl) =>
         send(tl, {
           address: A.ProjectFactory!,
           abi: projectFactoryAbi as Abi,
@@ -71,7 +72,7 @@ export function scenario(state: StackState) {
       );
       const offering = (await pub.readContract({ address: A.AssetRegistry!, abi: assetRegistryAbi, functionName: "offeringOf", args: [pid] })) as Address;
       const now = (await pub.getBlock()).timestamp;
-      await asTimelock(async (tl) => {
+      await asSafe(async (tl) => {
         await send(tl, {
           address: offering,
           abi: offeringManagerAbi as Abi,
@@ -99,9 +100,9 @@ export function scenario(state: StackState) {
       await test.mine({ blocks: 1 });
     },
 
-    /** FUNDED -> ACTIVE needs the timelock (vehicle in service). */
+    /** FUNDED -> ACTIVE needs governance (vehicle in service). */
     async activate(pid: Hex) {
-      await asTimelock((tl) => send(tl, { address: A.AssetRegistry!, abi: assetRegistryAbi as Abi, functionName: "transition", args: [pid, 5, bytes32("in service")] }));
+      await asSafe((tl) => send(tl, { address: A.AssetRegistry!, abi: assetRegistryAbi as Abi, functionName: "transition", args: [pid, 5, bytes32("in service")] }));
     },
 
     /** The treasury funds distributions: approveBatch pulls the batch amount from it. */

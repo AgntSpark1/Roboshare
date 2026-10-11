@@ -7,8 +7,8 @@ import {AssetRegistry} from "../src/registry/AssetRegistry.sol";
 import {ShareMarket} from "../src/market/ShareMarket.sol";
 
 /// @notice Adds the ShareMarket (EARLY_EXIT_DESIGN.md) to an existing deployment. Admin goes straight
-/// to the timelock; the deployer never holds a role.
-/// @dev Required env: ASSET_REGISTRY, PAYMENT_TOKEN, TIMELOCK, PAUSER (the addresses in deployments/*.env).
+/// to the governance Safe; the deployer never holds a role.
+/// @dev Required env: ASSET_REGISTRY, PAYMENT_TOKEN, SAFE, PAUSER (the addresses in deployments/*.env).
 ///      BSC mainnet also requires CONFIRM_MAINNET=I_UNDERSTAND_THIS_IS_MAINNET.
 contract DeployShareMarket is Script {
     uint256 internal constant BSC_MAINNET = 56;
@@ -25,22 +25,22 @@ contract DeployShareMarket is Script {
         ) revert MainnetNotConfirmed();
         address assets = _required("ASSET_REGISTRY");
         address usdt = _required("PAYMENT_TOKEN");
-        address timelock = _required("TIMELOCK");
+        address safe = _required("SAFE");
         address pauser = _required("PAUSER");
 
         vm.startBroadcast();
-        market = deploy(usdt, assets, timelock, pauser);
+        market = deploy(usdt, assets, safe, pauser);
         vm.stopBroadcast();
         console2.log("ShareMarket", address(market));
     }
 
-    function deploy(address usdt, address assets, address timelock, address pauser)
+    function deploy(address usdt, address assets, address safe, address pauser)
         public
         returns (ShareMarket market)
     {
-        market = new ShareMarket(IERC20(usdt), AssetRegistry(assets), timelock, pauser);
-        if (!market.hasRole(0x00, timelock)) revert CheckFailed("timelock admin");
-        if (market.hasRole(0x00, msg.sender) && msg.sender != timelock) revert CheckFailed("deployer admin");
+        market = new ShareMarket(IERC20(usdt), AssetRegistry(assets), safe, pauser);
+        if (!market.hasRole(0x00, safe)) revert CheckFailed("safe admin");
+        if (market.hasRole(0x00, msg.sender) && msg.sender != safe) revert CheckFailed("deployer admin");
         if (address(market.usdt()) != usdt || address(market.assetRegistry()) != assets) {
             revert CheckFailed("wiring");
         }

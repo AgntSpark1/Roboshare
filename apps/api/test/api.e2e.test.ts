@@ -37,10 +37,10 @@ const cfg: AppConfig = {
   paymentToken: USDT,
   totpEncKey: randomBytes(32).toString("hex"),
   rateLimitPerMinute: 100_000,
-  timelockDelaySeconds: 86_400,
-  timelock: ADDR(0x71e),
+  safe: ADDR(0x5af),
 };
-const TIMELOCK = ADDR(0x71e);
+const SAFE = ADDR(0x5af);
+const MULTISEND = "0x9641d764fc13c8B624c04430C7356C1C7C8102e2";
 const totpSecrets: Record<string, string> = {};
 const usedSteps: Record<string, Set<number>> = {};
 /** A valid code from a time step (now ±1) this user has not used yet, so the replay guard never trips. */
@@ -416,7 +416,7 @@ describe("idempotency", () => {
   });
 });
 
-describe("governance prepares (timelock, never signed by the server)", () => {
+describe("governance prepares (Safe, no timelock, never signed by the server)", () => {
   const PID2 = keccak256(stringToHex("api-project-2"));
   const OFFERING2 = ADDR(0x0ff2);
   const late = privateKeyToAccount(generatePrivateKey());
@@ -431,14 +431,18 @@ describe("governance prepares (timelock, never signed by the server)", () => {
     });
   });
 
-  it("wraps offering configure+open in one timelock batch for the Safe", async () => {
+  it("wraps offering configure+open in one Safe batch that takes effect when executed", async () => {
     const now = Math.floor(Date.now() / 1000);
     const body = { unitPrice: (1_000n * ONE).toString(), minUnits: 60, perWalletMax: 100, startTime: now, endTime: now + 30 * 86_400, treasury: ADDR(0x7e), termsHash: keccak256(stringToHex("terms")) };
     const r = await http().post(`/api/v1/admin/projects/${PID2}/offering`).set("Cookie", cookies.reviewer!).send(body).expect(201);
     const p = r.body.proposal;
-    expect(p.schedule.to).toBe(TIMELOCK);
-    expect(p.delaySeconds).toBe(86_400);
+    expect(p.safe).toBe(SAFE);
+    expect(p.tx).toMatchObject({ to: MULTISEND, operation: 1 });
+    expect(p).not.toHaveProperty("schedule");
     expect(p.calls).toHaveLength(2);
+    // The MultiSend payload carries both calls, in order.
+    expect(p.tx.data).toContain(p.calls[0].data.slice(2));
+    expect(p.tx.data.indexOf(p.calls[0].data.slice(2))).toBeLessThan(p.tx.data.indexOf(p.calls[1].data.slice(2)));
     expect(decodeFunctionData({ abi: offeringManagerAbi, data: p.calls[0].data }).functionName).toBe("configure");
     expect(decodeFunctionData({ abi: offeringManagerAbi, data: p.calls[1].data }).functionName).toBe("open");
     // An active project cannot get a new offering.
@@ -472,11 +476,13 @@ describe("governance prepares (timelock, never signed by the server)", () => {
     expect(ok.body.tx.to.toLowerCase()).toBe(OFFERING2.toLowerCase());
   });
 
-  it("prepares a direct reviewer transition or a timelock proposal", async () => {
+  it("prepares a direct reviewer transition or a Safe proposal", async () => {
     const direct = await http().post(`/api/v1/admin/projects/${PID2}/transition`).set("Cookie", cookies.reviewer!).send({ to: "VERIFIED", reason: "documents checked" }).expect(201);
     expect(direct.body.tx).toBeDefined();
     const gov = await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "incident" }).expect(201);
-    expect(gov.body.proposal.schedule.to).toBe(TIMELOCK);
+    expect(gov.body.proposal.safe).toBe(SAFE);
+    // A single call goes to its target directly (operation 0), not through MultiSend.
+    expect(gov.body.proposal.tx).toMatchObject({ to: ADDR(0xa55e), operation: 0 });
   });
 
   it("prepares the project pause set for the Guardian", async () => {
@@ -589,11 +595,12 @@ describe("referrals", () => {
     expect(r.body.topReferrers).toEqual([{ referrer: investor.address, accrued: (135n * ONE).toString() }]);
   });
 
-  it("wraps the on/off switch for both contracts in one timelock batch", async () => {
+  it("wraps the on/off switch for both contracts in one Safe batch", async () => {
     await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.operator!).send({ enabled: true, shareBps: 2_000, windowDays: 365 }).expect(403);
     await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, shareBps: 6_000, windowDays: 365 }).expect(400);
     const r = await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, shareBps: 2_000, windowDays: 365 }).expect(201);
-    expect(r.body.schedule.to).toBe(TIMELOCK);
+    expect(r.body.safe).toBe(SAFE);
+    expect(r.body.tx.to).toBe(MULTISEND);
     expect(r.body.calls.map((c: any) => c.to)).toEqual([ROUTER, REWARDS]);
     const terms = decodeFunctionData({ abi: subscriptionRouterAbi, data: r.body.calls[0].data });
     expect(terms.functionName).toBe("setReferralTerms");

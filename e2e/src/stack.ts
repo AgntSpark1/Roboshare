@@ -176,7 +176,7 @@ export async function startStack(): Promise<{ state: StackState; stop: () => Pro
         ASSET_REGISTRY: addr.AssetRegistry!,
         AUDIT_REGISTRY: addr.AuditRegistry!,
         PAYMENT_TOKEN: addr.MockUSDT!,
-        TIMELOCK: addr.TimelockController!,
+        SAFE: ROLES.safe,
       }),
     );
     procs.push(

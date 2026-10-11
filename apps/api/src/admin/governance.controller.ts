@@ -20,7 +20,7 @@ import { PrismaService } from "../common/prisma.service.js";
 import { lc, plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
-import { call, prepare, viaTimelock } from "./prepare.js";
+import { call, prepare, viaSafe } from "./prepare.js";
 
 const bytes32 = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 const address = z.string().refine((v) => isAddress(v), "invalid address");
@@ -43,7 +43,7 @@ const transitionBody = z.object({ to: z.enum(PROJECT_STATES), reason });
 const excludeBody = z.object({ wallet: address, reason });
 const pauseBody = z.object({ scope: z.enum(["platform", "project"]), projectId: bytes32.optional(), reason });
 
-/** States a REVIEWER moves directly; every other transition goes through the timelock (AssetRegistry._authorizeTransition). */
+/** States a REVIEWER moves directly; every other transition is a governance Safe proposal (AssetRegistry._authorizeTransition). */
 const REVIEWER_DIRECT = new Set(["VERIFIED", "DRAFT"]);
 
 @Controller("admin")
@@ -71,7 +71,7 @@ export class GovernanceController {
       termsHash: body.termsHash as Hex,
     };
     const offering = getAddress(p.offeringAddress);
-    const proposal = viaTimelock(this.cfg.chainId, this.timelock(), this.cfg.timelockDelaySeconds, [
+    const proposal = viaSafe(this.cfg.chainId, this.safe(), [
       call(offering, offeringManagerAbi, "configure", [cfg]),
       call(offering, offeringManagerAbi, "open", []),
     ], `configure and open offering ${id}`);
@@ -105,7 +105,7 @@ export class GovernanceController {
     const p = await this.project(id);
     const sub = await this.prisma.subscription.findUnique({ where: { projectIdOnchain_wallet: { projectIdOnchain: id, wallet: lc(body.wallet) } } });
     if (!sub || sub.status !== "ESCROWED") throw notFound("escrowed subscription");
-    const proposal = viaTimelock(this.cfg.chainId, this.timelock(), this.cfg.timelockDelaySeconds, [
+    const proposal = viaSafe(this.cfg.chainId, this.safe(), [
       call(getAddress(p.offeringAddress!), offeringManagerAbi, "excludeSubscriber", [getAddress(body.wallet), keccak256(stringToHex(body.reason))]),
     ], `exclude ${body.wallet} from offering ${id}`);
     await this.audit(req, "OFFERING_EXCLUDE_PROPOSE", "project", id, body);
@@ -122,11 +122,11 @@ export class GovernanceController {
     if (REVIEWER_DIRECT.has(body.to) && req.staffRoles?.includes("REVIEWER")) {
       return { tx: prepare(this.cfg.chainId, registry, assetRegistryAbi, "transition", args, `Move project to ${body.to} (reviewer wallet, not the registrant)`) };
     }
-    const proposal = viaTimelock(this.cfg.chainId, this.timelock(), this.cfg.timelockDelaySeconds, [call(registry, assetRegistryAbi, "transition", args)], `move project ${id} to ${body.to}`);
+    const proposal = viaSafe(this.cfg.chainId, this.safe(), [call(registry, assetRegistryAbi, "transition", args)], `move project ${id} to ${body.to}`);
     return plain({ proposal });
   }
 
-  /** Emergency pause, prepared for the Guardian (PAUSER) Safe. Pausing never waits for the timelock. */
+  /** Emergency pause, prepared for the Guardian (PAUSER) Safe. Pausing needs no governance signatures. */
   @Post("pause")
   @Roles("GOV_VIEW")
   async pause(@Req() req: AuthedRequest, @Body(new ZodPipe(pauseBody)) body: z.infer<typeof pauseBody>) {
@@ -182,8 +182,8 @@ export class GovernanceController {
     return p;
   }
 
-  private timelock(): Address {
-    return this.need(this.cfg.timelock, "TIMELOCK");
+  private safe(): Address {
+    return this.need(this.cfg.safe, "SAFE");
   }
 
   private need(addr: Address | undefined, name: string): Address {

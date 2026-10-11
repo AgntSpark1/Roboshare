@@ -35,7 +35,7 @@
 4. **结算**：每期分配批次批准后，后端按链上事件算出每个邀请人的应得金额，生成 Merkle 根，平台从手续费钱包往一个新的 `ReferralRewards` 合约充值，邀请人在 DApp 里自己点"领取"（和现在领收益一样的 pull 模式）。
 5. **风控**
    - 退款的认购（募集失败或未达最低单位）不产生奖励，因为根本没有手续费。
-   - 奖励比例、期限由治理（2/3 多签 + 24h timelock）设置，改动只对新绑定生效。
+   - 奖励比例、期限由治理（2/3 多签，签名后立即生效）设置，改动只对新绑定生效。
    - 暂停（pause）时领取也暂停，和 D-21 一致。
    - 合约里不存在"从投资者或分配池扣钱"的路径，奖励合约只能花平台自己充进去的钱。
 
@@ -79,9 +79,9 @@
 ### 合约
 
 - `SubscriptionRouter.subscribeWithReferrer(projectId, units, maxCost, referrer)`：资金流与 `subscribe` 完全相同。只在调用者**第一次**通过路由认购时绑定邀请人；邀请人必须本人认购过，不能是自己或零地址；不满足条件时忽略邀请人而不是让认购失败。绑定发出 `ReferralBound(investor, referrer, shareBps, expiresAt)`，把当时的条款写进事件。
-- `SubscriptionRouter.setReferralTerms(enabled, shareBps, window)`：仅时间锁可调用；`shareBps` 上限 5000，`window` 1 秒至 3650 天。默认关闭、2000（20%）、365 天。
+- `SubscriptionRouter.setReferralTerms(enabled, shareBps, window)`：仅治理 Safe 可调用；`shareBps` 上限 5000，`window` 1 秒至 3650 天。默认关闭、2000（20%）、365 天。
 - `ReferralRewards`：Merkle 累计领取。叶子 = `keccak256(bytes.concat(keccak256(abi.encode(account, cumulative))))`；每次发布新根覆盖旧根，领取时只付差额；任何人都可提交，奖励总是发给 `account`。`claimsEnabled` 默认关闭，仅时间锁可开；暂停时不能领取（D-21）；时间锁可以取回合约余额。
-- 部署脚本同时部署 `ReferralRewards`（管理员 = 时间锁，发布根 = 运营钱包），并核对两份合约都处于关闭状态。
+- 部署脚本同时部署 `ReferralRewards`（管理员 = 治理 Safe，发布根 = 运营钱包），并核对两份合约都处于关闭状态。
 
 ### 信任假设
 
@@ -90,7 +90,7 @@
 
 ### 运营流程
 
-1. 法律确认后，治理在控制台"邀请奖励"页生成时间锁提案，一次开启路由绑定和奖励领取。
+1. 法律确认后，治理在控制台"邀请奖励"页生成 Safe 提案，一次开启路由绑定和奖励领取。
 2. 每期分配批准后，运营在同一页点"生成并发布奖励根"，用运营钱包签名。
 3. 平台手续费钱包向 `ReferralRewards` 转入页面显示的差额。
 4. 邀请人在 DApp"我的资产"里复制邀请链接、查看奖励并领取。
@@ -98,6 +98,6 @@
 ### 后端与前端
 
 - 数据表：`referral`、`referral_accrual`、`referral_root`、`referral_claim`（链上事件投影，重组时重建）和 `referral_tree`（运营生成的树，不随重建删除）。
-- 接口：`GET /me/referrals`、`GET /admin/referrals`、`POST /admin/referrals/root`（运营）、`POST /admin/referrals/terms`（治理，返回时间锁提案）。
+- 接口：`GET /me/referrals`、`GET /admin/referrals`、`POST /admin/referrals/root`（运营）、`POST /admin/referrals/terms`（治理，返回 Safe 提案）。
 - 只有在链上根已生效且证明自检通过时才返回可领取的证明。
 - DApp 在落地页记录 `?ref=` 参数；功能关闭时邀请面板和认购页提示都不显示。

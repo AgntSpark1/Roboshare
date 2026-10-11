@@ -404,7 +404,7 @@ export const id: Messages = {
       ["Refund penuh jika gagal", "Jika minimum tidak tercapai saat penggalangan berakhir, USDT Anda dikembalikan penuh."],
       ["Unit di dompet Anda sendiri", "Baik platform maupun pihak tata kelola tidak dapat memindahkan unit Anda."],
       ["Pembukuan terbuka", "Setiap laporan operasional dicatat di chain, dan pendapatan baru dibagikan setelah laporan disetujui."],
-      ["Aturan tidak bisa diubah sesuka hati", "Kontrak proyek tidak bisa di-upgrade setelah diterapkan; tindakan admin platform memerlukan banyak tanda tangan dan diumumkan 24 jam sebelumnya."],
+      ["Aturan tidak bisa diubah sesuka hati", "Kontrak proyek tidak bisa di-upgrade setelah diterapkan; tindakan admin platform memerlukan 2 dari 3 tanda tangan multisig dan semuanya tercatat on-chain."],
     ],
     risksTitle: "Hal yang perlu diketahui",
     mayLose: "Investasi bisa merugi; imbal hasil tidak dijamin.",

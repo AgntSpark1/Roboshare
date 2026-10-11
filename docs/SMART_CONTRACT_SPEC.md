@@ -29,11 +29,11 @@
 
 ## 2. 角色与权限
 
-所有合约均使用 OpenZeppelin `AccessControl`。`DEFAULT_ADMIN_ROLE` 由一个 OpenZeppelin `TimelockController` 持有，其提议者/执行者为**治理 Safe**（D-16）。部署完成后，没有任何 EOA 持有 `DEFAULT_ADMIN_ROLE`。
+所有合约均使用 OpenZeppelin `AccessControl`。`DEFAULT_ADMIN_ROLE` 直接由**治理 Safe**（2-of-3）持有，没有时间锁，签名后立即执行（D-16，2026-10-11 修订）。部署完成后，没有任何 EOA 持有 `DEFAULT_ADMIN_ROLE`。
 
 | 角色 | 持有者（目标） | 可以 | 不可以 |
 |---|---|---|---|
-| `DEFAULT_ADMIN_ROLE` | 时间锁 ← 治理 Safe | 授予/撤销角色、解除暂停、在开放前配置募集、取消募集、执行标记为 GOV 的生命周期状态转换、设置费用接收方/金库（经时间锁） | 直接铸造、将托管或分配资金转给自己、编辑记录 |
+| `DEFAULT_ADMIN_ROLE` | 治理 Safe（2-of-3） | 授予/撤销角色、解除暂停、在开放前配置募集、取消募集、执行标记为 GOV 的生命周期状态转换、设置费用接收方/金库（经治理 Safe） | 直接铸造、将托管或分配资金转给自己、编辑记录 |
 | `OPERATOR_ROLE` | 运营方 Safe 或运维 EOA | 注册项目、提交文档/报告、提议批次、调用 `settle`、`claimFor` | 批准自己提交的内容、铸造、变更角色 |
 | `REVIEWER_ROLE` | 财务/审核 Safe | 验证项目、批准/驳回报告与批次 | 批准任何由其自身提交的内容（通过 `msg.sender != submitter` 强制执行） |
 | `COMPLIANCE_AGENT_ROLE` | 合规中继器（热密钥，链下限速） | 设置/续期/撤销投资资格、冻结/解冻 | `IdentityRegistry` 之外的任何操作 |
@@ -425,7 +425,7 @@ sequenceDiagram
 7. 任何分配额都不会被领取两次。
 8. `distributedForPeriod[p] ≤ approvedReport(p).distributableAmount`。
 9. 项目状态只能按照状态转换表变化。
-10. 部署脚本执行完成后，除时间锁外没有任何地址持有 `DEFAULT_ADMIN_ROLE`。
+10. 部署脚本执行完成后，除治理 Safe 外没有任何地址持有 `DEFAULT_ADMIN_ROLE`。
 11. `SubscriptionRouter` 的 USDT 余额始终为 0；它只从 `msg.sender` 拉取资金，且只转入已关联的 `OfferingManager`。
 
 ## 13. 自定义错误（示意）

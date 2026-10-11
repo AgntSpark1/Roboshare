@@ -59,10 +59,10 @@ contract DistributorDeployer {
 
 /// @title ProjectFactory
 /// @notice Deploys and wires one project's token, offering and distributor, then links them in the
-/// AssetRegistry. Only governance (DEFAULT_ADMIN_ROLE, held by the timelock) can deploy.
+/// AssetRegistry. Only governance (DEFAULT_ADMIN_ROLE, held by the governance Safe) can deploy.
 contract ProjectFactory is AccessControl {
     struct Roles {
-        address admin; // governance timelock
+        address admin; // governance Safe
         address operator;
         address reviewer;
         address pauser; // guardian Safe

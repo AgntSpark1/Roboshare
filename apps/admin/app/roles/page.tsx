@@ -29,7 +29,7 @@ export default function Roles() {
           </tbody>
         </table>
       </div>
-      <p className="muted small" style={{ marginTop: 10 }}>授予或撤销角色需要治理 Safe 通过时间锁执行。</p>
+      <p className="muted small" style={{ marginTop: 10 }}>授予或撤销角色需要治理 Safe（3 人中 2 人签名）执行，执行后立即生效。</p>
     </section>
   );
 }

@@ -404,7 +404,7 @@ export const es: Messages = {
       ["Reembolso total si no se completa", "Si al cerrar la oferta no se alcanza el mínimo, se te devuelve todo tu USDT."],
       ["Las participaciones están en tu billetera", "Ni la plataforma ni la gobernanza pueden moverlas."],
       ["Cuentas abiertas", "Cada informe de operación queda en la cadena, y los ingresos solo se reparten tras aprobarse el informe."],
-      ["Las reglas no cambian a voluntad", "Los contratos de cada proyecto no se pueden actualizar tras desplegarse; las acciones de administración de la plataforma requieren varias firmas y se anuncian con 24 horas de antelación."],
+      ["Las reglas no cambian a voluntad", "Los contratos de cada proyecto no se pueden actualizar tras desplegarse; las acciones de administración de la plataforma requieren 2 de 3 firmas multisig y todas quedan registradas en la cadena."],
     ],
     risksTitle: "Lo que debes saber",
     mayLose: "Puedes perder dinero; la rentabilidad no está garantizada.",

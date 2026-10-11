@@ -25,7 +25,7 @@
 
 | 变量 | 含义 |
 |---|---|
-| `SAFE` | 2/3 多签，时间锁唯一的提案人和执行人 |
+| `SAFE` | 2/3 治理多签，直接持有所有合约的管理员角色（必须是已部署的 Safe 合约，否则脚本拒绝部署） |
 | `OPERATOR` | 运营方（登记项目、提交报告、提交分配批次） |
 | `REVIEWER` | 审核人（审批项目、报告、分配批次；不能是提交人本人） |
 | `PAUSER` | 紧急暂停 |
@@ -49,15 +49,14 @@ forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --verify --led
 
 脚本实际做的事：
 
-1. 部署 `TimelockController`，延迟 24 小时，提案人和执行人都只有 `SAFE`，没有管理员。
 2. 部署 `IdentityRegistry`、`AssetRegistry`、`AuditRegistry`、`SubscriptionRouter`、`ProjectFactory`（含三个部署辅助合约）。
 3. 授予运营、审核、暂停、合规代理、工厂角色。
-4. 把所有合约的管理员角色交给时间锁，部署者放弃管理员角色。
-5. 在同一次执行里逐项核对：时间锁是各合约管理员、部署者已无权限、时间锁延迟为 24 小时、Safe 是提案人和执行人、路由使用的 USDT 正确且有代码。任一项不符就整体回滚。
+4. 把所有合约的管理员角色直接交给 `SAFE`，部署者放弃管理员角色。没有时间锁（D-16，2026-10-11 修订）。
+5. 在同一次执行里逐项核对：Safe 是各合约（含每个项目的合约）管理员、部署者已无权限、路由使用的 USDT 正确且有代码。任一项不符就整体回滚。
 
-部署后，把 `broadcast/Deploy.s.sol/<chainId>/run-latest.json` 里的地址和部署区块填入后端环境变量（`ASSET_REGISTRY`、`AUDIT_REGISTRY`、`IDENTITY_REGISTRY`、`SUBSCRIPTION_ROUTER`、`PROJECT_FACTORY`、`REFERRAL_REWARDS`、`SHARE_MARKET`、`TIMELOCK`、`START_BLOCK`、`PAYMENT_TOKEN`）。不要手抄，不要用占位地址。
+部署后，把 `broadcast/Deploy.s.sol/<chainId>/run-latest.json` 里的地址和部署区块填入后端环境变量（`ASSET_REGISTRY`、`AUDIT_REGISTRY`、`IDENTITY_REGISTRY`、`SUBSCRIPTION_ROUTER`、`PROJECT_FACTORY`、`REFERRAL_REWARDS`、`SHARE_MARKET`、`SAFE`、`START_BLOCK`、`PAYMENT_TOKEN`）。不要手抄，不要用占位地址。
 
-按项目部署：项目在 `AssetRegistry` 里变成 VERIFIED 后，由后端 `/admin/.../prepare` 接口生成时间锁 `schedule` 调用数据，Safe 签名提交；24 小时后再提交 `execute`。配置并开启募集走同一路径。
+按项目部署：项目在 `AssetRegistry` 里变成 VERIFIED 后，后端 `/admin/...` 接口生成 Safe 交易（多笔调用时是一笔 MultiSendCallOnly 批量交易，也会逐笔列出，方便在 Safe{Wallet} 的 Transaction Builder 里添加），2 名签名人签名并执行后立即生效。配置并开启募集走同一路径。
 
 ## 5. 本地部署彩排
 
@@ -65,7 +64,7 @@ forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --verify --led
 ./scripts/local-deploy-sim.sh
 ```
 
-在本地 anvil 上用解锁账户（不需要任何私钥）执行完整部署脚本，再用 `cast` 从链上核对：时间锁延迟、管理员归属、部署者已不能授予权限。
+在本地 anvil 上用解锁账户（不需要任何私钥）执行完整部署脚本，再用 `cast` 从链上核对：没有部署时间锁、Safe 是管理员、部署者已不能授予权限。
 
 完整业务流程（登记 → 审核 → 部署项目 → 募集 → 结算 → 报告 → 分配 → 领取）由 `apps/worker/test/indexer.e2e.test.ts` 在 anvil 上实际跑过，并核对了数据库与链上状态一致。
 
@@ -94,6 +93,6 @@ forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --verify --led
 2. 第三方合约审计完成，高/中风险问题全部修复。
 3. 在 BscScan 上核对 USDT 地址；在 BSC 测试网确认 Cancun 操作码可用。
 4. 用 soliditylang.org 官方校验值核对 solc 0.8.30 二进制（本沙盒无法访问该网站）。
-5. Safe 签名人、时间锁流程在测试网完整演练一次。
+5. Safe 签名人流程（2/3 签名后立即执行）在测试网完整演练一次。
 6. 法律意见：份额的法律性质（D-1 合同收益权）在目标司法辖区可合法发售。
 7. Charlene 书面批准主网部署。

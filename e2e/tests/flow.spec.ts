@@ -1,5 +1,5 @@
 // Phase 4 exit criterion: subscribe -> settle -> report -> batch -> claim, through the investor DApp and the admin
-// console on a local anvil chain. Governance (timelock), KYC and treasury funding are done by the TEST-ONLY harness.
+// console on a local anvil chain. Governance (the Safe), KYC and treasury funding are done by the TEST-ONLY harness.
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { allocate, revenueDistributorAbi } from "@roboshare/shared";
@@ -117,7 +117,7 @@ test("operator settles the offering after it ends", async ({ browser }) => {
   await axe(page, "admin offerings");
   await runTx(page, row.getByRole("button", { name: "结算募集" }));
   await s.indexed();
-  // Governance moves FUNDED -> ACTIVE once the vehicle is in service (timelock; harness).
+  // Governance moves FUNDED -> ACTIVE once the vehicle is in service (Safe; harness).
   await s.activate(projectIdOf(SLUG));
   await s.indexed();
 });
