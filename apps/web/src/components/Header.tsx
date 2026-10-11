@@ -32,7 +32,7 @@ export function Logo() {
 
 /** Compact language picker for the top bar: globe and a short code, the full list in a dialog. */
 export function LanguageSwitch() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, auto, setLocale, setAuto } = useI18n();
   const [open, setOpen] = useState(false);
   const current = LOCALES.find((l) => l.code === locale)!;
   return (
@@ -47,13 +47,24 @@ export function LanguageSwitch() {
       {open && (
         <Modal title={t.nav.language} onClose={() => setOpen(false)}>
           <div className="lang-list">
+            <button
+              type="button"
+              className={`lang-auto${auto ? " on" : ""}`}
+              aria-pressed={auto}
+              onClick={() => {
+                setAuto();
+                setOpen(false);
+              }}
+            >
+              {t.nav.auto}
+            </button>
             {LOCALES.map((l) => (
               <button
                 key={l.code}
                 type="button"
                 lang={l.code}
-                className={l.code === locale ? "on" : ""}
-                aria-pressed={l.code === locale}
+                className={!auto && l.code === locale ? "on" : ""}
+                aria-pressed={!auto && l.code === locale}
                 onClick={() => {
                   setLocale(l.code);
                   setOpen(false);

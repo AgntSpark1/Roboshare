@@ -1,9 +1,9 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { blockReason } from "@/components/SubscribePanel";
 import { I18nProvider } from "@/i18n/I18nProvider";
-import { LOCALES, pickLocale } from "@/i18n/locales";
+import { LOCALES, matchLocale, pickLocale } from "@/i18n/locales";
 import { MESSAGES } from "@/i18n/messages";
 import Risk from "../app/risk/page";
 
@@ -33,6 +33,7 @@ describe("locale detection", () => {
     expect(pickLocale("fr-FR")).toBe("zh-CN");
     expect(pickLocale(null)).toBe("zh-CN");
     expect(pickLocale("en;q=0")).toBe("zh-CN");
+    expect(matchLocale("fr-FR,de")).toBeNull();
   });
 });
 
@@ -65,6 +66,9 @@ describe("translations", () => {
 });
 
 describe("language switch", () => {
+  // jsdom reports en-US; these tests start from a Chinese phone unless they say otherwise.
+  beforeEach(() => void vi.spyOn(navigator, "languages", "get").mockReturnValue(["zh-CN"]));
+
   it("re-renders the page in the chosen language, sets <html lang> and remembers it in a cookie", async () => {
     render(
       <I18nProvider initial="zh-CN">
@@ -80,5 +84,42 @@ describe("language switch", () => {
     expect(screen.getByText(MESSAGES.en.risk.translationNote)).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("en");
     expect(document.cookie).toContain("rs_lang=en");
+  });
+
+  it("follows the device language until the visitor picks one, and can go back to it", async () => {
+    const langs = vi.spyOn(navigator, "languages", "get").mockReturnValue(["ja-JP", "en-US"]);
+    document.cookie = "rs_lang=; path=/; max-age=0";
+    const { unmount } = render(
+      <I18nProvider initial="zh-CN">
+        <LanguageSwitch />
+        <Risk />
+      </I18nProvider>,
+    );
+    // The server guessed Chinese from Accept-Language, but the phone is set to Japanese.
+    expect(await screen.findByRole("heading", { level: 1, name: MESSAGES.ja.risk.title })).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("ja");
+    expect(document.cookie).not.toContain("rs_lang=ja");
+
+    await userEvent.click(screen.getByRole("button", { name: new RegExp(MESSAGES.ja.nav.language) }));
+    await act(() => userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "简体中文" })));
+    expect(screen.getByRole("heading", { level: 1, name: "投资须知" })).toBeInTheDocument();
+    expect(document.cookie).toContain("rs_lang=zh-CN");
+    unmount();
+
+    // A saved choice wins over the device language on the next visit.
+    render(
+      <I18nProvider initial="zh-CN">
+        <LanguageSwitch />
+        <Risk />
+      </I18nProvider>,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "投资须知" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /语言/ }));
+    const auto = within(screen.getByRole("dialog")).getByRole("button", { name: "跟随系统" });
+    expect(auto).toHaveAttribute("aria-pressed", "false");
+    await act(() => userEvent.click(auto));
+    expect(screen.getByRole("heading", { level: 1, name: MESSAGES.ja.risk.title })).toBeInTheDocument();
+    expect(document.cookie).not.toContain("rs_lang");
+    langs.mockRestore();
   });
 });

@@ -106,6 +106,7 @@ export const id: Messages = {
     network: "Jaringan",
     chainNames: { 56: "BNB Smart Chain", 97: "BSC Testnet", 31337: "Chain uji lokal" },
     language: "Bahasa",
+    auto: "Ikuti perangkat",
   },
   hero: {
     tagAuto: "Tanpa pengemudi",
