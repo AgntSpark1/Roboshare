@@ -90,6 +90,7 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
   const price = BigInt(o.unitPrice);
   const cost = price * BigInt(units);
   const needApproval = usdt.data ? usdt.data.allowance < cost : true;
+  const short = usdt.data ? usdt.data.balance < cost : false;
 
   const reason = blockReason({
     connected: isConnected,
@@ -136,7 +137,8 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
       return;
     }
     const ok = await start(steps, (hash: Hash, i: number) => {
-      void api.post("/tx/pending", { hash, purpose: steps[i]!.purpose }).catch(() => undefined);
+      // Approvals are not indexed, so they would stay "pending" forever.
+      if (steps[i]!.purpose !== "APPROVE") void api.post("/tx/pending", { hash, purpose: steps[i]!.purpose }).catch(() => undefined);
     });
     if (ok) {
       setDone(true);
@@ -177,9 +179,9 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
         <b>{formatUsdt(cost)} USDT</b>
       </div>
       {address && usdt.data && (
-        <div className={`approval${needApproval ? "" : " ok"}`}>
+        <div className={`approval${needApproval || short ? "" : " ok"}`}>
           <span className="st" aria-hidden="true" />
-          {c.balance(formatUsdt(usdt.data.balance))}{needApproval ? "" : c.direct}
+          {c.balance(formatUsdt(usdt.data.balance))}{needApproval || short ? "" : c.direct}
         </div>
       )}
       {needApproval && isConnected && me && (
@@ -226,7 +228,7 @@ export function SubscribePanel({ p }: { p: ProjectDetail }) {
           {c.success}<Link href="/portfolio">{t.project.viewPortfolio}</Link>
         </p>
       )}
-      <p className="fine">{c.fine(o.minUnits, o.perWalletMax ?? o.maxUnits)}</p>
+      <p className="fine">{c.fine(o.minUnits, o.perWalletMax && o.perWalletMax < o.maxUnits ? o.perWalletMax : undefined)}</p>
     </aside>
   );
 }

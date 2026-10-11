@@ -505,6 +505,8 @@ describe("investor extras", () => {
     });
     const hash = `0x${"ab".repeat(32)}`;
     await http().post("/api/v1/tx/pending").set("Cookie", cookies.investor!).send({ hash, purpose: "CLAIM" }).expect(202);
+    // approvals are never indexed, so they are not shown as pending
+    await http().post("/api/v1/tx/pending").set("Cookie", cookies.investor!).send({ hash: `0x${"cd".repeat(32)}`, purpose: "APPROVE" }).expect(202);
     const r = await http().get("/api/v1/me/transactions").set("Cookie", cookies.investor!).expect(200);
     expect(r.body.items.map((i: any) => i.kind)).toEqual(["TRANSFER_OUT", "MINT"]);
     expect(r.body.pending).toEqual([expect.objectContaining({ hash, purpose: "CLAIM" })]);
