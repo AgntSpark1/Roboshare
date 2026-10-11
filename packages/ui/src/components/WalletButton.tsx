@@ -6,18 +6,9 @@ import { Modal } from "./Modal";
 import { shortAddr } from "../format";
 import { useSession, useSignIn, useSignOut } from "../session";
 import { TEST_WALLET_PREFIX } from "../wagmi";
+import { walletApps } from "../walletApps";
 
 const CHAIN_LABEL: Record<number, string> = { 56: "BNB 智能链", 97: "BSC 测试网", 31337: "本地测试链" };
-
-/** Deep links that open this page inside a wallet app's own browser, where the wallet is injected. */
-function walletApps(href: string) {
-  const bare = href.replace(/^https?:\/\//, "");
-  return [
-    { name: "MetaMask", url: `https://metamask.app.link/dapp/${bare}` },
-    { name: "OKX Wallet", url: `okx://wallet/dapp/url?dappUrl=${encodeURIComponent(href)}` },
-    { name: "Trust Wallet", url: `https://link.trustwallet.com/open_url?coin_id=20000714&url=${encodeURIComponent(href)}` },
-  ];
-}
 
 /**
  * One wallet per entry: wallets announced through EIP-6963 (with their own name and icon) replace the generic
@@ -61,10 +52,15 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
             {noWallet && page && (
               <div className="wallet-apps">
                 <p className="muted">这个浏览器里没有钱包。手机上请用下面的钱包 App 打开本页，再点“连接钱包”。</p>
-                <div className="links">
-                  {walletApps(page.href).map((w) => (
-                    <a key={w.name} className="btn sm" href={w.url}>{w.name}</a>
+                <div className="app-grid">
+                  {walletApps(page.href, target.id).map((w) => (
+                    <a key={w.name} className="app" href={w.url}>
+                      <img src={w.logo} alt="" width={40} height={40} />
+                      <span>{w.name}</span>
+                    </a>
                   ))}
+                </div>
+                <div className="links">
                   <button
                     type="button"
                     className="btn ghost sm"
@@ -107,7 +103,7 @@ export function WalletButton({ signInLabel = "签名登录" }: { signInLabel?: s
                       <b>{test ? `测试钱包 ${shortAddr(acct)}` : c.name === "Injected" ? "浏览器钱包" : c.name}</b>
                       <br />
                       <small className="muted">
-                        {busy ? "请在钱包里确认连接…" : test ? "仅本地测试链（TEST-ONLY）" : noWallet && c.id === "injected" ? "未检测到钱包" : "MetaMask、OKX、Trust 等"}
+                        {busy ? "请在钱包里确认连接…" : test ? "仅本地测试链（TEST-ONLY）" : noWallet && c.id === "injected" ? "未检测到钱包" : "MetaMask、币安、OKX、TokenPocket、Bitget、Trust 等"}
                       </small>
                     </span>
                     {busy && <span className="spin" aria-hidden="true" />}

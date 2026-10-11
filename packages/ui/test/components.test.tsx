@@ -87,6 +87,16 @@ describe("components", () => {
     expect(within(dialog).getByRole("link", { name: "MetaMask" })).toHaveAttribute("href", expect.stringMatching(/^https:\/\/metamask\.app\.link\/dapp\//));
     expect(within(dialog).getByRole("link", { name: "Trust Wallet" })).toHaveAttribute("href", expect.stringContaining(encodeURIComponent(window.location.href)));
     expect(within(dialog).getByText("未检测到钱包")).toBeInTheDocument();
+    for (const name of ["MetaMask", "币安钱包", "OKX Wallet", "TokenPocket", "Bitget Wallet", "Trust Wallet"]) {
+      const link = within(dialog).getByRole("link", { name });
+      expect(link.querySelector("img")?.getAttribute("src")).toMatch(/^data:image\/svg\+xml/);
+    }
+    expect(within(dialog).getByRole("link", { name: "Bitget Wallet" })).toHaveAttribute("href", expect.stringMatching(/^https:\/\/bkcode\.vip\?action=dapp&url=/));
+    const tp = within(dialog).getByRole("link", { name: "TokenPocket" }).getAttribute("href")!;
+    expect(JSON.parse(decodeURIComponent(tp.replace("tpdapp://open?params=", "")))).toMatchObject({ url: window.location.href, chain: "BSC" });
+    const bn = new URL(within(dialog).getByRole("link", { name: "币安钱包" }).getAttribute("href")!);
+    const dp = atob(bn.searchParams.get("_dp")!);
+    expect(atob(new URL(dp.replace("bnc://", "https://")).searchParams.get("startPageQuery")!)).toBe(`url=${window.location.href}&defaultChainId=97`);
   });
 
   it("explains wallet failures in Chinese", () => {
