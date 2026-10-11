@@ -13,5 +13,4 @@ export const walletEnv: WalletEnv = {
 export const EXPLORER: Record<number, string | undefined> = { 56: "https://bscscan.com", 97: "https://testnet.bscscan.com" };
 export const explorer = EXPLORER[walletEnv.chainId];
 export const isTestChain = walletEnv.chainId !== 56;
-export const CHAIN_NAME: Record<number, string> = { 56: "BNB Smart Chain", 97: "BSC 测试网", 31337: "本地测试链" };
 export const RISK_VERSION = "2026-10";

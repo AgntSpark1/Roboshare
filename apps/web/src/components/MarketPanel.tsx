@@ -19,6 +19,8 @@ import {
 import { explorer } from "@/env";
 import { useEligibility, usePaymentSetup, useRefreshAfterTx } from "@/lib/data";
 import { activeListings, useListings, useMarketAddress, useMarketWallet, type MarketListing } from "@/lib/market";
+import { useI18n } from "@/i18n/I18nProvider";
+import { zhCN, type Messages } from "@/i18n/messages/zh-CN";
 
 type Purpose = "APPROVE" | "MARKET_LIST" | "MARKET_BUY" | "MARKET_CANCEL";
 type Step = TxStep & { purpose: Purpose };
@@ -35,31 +37,34 @@ export function buyBlockReason(input: {
   balance: bigint | undefined;
   cost: bigint;
   acknowledged: boolean;
-}): string | null {
-  if (input.eligible === false) return "你的钱包还未开通认购资格";
-  if (input.units < 1 || input.units > input.available) return `可买 1–${input.available} 份`;
-  if (input.balance !== undefined && input.balance < input.cost) return "USDT 余额不足";
-  if (!input.acknowledged) return "请先勾选确认";
+}, t: Messages = zhCN): string | null {
+  const b = t.subscribe.block;
+  if (input.eligible === false) return b.ineligible;
+  if (input.units < 1 || input.units > input.available) return t.market.buyRange(input.available);
+  if (input.balance !== undefined && input.balance < input.cost) return b.balance;
+  if (!input.acknowledged) return b.ack;
   return null;
 }
 
 /** Parses the seller's form. Exported for tests. */
-export function sellInput(held: number, units: number, priceText: string): { price: bigint } | { error: string } {
-  if (held <= 0) return { error: "你没有可出售的份额" };
-  if (units < 1 || units > held) return { error: `可卖 1–${held} 份` };
+export function sellInput(held: number, units: number, priceText: string, m: Messages["market"] = zhCN.market): { price: bigint } | { error: string } {
+  if (held <= 0) return { error: m.noUnits };
+  if (units < 1 || units > held) return { error: m.sellRange(held) };
   let price: bigint;
   try {
     price = parseUsdt(priceText);
   } catch {
-    return { error: "请输入每份价格" };
+    return { error: m.price };
   }
-  if (price <= 0n) return { error: "请输入每份价格" };
+  if (price <= 0n) return { error: m.price };
   return { price };
 }
 
 /** Peer-to-peer resale (EARLY_EXIT_DESIGN.md): buy listed units, or list your own for sale. */
 export function MarketPanel({ p }: { p: ProjectDetail }) {
   const market = useMarketAddress();
+  const { t } = useI18n();
+  const m = t.market;
   const { address, isConnected } = useAccount();
   const { me } = useSession();
   const listings = useListings(p.id);
@@ -96,14 +101,14 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
 
   return (
     <div className="panel" id="market" style={{ marginTop: 24 }}>
-      <h2 className="h3">转让市场</h2>
-      <p className="muted" style={{ fontSize: ".84rem" }}>想提前拿回资金，可以挂单把份额卖给其他投资者；也可以在这里买入别人转让的份额。</p>
+      <h2 className="h3">{m.title}</h2>
+      <p className="muted" style={{ fontSize: ".84rem" }}>{m.intro}</p>
 
       {forSale.length ? (
         <div className="table-wrap">
           <table>
-            <caption className="sr-only">在售份额</caption>
-            <thead><tr><th>在售</th><th className="r">每份价格（USDT）</th><th>截止</th><th><span className="sr-only">操作</span></th></tr></thead>
+            <caption className="sr-only">{m.forSale}</caption>
+            <thead><tr><th>{m.colForSale}</th><th className="r">{m.colPrice}</th><th>{m.colExpires}</th><th><span className="sr-only">{m.actions}</span></th></tr></thead>
             <tbody>
               {forSale.map((l) => (
                 <ListingRow key={l.id.toString()} l={l} market={market} signedIn={signedIn} usdtState={usdtState} running={run.running} exec={exec} />
@@ -112,24 +117,24 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
           </table>
         </div>
       ) : (
-        <p className="muted" data-testid="no-listings">{listings.isLoading ? "正在读取挂单…" : "暂时没有在售份额。"}</p>
+        <p className="muted" data-testid="no-listings">{listings.isLoading ? m.loading : m.none}</p>
       )}
 
       {!signedIn ? (
-        <div style={{ marginTop: 12 }}><WalletButton signInLabel="签名登录后买卖" /></div>
+        <div style={{ marginTop: 12 }}><WalletButton signInLabel={m.signIn} /></div>
       ) : (
         <>
           {myListings.length > 0 && (
             <div style={{ marginTop: 16 }}>
-              <h3 className="h3" style={{ fontSize: ".95rem" }}>我的挂单</h3>
+              <h3 className="h3" style={{ fontSize: ".95rem" }}>{m.myListings}</h3>
               <div className="table-wrap">
                 <table>
-                  <caption className="sr-only">我的挂单</caption>
-                  <thead><tr><th>剩余</th><th className="r">每份价格（USDT）</th><th>截止</th><th><span className="sr-only">操作</span></th></tr></thead>
+                  <caption className="sr-only">{m.myListings}</caption>
+                  <thead><tr><th>{m.colRemaining}</th><th className="r">{m.colPrice}</th><th>{m.colExpires}</th><th><span className="sr-only">{m.actions}</span></th></tr></thead>
                   <tbody>
                     {myListings.map((l) => (
                       <tr key={l.id.toString()} data-testid={`my-listing-${l.id}`}>
-                        <td>{l.units} 份</td>
+                        <td>{t.units.n(l.units)}</td>
                         <td className="r">{formatUsdt(l.pricePerUnit)}</td>
                         <td>{formatDate(l.expiresAt * 1000).slice(0, 10)}</td>
                         <td className="r">
@@ -139,12 +144,12 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
                             disabled={run.running}
                             onClick={() =>
                               exec(
-                                [{ label: "撤销挂单", purpose: "MARKET_CANCEL", write: { address: market, abi: shareMarketAbi, functionName: "cancel", args: [l.id] } }],
-                                "挂单已撤销。",
+                                [{ label: m.cancelStep, purpose: "MARKET_CANCEL", write: { address: market, abi: shareMarketAbi, functionName: "cancel", args: [l.id] } }],
+                                m.cancelled,
                               )
                             }
                           >
-                            撤单
+                            {m.cancel}
                           </button>
                         </td>
                       </tr>
@@ -162,7 +167,7 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
 
       {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
       {done && <p className="okmsg" role="status">{done}</p>}
-      <p className="fine" style={{ marginTop: 10 }}>价格由卖家自定，平台不收手续费，也不保证成交。成交前已结算的收益归卖家。</p>
+      <p className="fine" style={{ marginTop: 10 }}>{m.fine}</p>
     </div>
   );
 }
@@ -183,16 +188,17 @@ function ListingRow({
   exec: (s: Step[], message: string) => Promise<void>;
 }) {
   const [openBuy, setOpenBuy] = useState(false);
+  const { t } = useI18n();
   return (
     <>
       <tr data-testid={`listing-${l.id}`}>
-        <td>{l.fillable} 份</td>
+        <td>{t.units.n(l.fillable)}</td>
         <td className="r">{formatUsdt(l.pricePerUnit)}</td>
         <td>{formatDate(l.expiresAt * 1000).slice(0, 10)}</td>
         <td className="r">
           {signedIn && (
             <button type="button" className="btn ghost sm" aria-expanded={openBuy} onClick={() => setOpenBuy(!openBuy)}>
-              购买
+              {t.market.buy}
             </button>
           )}
         </td>
@@ -210,44 +216,47 @@ function ListingRow({
 
 function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; market: Address; usdtState: UsdtState; running: boolean; exec: (s: Step[], message: string) => Promise<void> }) {
   const elig = useEligibility();
+  const { t } = useI18n();
+  const m = t.market;
+  const c = t.subscribe;
   const { usdt } = usePaymentSetup();
   const [units, setUnits] = useState(1);
   const [ack, setAck] = useState(false);
   const cost = l.pricePerUnit * BigInt(units);
   const needApproval = usdtState.allowance === undefined ? true : usdtState.allowance < cost;
-  const reason = buyBlockReason({ eligible: elig.data?.eligibleNow, available: l.fillable, units, balance: usdtState.balance, cost, acknowledged: ack });
+  const reason = buyBlockReason({ eligible: elig.data?.eligibleNow, available: l.fillable, units, balance: usdtState.balance, cost, acknowledged: ack }, t);
 
   const steps = useMemo<Step[]>(() => {
     if (!usdt) return [];
     const s: Step[] = [];
     if (needApproval) {
-      s.push({ label: `授权 ${formatUsdt(cost)} USDT`, purpose: "APPROVE", write: { address: usdt, abi: erc20Abi, functionName: "approve", args: [market, cost] } });
+      s.push({ label: c.stepApprove(formatUsdt(cost)), purpose: "APPROVE", write: { address: usdt, abi: erc20Abi, functionName: "approve", args: [market, cost] } });
     }
     s.push({
-      label: `购买 ${units} 份`,
+      label: m.stepBuy(units),
       purpose: "MARKET_BUY",
       write: { address: market, abi: shareMarketAbi, functionName: "buy", args: [l.id, units, l.pricePerUnit] },
     });
     return s;
-  }, [usdt, needApproval, cost, market, l.id, l.pricePerUnit, units]);
+  }, [usdt, needApproval, cost, market, l.id, l.pricePerUnit, units, c, m]);
 
   const set = (n: number) => setUnits(Math.max(1, Math.min(Math.max(l.fillable, 1), Math.floor(n) || 1)));
 
   return (
     <div style={{ display: "grid", gap: 10, padding: "8px 0" }}>
-      <label htmlFor={`buy-units-${l.id}`} className="muted" style={{ fontSize: ".8rem" }}>购买份数</label>
+      <label htmlFor={`buy-units-${l.id}`} className="muted" style={{ fontSize: ".8rem" }}>{m.buyUnits}</label>
       <div className="stepper">
-        <button type="button" aria-label="减少一份" onClick={() => set(units - 1)} disabled={units <= 1}>−</button>
+        <button type="button" aria-label={c.less} onClick={() => set(units - 1)} disabled={units <= 1}>−</button>
         <input id={`buy-units-${l.id}`} inputMode="numeric" value={units} onChange={(e) => set(Number(e.target.value))} />
-        <button type="button" aria-label="增加一份" onClick={() => set(units + 1)} disabled={units >= l.fillable}>+</button>
+        <button type="button" aria-label={c.more} onClick={() => set(units + 1)} disabled={units >= l.fillable}>+</button>
       </div>
-      <div className="line total"><span>应付</span><b>{formatUsdt(cost)} USDT</b></div>
+      <div className="line total"><span>{c.due}</span><b>{formatUsdt(cost)} USDT</b></div>
       <label className="check">
         <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
-        <span>我已阅读 <Link href="/risk" style={{ color: "var(--amber)" }}>投资须知</Link> 和项目条款</span>
+        <span>{c.ackBefore}<Link href="/risk" style={{ color: "var(--amber)" }}>{t.layout.investorNotes}</Link>{c.ackAfter}</span>
       </label>
-      <button type="button" className="btn primary" disabled={!!reason || running || steps.length === 0} onClick={() => exec(steps, `购买成功，${units} 份已到你的钱包。`)}>
-        {needApproval ? "授权并购买" : "确认购买"}
+      <button type="button" className="btn primary" disabled={!!reason || running || steps.length === 0} onClick={() => exec(steps, m.bought(units))}>
+        {needApproval ? m.approveAndBuy : m.confirmBuy}
       </button>
       {reason && <p className="muted" style={{ fontSize: ".8rem" }}>{reason}</p>}
     </div>
@@ -269,45 +278,47 @@ function SellForm({
   running: boolean;
   exec: (s: Step[], message: string) => Promise<void>;
 }) {
+  const { t } = useI18n();
+  const m = t.market;
   const [units, setUnits] = useState(1);
   const [priceText, setPriceText] = useState("");
   const [days, setDays] = useState<(typeof DURATIONS)[number]>(30);
-  const parsed = sellInput(held, units, priceText);
+  const parsed = sellInput(held, units, priceText, m);
 
   function list() {
     if ("error" in parsed) return;
     const s: Step[] = [];
     // One approval covers every unit held, so later listings need no extra step.
     if (unitAllowance < BigInt(held)) {
-      s.push({ label: "授权转让市场出售份额", purpose: "APPROVE", write: { address: p.contracts.token!, abi: erc20Abi, functionName: "approve", args: [market, maxUint256] } });
+      s.push({ label: m.approveUnits, purpose: "APPROVE", write: { address: p.contracts.token!, abi: erc20Abi, functionName: "approve", args: [market, maxUint256] } });
     }
     const expiresAt = BigInt(Math.floor(Date.now() / 1000) + days * DAY);
-    s.push({ label: `挂单 ${units} 份`, purpose: "MARKET_LIST", write: { address: market, abi: shareMarketAbi, functionName: "list", args: [p.id, units, parsed.price, expiresAt] } });
-    void exec(s, "挂单成功，有人购买时 USDT 会直接到你的钱包。");
+    s.push({ label: m.stepList(units), purpose: "MARKET_LIST", write: { address: market, abi: shareMarketAbi, functionName: "list", args: [p.id, units, parsed.price, expiresAt] } });
+    void exec(s, m.listed);
   }
 
   return (
     <div className="form" style={{ marginTop: 16 }}>
-      <h3 className="h3" style={{ fontSize: ".95rem" }}>卖出我的份额（持有 {held} 份）</h3>
+      <h3 className="h3" style={{ fontSize: ".95rem" }}>{m.sellTitle(held)}</h3>
       <div className="row">
         <label className="field">
-          <span>出售份数</span>
+          <span>{m.sellUnits}</span>
           <input inputMode="numeric" value={units} onChange={(e) => setUnits(Math.floor(Number(e.target.value)) || 0)} />
         </label>
         <label className="field">
-          <span>每份价格（USDT）</span>
-          <input inputMode="decimal" placeholder="例如 950" value={priceText} onChange={(e) => setPriceText(e.target.value)} />
+          <span>{m.sellPrice}</span>
+          <input inputMode="decimal" placeholder={m.pricePlaceholder} value={priceText} onChange={(e) => setPriceText(e.target.value)} />
         </label>
         <label className="field">
-          <span>挂单有效期</span>
+          <span>{m.duration}</span>
           <select value={days} onChange={(e) => setDays(Number(e.target.value) as (typeof DURATIONS)[number])}>
-            {DURATIONS.map((d) => <option key={d} value={d}>{d} 天</option>)}
+            {DURATIONS.map((d) => <option key={d} value={d}>{m.days(d)}</option>)}
           </select>
         </label>
       </div>
-      {"price" in parsed && <p className="muted" style={{ fontSize: ".84rem" }}>全部卖出可得 {formatUsdt(parsed.price * BigInt(units))} USDT</p>}
+      {"price" in parsed && <p className="muted" style={{ fontSize: ".84rem" }}>{m.proceeds(formatUsdt(parsed.price * BigInt(units)))}</p>}
       <button type="button" className="btn primary" style={{ marginTop: 8 }} disabled={"error" in parsed || running} onClick={list}>
-        挂单出售
+        {m.listBtn}
       </button>
       {"error" in parsed && priceText !== "" && <p className="muted" style={{ fontSize: ".8rem" }}>{parsed.error}</p>}
     </div>

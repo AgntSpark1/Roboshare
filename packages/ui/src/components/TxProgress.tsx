@@ -1,10 +1,12 @@
+"use client";
 import type { TxRun, TxStep } from "../tx";
 import { shortAddr } from "../format";
+import { useUiStrings } from "../i18n";
 
-const WORD = { idle: "等待", signing: "请在钱包中确认", pending: "等待区块确认", done: "已确认", error: "失败" } as const;
 
 /** Step list for a multi-transaction flow; the live region announces each change to screen readers. */
 export function TxProgress({ steps, run, explorer }: { steps: Pick<TxStep, "label">[]; run: TxRun; explorer?: string }) {
+  const WORD = useUiStrings().txState;
   return (
     <div className="txsteps" aria-live="polite">
       {steps.map((s, i) => {

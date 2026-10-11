@@ -2,9 +2,12 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { countdown, formatUsdt, type ProjectListItem } from "@roboshare/ui";
+import { useI18n } from "@/i18n/I18nProvider";
 import { projectCode } from "./ProjectCard";
 
 export function Hero({ featured }: { featured?: ProjectListItem }) {
+  const { t } = useI18n();
+  const h = t.hero;
   const stage = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const tags = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
@@ -30,44 +33,46 @@ export function Hero({ featured }: { featured?: ProjectListItem }) {
     <section className="hero">
       <div className="stage" ref={stage}>
         <canvas ref={canvas} id="car3d" aria-hidden="true" />
-        <div className="tag3d" ref={tags[0]} aria-hidden="true"><b>AUTO</b>自动驾驶</div>
-        <div className="tag3d" ref={tags[1]} aria-hidden="true"><b>ROBOTAXI</b>网约车运营</div>
-        <div className="tag3d" ref={tags[2]} aria-hidden="true"><b>USDT</b>按期领取</div>
+        <div className="tag3d" ref={tags[0]} aria-hidden="true"><b>AUTO</b>{h.tagAuto}</div>
+        <div className="tag3d" ref={tags[1]} aria-hidden="true"><b>ROBOTAXI</b>{h.tagRide}</div>
+        <div className="tag3d" ref={tags[2]} aria-hidden="true"><b>USDT</b>{h.tagPaid}</div>
       </div>
       <div className="shade" />
       <div className="scanline" />
       <span className="corner tl" /><span className="corner tr" /><span className="corner bl" /><span className="corner br" />
       <div className="wrap">
-        <div className="eyebrow" style={{ color: "var(--lidar)" }}>ROBOTAXI 收益份额 · USDT 结算</div>
+        <div className="eyebrow" style={{ color: "var(--lidar)" }}>{h.eyebrow}</div>
         <h1 style={{ marginTop: 14 }}>
-          <span className="word">把一辆</span> <span className="word" style={{ animationDelay: ".12s" }}><em>Robotaxi</em></span>
+          {h.h1[0] && <><span className="word">{h.h1[0]}</span>{" "}</>}
+          <span className="word" style={{ animationDelay: ".12s" }}><em>Robotaxi</em>{h.h1[1] && ` ${h.h1[1]}`}</span>
           <br />
-          <span className="word" style={{ animationDelay: ".24s" }}>拆成</span> <span className="word" style={{ animationDelay: ".36s" }}><em>100</em> 份</span>
+          {h.h1[2] && <><span className="word" style={{ animationDelay: ".24s" }}>{h.h1[2]}</span>{" "}</>}
+          <span className="word" style={{ animationDelay: ".36s" }}><em>100</em> {h.h1[3]}</span>
         </h1>
         <p className="lead">
-          按份认购自动驾驶网约车的运营收益，每期以 USDT 发到你的钱包，账目公开可查。
+          {h.lead}
         </p>
         <div className="cta">
           {featured ? (
-            <Link className="btn primary" href={`/projects/${featured.id}`}>立即认购 {projectCode(featured)}</Link>
+            <Link className="btn primary" href={`/projects/${featured.id}`}>{h.buyNow(projectCode(featured))}</Link>
           ) : (
-            <Link className="btn primary" href="/projects">查看车辆项目</Link>
+            <Link className="btn primary" href="/projects">{h.viewProjects}</Link>
           )}
-          {featured && <Link className="btn ghost" href="/projects">全部项目</Link>}
+          {featured && <Link className="btn ghost" href="/projects">{h.allProjects}</Link>}
         </div>
         {o && (
           <div className="hud">
             <div className="h">
-              <span className="eyebrow">每份</span>
+              <span className="eyebrow">{h.perUnit}</span>
               <div className="num">{formatUsdt(o.unitPrice)}<span className="muted" style={{ fontSize: ".8rem" }}> USDT</span></div>
             </div>
             <div className="h">
-              <span className="eyebrow">已认购</span>
-              <div className="num">{o.unitsSold}<span className="muted" style={{ fontSize: ".8rem" }}> / {o.maxUnits} 份</span></div>
+              <span className="eyebrow">{h.sold}</span>
+              <div className="num">{o.unitsSold}<span className="muted" style={{ fontSize: ".8rem" }}> / {t.units.n(o.maxUnits)}</span></div>
             </div>
             <div className="h">
-              <span className="eyebrow">剩余时间</span>
-              <div className="num mono" style={{ fontSize: "1.1rem" }}>{countdown(o.endAt)}</div>
+              <span className="eyebrow">{h.timeLeft}</span>
+              <div className="num mono" style={{ fontSize: "1.1rem" }}>{countdown(o.endAt, Date.now(), t.ui.days)}</div>
             </div>
           </div>
         )}
