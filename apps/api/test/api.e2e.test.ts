@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@roboshare/db";
-import { allocate, auditRegistryAbi, financialReportSchema, identityRegistryAbi, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
+import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
 import { createHmac, randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
@@ -647,19 +647,7 @@ describe("rate limiting", () => {
   });
 });
 
-describe("console operations (Safe queue, investor eligibility)", () => {
-  const IDENTITY = getAddress(ADDR(0x1d));
-  const COMPLIANCE_ROLE = keccak256(stringToHex("COMPLIANCE_AGENT_ROLE"));
-  const newcomer = privateKeyToAccount(generatePrivateKey());
-
-  beforeAll(async () => {
-    await prisma.contractDeployment.create({ data: { chainId: 31337, address: IDENTITY.toLowerCase(), kind: "IDENTITY_REGISTRY", deployedBlock: 1n } });
-    const opUser = (await prisma.wallet.findUniqueOrThrow({ where: { address: operator.address.toLowerCase() } })).userId;
-    await prisma.staffAccount.update({ where: { userId: opUser }, data: { roles: ["OPERATOR", "REVIEWER", "COMPLIANCE"] } });
-    await prisma.roleGrant.create({ data: { chainId: 31337, contract: ADDR(1), role: COMPLIANCE_ROLE, account: operator.address.toLowerCase(), active: true, eventId: crypto.randomUUID() } });
-    expect((await login(newcomer)).status).toBe(200);
-  });
-
+describe("console operations (Safe queue)", () => {
   it("queues governance proposals so owners confirm them in the console", async () => {
     const r = await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "queue test" }).expect(201);
     const id = r.body.proposal.queueId;
@@ -694,38 +682,5 @@ describe("console operations (Safe queue, investor eligibility)", () => {
     const hist = (await http().get("/api/v1/admin/safe-txs?status=all").set("Cookie", cookies.reviewer!).expect(200)).body.items;
     expect(hist.find((i: any) => i.id === b)).toMatchObject({ status: "EXECUTED", execTxHash: `0x${"ee".repeat(32)}`, safeNonce: 7 });
     expect(hist.find((i: any) => i.id === a)).toMatchObject({ status: "CANCELLED", closeReason: "duplicate" });
-  });
-
-  it("lists signed-in investors with their eligibility, hiding staff from the pending count", async () => {
-    const r = await http().get("/api/v1/admin/investors").set("Cookie", cookies.reviewer!).expect(200);
-    const by = (a: Address) => r.body.items.find((i: any) => i.wallet === a);
-    expect(by(investor.address)).toMatchObject({ status: "ELIGIBLE", staff: false });
-    expect(by(newcomer.address)).toMatchObject({ status: "NONE", staff: false, subscribedUnits: 0 });
-    expect(by(operator.address)).toMatchObject({ staff: true });
-    const pending = await http().get("/api/v1/admin/investors?filter=pending").set("Cookie", cookies.reviewer!).expect(200);
-    expect(pending.body.items.map((i: any) => i.wallet)).toContain(newcomer.address);
-    expect(pending.body.items.map((i: any) => i.wallet)).not.toContain(investor.address);
-    expect(pending.body.counts.pending).toBe(pending.body.items.length);
-  });
-
-  it("prepares a batch eligibility grant for the compliance wallet only", async () => {
-    await http().post("/api/v1/admin/eligibility").set("Cookie", cookies.reviewer!).send({ wallets: [newcomer.address] }).expect(403);
-    const r = await http().post("/api/v1/admin/eligibility").set("Cookie", cookies.operator!).send({ wallets: [newcomer.address, newcomer.address.toLowerCase(), other.address], days: 30 }).expect(201);
-    expect(r.body.tx.to).toBe(IDENTITY);
-    const call = decodeFunctionData({ abi: identityRegistryAbi, data: r.body.tx.data });
-    expect(call.functionName).toBe("batchSetEligibility");
-    const [wallets, classes, , expiries] = call.args as [Address[], number[], number[], bigint[]];
-    expect(wallets).toEqual([newcomer.address, other.address]); // de-duplicated
-    expect(classes).toEqual([1, 1]);
-    expect(Number(expiries[0])).toBeGreaterThan(Date.now() / 1000 + 29 * 86_400);
-    const none = await http().post("/api/v1/admin/eligibility").set("Cookie", cookies.operator!).send({ wallets: [other.address], days: 0 }).expect(201);
-    expect((decodeFunctionData({ abi: identityRegistryAbi, data: none.body.tx.data }).args as any)[3]).toEqual([0n]);
-    await http().post("/api/v1/admin/eligibility").set("Cookie", cookies.operator!).send({ wallets: Array.from({ length: 51 }, (_, i) => ADDR(i + 100)) }).expect(400);
-  });
-
-  it("prepares revoke only for an eligible wallet", async () => {
-    const r = await http().post("/api/v1/admin/eligibility/revoke").set("Cookie", cookies.operator!).send({ wallet: investor.address, reason: "test revoke" }).expect(201);
-    expect(decodeFunctionData({ abi: identityRegistryAbi, data: r.body.tx.data }).functionName).toBe("revoke");
-    await http().post("/api/v1/admin/eligibility/revoke").set("Cookie", cookies.operator!).send({ wallet: newcomer.address, reason: "test revoke" }).expect(404);
   });
 });

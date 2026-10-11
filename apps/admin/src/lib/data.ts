@@ -25,20 +25,6 @@ export const useProject = (id: string | undefined) =>
   useQuery({ queryKey: ["project", id], enabled: !!id, queryFn: () => api.get<ProjectDetail>(`/projects/${id}`) });
 export const useReports = (status?: string) =>
   useQuery({ queryKey: ["admin", "reports", status ?? "all"], queryFn: () => api.get<{ items: ReportRow[] }>(`/admin/reports${status ? `?status=${status}` : ""}`) });
-export interface InvestorRow {
-  wallet: `0x${string}`;
-  linkedAt: string;
-  staff: boolean;
-  status: "NONE" | "ELIGIBLE" | "EXPIRED" | "FROZEN";
-  expiresAt: string | null;
-  subscribedUnits: number;
-  heldUnits: number;
-  riskAcknowledged: boolean;
-}
-
-export const useInvestors = () =>
-  useQuery({ queryKey: ["admin", "investors"], refetchInterval: 15_000, queryFn: () => api.get<{ items: InvestorRow[]; counts: { total: number; pending: number }; maxBatch: number }>("/admin/investors") });
-
 export const useHealth = () =>
   useQuery({ queryKey: ["health"], refetchInterval: 10_000, queryFn: () => api.get<{ indexer: { lastBlock: string; updatedAt: string } | null }>("/health") });
 
