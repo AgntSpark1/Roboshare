@@ -218,7 +218,9 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         emit SubscriberExcluded(investor, reasonHash);
     }
 
-    function settle() external onlyRole(OPERATOR_ROLE) nonReentrant whenNotPaused {
+    /// @notice Anyone may settle once the offering is sold out, or once it has ended at or above the
+    /// minimum, so a full offering closes immediately without waiting for an operator (Charlene, 2026-10-11).
+    function settle() external nonReentrant whenNotPaused {
         if (!opened) revert NotOpen();
         if (outcome != Outcome.NONE) revert OfferingFinalized();
         bool ended = block.timestamp >= config.endTime;

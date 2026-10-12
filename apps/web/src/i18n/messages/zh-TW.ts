@@ -235,6 +235,9 @@ export const zhTW: Messages = {
     stepApproveUnlimited: "授權 USDT（不限額）",
     stepApprove: (amt) => `授權 ${amt} USDT`,
     stepBuy: (n) => `認購 ${n} 份`,
+    settleNote: "名額已滿，份額正在自動發放。",
+    settleButton: "完成募集，發放份額",
+    settleDone: "份額已發放",
     block: {
       notStarted: (when: string) => `${when} 開放認購`,
       gas: "錢包裡需要少量 BNB 支付網路手續費",
