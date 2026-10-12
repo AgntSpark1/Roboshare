@@ -82,7 +82,7 @@ const ui: UiStrings = {
 export const ja: Messages = {
   ui,
   meta: {
-    title: "RoboShare · Robotaxi があなたの代わりに USDT を稼ぐ",
+    title: "RoboShare · 自動運転の追い風に、1口から乗ろう",
     description: "自動運転配車サービスの車1台を100口に分割。1口から参加でき、車は毎日走り、収益は毎月決算・分配され、USDT をワンタップでウォレットに受け取れます。すべてオンチェーンで確認できます。",
   },
   layout: {
@@ -116,8 +116,8 @@ export const ja: Messages = {
     tagRide: "昼も夜も走行",
     tagPaid: "毎月分配",
     eyebrow: "ROBOTAXI 収益持分 · 1口から",
-    h1: ["*Robotaxi* が", "あなたの *USDT* を稼ぐ"],
-    lead: "自動運転配車サービスの車1台を100口に分割。1口から参加できます。車は毎日乗客を運び、収益は毎月決算・分配され、USDT をワンタップでウォレットに受け取れます。すべての支払いはオンチェーンで確認できます。",
+    h1: ["自動運転の追い風に", "*1口*から乗ろう"],
+    lead: "Robotaxi 1台を100口に分割し、誰でもこの新しいビジネスに参加できます。車は毎日走り、収益は毎月決算・分配され、USDT をワンタップでウォレットに受け取れます。すべての支払いはオンチェーンで確認できます。",
     buyNow: (code) => `${code} に申し込む`,
     viewProjects: "募集中の車両を見る",
     allProjects: "すべての車両",
@@ -323,7 +323,7 @@ export const ja: Messages = {
     copy: "リンクをコピー",
     copied: "コピーしました",
     share: "共有",
-    shareText: "Robotaxi があなたの代わりに USDT を稼ぐ。1口から一緒に参加しよう",
+    shareText: "自動運転の追い風に、1口から乗ろう。RoboShare で一緒に Robotaxi に投資しよう",
     saveQr: "QR コードを保存",
     qrAlt: "紹介用 QR コード",
     earningsTitle: "紹介収益",

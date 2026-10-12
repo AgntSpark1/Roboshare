@@ -82,7 +82,7 @@ const ui: UiStrings = {
 export const vi: Messages = {
   ui,
   meta: {
-    title: "RoboShare · Để Robotaxi kiếm USDT thay bạn",
+    title: "RoboShare · Đón sóng xe tự lái, chỉ từ 1 phần",
     description: "Một xe gọi tự lái được chia thành 100 phần, từ 1 phần là tham gia được. Xe chạy mỗi ngày, thu nhập được quyết toán hằng tháng, nhận USDT về ví bằng một chạm, minh bạch trên chuỗi.",
   },
   layout: {
@@ -116,8 +116,8 @@ export const vi: Messages = {
     tagRide: "Chạy ngày đêm",
     tagPaid: "Chia hằng tháng",
     eyebrow: "PHẦN THU NHẬP ROBOTAXI · TỪ 1 PHẦN",
-    h1: ["Để *Robotaxi*", "kiếm *USDT* thay bạn"],
-    lead: "Một xe gọi tự lái được chia thành 100 phần, từ 1 phần là tham gia được. Xe chở khách mỗi ngày, thu nhập được quyết toán hằng tháng, nhận USDT về ví bằng một chạm. Mọi khoản chi trả đều kiểm tra được trên chuỗi.",
+    h1: ["Đón sóng xe tự lái", "chỉ từ *1 phần*"],
+    lead: "Một chiếc Robotaxi được chia thành 100 phần, ai cũng có thể tham gia mô hình kinh doanh mới này. Xe chạy mỗi ngày, thu nhập được quyết toán hằng tháng, nhận USDT về ví bằng một chạm. Mọi khoản chi trả đều kiểm tra được trên chuỗi.",
     buyNow: (code) => `Đầu tư ${code}`,
     viewProjects: "Xem xe đang mở bán",
     allProjects: "Tất cả xe",
@@ -323,7 +323,7 @@ export const vi: Messages = {
     copy: "Sao chép liên kết",
     copied: "Đã sao chép",
     share: "Chia sẻ",
-    shareText: "Để Robotaxi kiếm USDT thay bạn. Từ 1 phần, cùng lên xe nào",
+    shareText: "Đón sóng xe tự lái, chỉ từ 1 phần. Cùng đầu tư Robotaxi trên RoboShare nhé",
     saveQr: "Lưu mã QR",
     qrAlt: "Mã QR giới thiệu",
     earningsTitle: "Thu nhập giới thiệu",

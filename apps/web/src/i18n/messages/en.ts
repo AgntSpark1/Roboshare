@@ -82,7 +82,7 @@ const ui: UiStrings = {
 export const en: Messages = {
   ui,
   meta: {
-    title: "RoboShare · Let a Robotaxi earn USDT for you",
+    title: "RoboShare · Get in on the self-driving boom from 1 unit",
     description: "One self-driving ride-hailing car, split into 100 units. Start with 1 unit. The car takes rides every day and income is settled monthly; claim your USDT share to your wallet in one tap, all on chain.",
   },
   layout: {
@@ -116,8 +116,8 @@ export const en: Messages = {
     tagRide: "Rides day and night",
     tagPaid: "Monthly payouts",
     eyebrow: "ROBOTAXI INCOME UNITS · FROM 1 UNIT",
-    h1: ["Let a *Robotaxi*", "earn *USDT* for you"],
-    lead: "One self-driving ride-hailing car, split into 100 units. Start with 1 unit. The car takes rides every day, and income is settled monthly: claim your USDT share to your wallet in one tap. Every payment is on chain.",
+    h1: ["The self-driving boom", "get in from *1 unit*"],
+    lead: "One Robotaxi, split into 100 units, so anyone can take part in this new business. The car takes rides every day; income is settled monthly and you claim your USDT share to your wallet in one tap. Every payment is on chain.",
     buyNow: (code) => `Invest in ${code}`,
     viewProjects: "See open cars",
     allProjects: "All cars",
@@ -323,7 +323,7 @@ export const en: Messages = {
     copy: "Copy link",
     copied: "Copied",
     share: "Share",
-    shareText: "Let a Robotaxi earn USDT for you. Start with 1 unit and get on board with me",
+    shareText: "The self-driving boom: get in from 1 unit. Invest in Robotaxis with me on RoboShare",
     saveQr: "Save QR code",
     qrAlt: "Referral QR code",
     earningsTitle: "Referral earnings",

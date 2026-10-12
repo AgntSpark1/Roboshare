@@ -82,7 +82,7 @@ const ui: UiStrings = {
 export const ko: Messages = {
   ui,
   meta: {
-    title: "RoboShare · Robotaxi가 당신 대신 USDT를 법니다",
+    title: "RoboShare · 자율주행 시대의 기회, 1좌로 탑승하세요",
     description: "자율주행 호출 차량 한 대를 100좌로 나눴습니다. 1좌부터 참여하세요. 차는 매일 운행하고, 수익은 매달 정산·분배되며 USDT를 한 번에 지갑으로 받을 수 있습니다. 모두 온체인에서 확인할 수 있습니다.",
   },
   layout: {
@@ -116,8 +116,8 @@ export const ko: Messages = {
     tagRide: "밤낮없이 운행",
     tagPaid: "매달 분배",
     eyebrow: "ROBOTAXI 수익 지분 · 1좌부터",
-    h1: ["*Robotaxi*가", "당신 대신 *USDT*를 법니다"],
-    lead: "자율주행 호출 차량 한 대를 100좌로 나눴습니다. 1좌부터 참여하세요. 차는 매일 손님을 태우고, 수익은 매달 정산·분배되며 USDT를 한 번에 지갑으로 받을 수 있습니다. 모든 지급 내역은 온체인에서 확인할 수 있습니다.",
+    h1: ["자율주행 시대의 기회", "*1좌*로 탑승하세요"],
+    lead: "Robotaxi 한 대를 100좌로 나눠 누구나 이 새로운 사업에 참여할 수 있습니다. 차는 매일 운행하고, 수익은 매달 정산·분배되며 USDT를 한 번에 지갑으로 받을 수 있습니다. 모든 지급 내역은 온체인에서 확인할 수 있습니다.",
     buyNow: (code) => `${code} 청약하기`,
     viewProjects: "모집 중인 차량 보기",
     allProjects: "전체 차량",
@@ -323,7 +323,7 @@ export const ko: Messages = {
     copy: "링크 복사",
     copied: "복사됨",
     share: "공유",
-    shareText: "Robotaxi가 당신 대신 USDT를 법니다. 1좌부터 함께 탑승해요",
+    shareText: "자율주행 시대의 기회, 1좌로 탑승하세요. RoboShare에서 함께 Robotaxi에 투자해요",
     saveQr: "QR 코드 저장",
     qrAlt: "추천 QR 코드",
     earningsTitle: "추천 수익",

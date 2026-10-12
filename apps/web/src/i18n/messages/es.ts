@@ -82,7 +82,7 @@ const ui: UiStrings = {
 export const es: Messages = {
   ui,
   meta: {
-    title: "RoboShare · Que un Robotaxi gane USDT por ti",
+    title: "RoboShare · Súbete al auge de la conducción autónoma desde 1 participación",
     description: "Un coche autónomo de transporte dividido en 100 participaciones. Empieza con 1. El coche hace viajes cada día y los ingresos se liquidan cada mes; cobra tus USDT en tu billetera con un toque, todo en cadena.",
   },
   layout: {
@@ -116,8 +116,8 @@ export const es: Messages = {
     tagRide: "Viajes día y noche",
     tagPaid: "Reparto mensual",
     eyebrow: "INGRESOS ROBOTAXI · DESDE 1 PARTICIPACIÓN",
-    h1: ["Que un *Robotaxi*", "gane *USDT* por ti"],
-    lead: "Un coche autónomo de transporte dividido en 100 participaciones. Empieza con 1. El coche lleva pasajeros cada día y los ingresos se liquidan cada mes; cobra tus USDT en tu billetera con un toque. Cada pago se puede verificar en cadena.",
+    h1: ["El auge autónomo", "súbete desde *1 participación*"],
+    lead: "Un Robotaxi dividido en 100 participaciones, para que cualquiera pueda entrar en este nuevo negocio. El coche hace viajes cada día; los ingresos se liquidan cada mes y cobras tus USDT en tu billetera con un toque. Cada pago se puede verificar en cadena.",
     buyNow: (code) => `Invertir en ${code}`,
     viewProjects: "Ver coches abiertos",
     allProjects: "Todos los coches",
@@ -323,7 +323,7 @@ export const es: Messages = {
     copy: "Copiar enlace",
     copied: "Copiado",
     share: "Compartir",
-    shareText: "Que un Robotaxi gane USDT por ti. Desde 1 participación, súbete conmigo",
+    shareText: "El auge autónomo: súbete desde 1 participación. Invierte en Robotaxis conmigo en RoboShare",
     saveQr: "Guardar código QR",
     qrAlt: "Código QR de referido",
     earningsTitle: "Ganancias por referidos",
