@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { blockReason, settleReady } from "@/components/SubscribePanel";
 
-const ok = { connected: true, signedIn: true, open: true, eligible: true, remaining: 40, units: 3, balance: 10_000n, cost: 1_500n, acknowledged: true };
+const ok = { connected: true, signedIn: true, open: true, frozen: false, remaining: 40, units: 3, balance: 10_000n, cost: 1_500n, acknowledged: true };
 
 describe("subscribe gating", () => {
-  it("allows a signed-in, eligible investor with funds who accepted the risks", () => {
+  it("allows a signed-in investor with funds who accepted the risks", () => {
     expect(blockReason(ok)).toBeNull();
   });
 
@@ -12,7 +12,7 @@ describe("subscribe gating", () => {
     expect(blockReason({ ...ok, open: false })).toBe("当前不在募集期");
     expect(blockReason({ ...ok, connected: false })).toBe("请先连接钱包");
     expect(blockReason({ ...ok, signedIn: false })).toBe("请先签名登录");
-    expect(blockReason({ ...ok, eligible: false })).toBe("你的钱包还未开通认购资格");
+    expect(blockReason({ ...ok, frozen: true })).toBe("该钱包已被冻结，暂时无法交易");
     expect(blockReason({ ...ok, remaining: 0 })).toMatch(/上限|售罄/);
     expect(blockReason({ ...ok, units: 41 })).toBe("可认购 1–40 份");
     expect(blockReason({ ...ok, balance: 1_000n })).toBe("USDT 余额不足");
@@ -24,8 +24,8 @@ describe("subscribe gating", () => {
     expect(blockReason({ ...ok, open: false, opensAt: "2026-10-12 03:06" })).toBe("2026-10-12 03:06 开放认购");
   });
 
-  it("does not block while eligibility or balance are still loading", () => {
-    expect(blockReason({ ...ok, eligible: undefined, balance: undefined })).toBeNull();
+  it("does not block while the freeze status or balance are still loading", () => {
+    expect(blockReason({ ...ok, frozen: undefined, balance: undefined })).toBeNull();
   });
 });
 

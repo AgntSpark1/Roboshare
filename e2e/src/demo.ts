@@ -11,7 +11,6 @@ const s = scenario(state);
 const A = state.addr;
 
 async function buy(who: Address, pid: `0x${string}`, units: number, price: bigint) {
-  await s.kyc(who);
   await s.mintUsdt(who, BigInt(units) * price + 5_000n * ONE);
   await s.send(who, { address: A.MockUSDT!, abi: erc20Abi as Abi, functionName: "approve", args: [A.SubscriptionRouter!, maxUint256] });
   await s.send(who, { address: A.SubscriptionRouter!, abi: subscriptionRouterAbi as Abi, functionName: "subscribe", args: [pid, units, BigInt(units) * price] });
@@ -43,7 +42,6 @@ await s.send(ROLES.reviewer, { address: distributor, abi: revenueDistributorAbi 
 // An open offering.
 const p1 = await s.openOffering({ slug: "rs-001", title: "星港 01 号", unitPrice: 520n * ONE, minUnits: 60, perWalletMax: 40, durationSec: 4 * 86_400 + 7 * 3600 });
 await buy(ROLES.bob, p1.pid, 23, 520n * ONE);
-await s.kyc(ROLES.alice);
 await s.mintUsdt(ROLES.alice, 30_000n * ONE);
 await s.indexed();
 

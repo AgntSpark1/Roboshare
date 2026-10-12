@@ -2,7 +2,7 @@ import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@roboshare/db";
 import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
-import { createHmac, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
@@ -31,7 +31,6 @@ const cfg: AppConfig = {
   chainId: 31337,
   sessionSecret: randomBytes(32).toString("hex"),
   siweDomain: "app.roboshare.test, admin.roboshare.test",
-  kycWebhookSecret: randomBytes(32).toString("hex"),
   assetRegistry: ADDR(0xa55e),
   auditRegistry: AUDIT_REGISTRY,
   paymentToken: USDT,
@@ -362,29 +361,6 @@ describe("admin", () => {
   });
 });
 
-describe("KYC webhook (TEST-ONLY mock provider)", () => {
-  const sign = (ts: string, body: string, secret = cfg.kycWebhookSecret!) =>
-    createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
-  const body = JSON.stringify({ eventId: `evt-${randomBytes(8).toString("hex")}`, caseRef: "case-1", wallet: investor.address, status: "APPROVED" });
-
-  it("accepts a signed event once", async () => {
-    const ts = String(Math.floor(Date.now() / 1000));
-    const post = () => http().post("/api/v1/webhooks/kyc/mock").set("Content-Type", "application/json").set("x-timestamp", ts).set("x-signature", sign(ts, body)).send(body);
-    await post().expect(202);
-    await post().expect(409);
-    const c = await prisma.complianceCase.findFirstOrThrow({ where: { providerRef: "case-1" } });
-    expect(c.status).toBe("APPROVED");
-  });
-
-  it("rejects bad signatures, stale timestamps and unknown providers", async () => {
-    const ts = String(Math.floor(Date.now() / 1000));
-    await http().post("/api/v1/webhooks/kyc/mock").set("Content-Type", "application/json").set("x-timestamp", ts).set("x-signature", sign(ts, body, "x".repeat(64))).send(body).expect(401);
-    const old = String(Math.floor(Date.now() / 1000) - 3600);
-    await http().post("/api/v1/webhooks/kyc/mock").set("Content-Type", "application/json").set("x-timestamp", old).set("x-signature", sign(old, body)).send(body).expect(401);
-    await http().post("/api/v1/webhooks/kyc/acme").set("Content-Type", "application/json").send(body).expect(404);
-  });
-});
-
 describe("staff step-up (TOTP)", () => {
   it("requires a recent authenticator code for admin routes", async () => {
     const r = await http().get("/api/v1/admin/roles").set("Cookie", cookies.operatorPlain!).expect(401);
@@ -450,7 +426,7 @@ describe("governance prepares (Safe, no timelock, never signed by the server)", 
     expect(bad.body.error.code).toBe("PROJECT_STATE_INVALID");
   });
 
-  it("checks subscriber eligibility before preparing settle", async () => {
+  it("blocks settle preparation while a frozen wallet is escrowed", async () => {
     await prisma.project.update({ where: { projectIdOnchain: PID2 }, data: { state: "OFFERING" } });
     await prisma.offering.create({
       data: {
@@ -458,17 +434,21 @@ describe("governance prepares (Safe, no timelock, never signed by the server)", 
         perWalletMax: 100, startAt: new Date(0), endAt: new Date(1), treasury: ADDR(0x7e).toLowerCase(), termsHash: keccak256(stringToHex("terms")), unitsSold: 70,
       },
     });
-    await prisma.eligibility.create({ data: { wallet: investor.address.toLowerCase(), status: "ELIGIBLE", expiresAt: new Date(Date.now() + 86_400_000), lastBlock: 1n } });
     await prisma.subscription.createMany({
       data: [
         { projectIdOnchain: PID2, wallet: investor.address.toLowerCase(), units: 60, amount: "1", status: "ESCROWED", lastTxHash: "0x1" },
         { projectIdOnchain: PID2, wallet: late.address.toLowerCase(), units: 10, amount: "1", status: "ESCROWED", lastTxHash: "0x2" },
       ],
     });
+    // No KYC: unregistered wallets do not block settlement, and any unfrozen wallet may invest.
+    await http().post(`/api/v1/admin/offerings/${PID2}/settle`).set("Cookie", cookies.operator!).expect(200);
+    const me = await http().get("/api/v1/me/eligibility").set("Cookie", cookies.investor!).expect(200);
+    expect(me.body).toEqual({ wallet: investor.address.toLowerCase(), frozen: false, eligibleNow: true });
+    await prisma.eligibility.create({ data: { wallet: late.address.toLowerCase(), status: "FROZEN", lastBlock: 1n } });
     const blocked = await http().post(`/api/v1/admin/offerings/${PID2}/settle`).set("Cookie", cookies.operator!).expect(409);
-    expect(blocked.body.error).toMatchObject({ code: "NOT_ELIGIBLE", details: { wallets: [late.address] } });
+    expect(blocked.body.error).toMatchObject({ code: "SUBSCRIBER_FROZEN", details: { wallets: [late.address] } });
 
-    const ex = await http().post(`/api/v1/admin/offerings/${PID2}/exclude`).set("Cookie", cookies.reviewer!).send({ wallet: late.address, reason: "KYC lapsed" }).expect(201);
+    const ex = await http().post(`/api/v1/admin/offerings/${PID2}/exclude`).set("Cookie", cookies.reviewer!).send({ wallet: late.address, reason: "stolen wallet" }).expect(201);
     expect(decodeFunctionData({ abi: offeringManagerAbi, data: ex.body.proposal.calls[0].data }).functionName).toBe("excludeSubscriber");
 
     await prisma.subscription.update({ where: { projectIdOnchain_wallet: { projectIdOnchain: PID2, wallet: late.address.toLowerCase() } }, data: { status: "REFUNDABLE" } });

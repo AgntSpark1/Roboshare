@@ -2,7 +2,6 @@ import { PrismaClient } from "@roboshare/db";
 import {
   assetRegistryAbi,
   auditRegistryAbi,
-  identityRegistryAbi,
   offeringManagerAbi,
   projectFactoryAbi,
   revenueDistributorAbi,
@@ -69,7 +68,7 @@ describe("monthly distribution autopilot on a local chain", () => {
     c = await startAnvil(18547);
     prisma = new PrismaClient();
     await resetDb(prisma);
-    const [, , operator, reviewer, , agent, , alice, bob, t] = c.accounts;
+    const [, , operator, reviewer, , , , alice, bob, t] = c.accounts;
     treasury = t!;
     usdt = c.addr.MockUSDT!;
     indexer = new Indexer(prisma, c.pub as any, {
@@ -84,7 +83,7 @@ describe("monthly distribution autopilot on a local chain", () => {
     await send(c, reviewer!, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "transition", args: [PID, 2, bytes32("ok")] });
     await asSafe(c, (safe) => send(c, safe, {
       address: c.addr.ProjectFactory!, abi: projectFactoryAbi, functionName: "deployProject",
-      args: [{ projectId: PID, name: "Autopilot Vehicle", symbol: "RSAP", allowedClassesMask: 2n, treasury }],
+      args: [{ projectId: PID, name: "Autopilot Vehicle", symbol: "RSAP", treasury }],
     }));
     const offering = (await c.pub.readContract({ address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "offeringOf", args: [PID] })) as Address;
     const start = (await c.pub.getBlock()).timestamp;
@@ -93,7 +92,6 @@ describe("monthly distribution autopilot on a local chain", () => {
       await send(c, safe, { address: offering, abi: offeringManagerAbi, functionName: "open" });
     });
     for (const [who, units] of [[alice!, 70], [bob!, 30]] as const) {
-      await send(c, agent!, { address: c.addr.IdentityRegistry!, abi: identityRegistryAbi, functionName: "setEligibility", args: [who, 1, 840, start + 365n * 86_400n, bytes32("kyc")] });
       await send(c, who, { address: usdt, abi: mintAbi, functionName: "mint", args: [who, BigInt(units) * UNIT_PRICE] });
       await send(c, who, { address: usdt, abi: erc20Abi, functionName: "approve", args: [c.addr.SubscriptionRouter!, 2n ** 256n - 1n] });
       await send(c, who, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "subscribe", args: [PID, units, BigInt(units) * UNIT_PRICE] });

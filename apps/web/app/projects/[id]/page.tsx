@@ -1,14 +1,15 @@
 "use client";
 import Link from "next/link";
 import { use } from "react";
-import { formatBps, formatDate, formatUsdt, OfferingProgress, shortAddr, StatePill, stateLabel } from "@roboshare/ui";
+import { formatBps, formatDate, formatUsdt, OfferingProgress, shortAddr, StatePill, stateLabel, type DailyRevenueItem } from "@roboshare/ui";
 import { CarArt } from "@/components/CarArt";
 import { projectCode } from "@/components/ProjectCard";
 import { MarketPanel } from "@/components/MarketPanel";
 import { SubscribePanel } from "@/components/SubscribePanel";
 import { explorer } from "@/env";
 import { useI18n } from "@/i18n/I18nProvider";
-import { useFinancials, useProject, useProjectDistributions } from "@/lib/data";
+import { useDailyRevenue, useFinancials, useProject, useProjectDistributions } from "@/lib/data";
+import { termLine } from "@/lib/term";
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -17,6 +18,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const q = useProject(id);
   const fin = useFinancials(id);
   const dist = useProjectDistributions(id);
+  const daily = useDailyRevenue(id);
 
   if (q.isLoading) return <section><div className="wrap"><p className="muted">{c.loading}</p></div></section>;
   if (q.error || !q.data)
@@ -31,6 +33,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const p = q.data;
   const code = projectCode({ slug: p.meta?.slug ?? null, id: p.id });
   const o = p.offering;
+  const term = termLine(p.term, t.projects.term);
   const link = (kind: "address" | "tx", v: string | null) =>
     v ? (explorer ? <a className="hash" href={`${explorer}/${kind}/${v}`} target="_blank" rel="noreferrer">{shortAddr(v, 8, 6)}</a> : <span className="hash">{shortAddr(v, 8, 6)}</span>) : "—";
 
@@ -49,6 +52,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               <StatePill state={p.state} />
             </div>
             <p className="muted">{p.meta?.summary ?? c.noSummary}</p>
+            {term && <p className="term-line" data-testid="term-line" style={{ marginTop: 8 }}>{term}</p>}
             <div className="facts">
               <div><span>{c.model}</span><b>{[p.meta?.make, p.meta?.model].filter(Boolean).join(" ") || "—"}</b></div>
               <div><span>{c.issuedCap}</span><b>{t.units.of(p.issuedUnits, p.authorizedUnits)}</b></div>
@@ -78,6 +82,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </aside>
           )}
         </div>
+
+        {daily.data?.items.length ? <DailyPanel items={daily.data.items} /> : null}
 
         {(p.state === "FUNDED" || p.state === "ACTIVE") && <MarketPanel p={p} />}
 
@@ -115,7 +121,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   <tbody>
                     {dist.data.items.map((b) => (
                       <tr key={b.batchId}>
-                        <td>{c.roundN(b.batchId)}</td>
+                        <td>{c.roundN(b.batchId)}{b.capitalReturn && <span className="tag-s ok-t">{c.capitalReturn}</span>}</td>
                         <td className="r">{formatUsdt(b.amount)}</td>
                       </tr>
                     ))}
@@ -158,5 +164,36 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         </details>
       </div>
     </section>
+  );
+}
+
+function DailyPanel({ items }: { items: DailyRevenueItem[] }) {
+  const c = useI18n().t.project;
+  const today = items[0]!;
+  const pending = (s: DailyRevenueItem["status"]) => (s === "PENDING" ? <span className="tag-s warn-t">{c.daily.pending}</span> : null);
+  return (
+    <div className="panel" style={{ marginTop: 24 }} data-testid="daily-revenue">
+      <h2 className="h3">{c.daily.title}</h2>
+      <div className="daily-today">
+        <span className="muted">{c.daily.today} · {today.day}</span>
+        <b className="num">{formatUsdt(today.net)} USDT</b>
+        {pending(today.status)}
+      </div>
+      <div className="table-wrap">
+        <table>
+          <caption className="sr-only">{c.daily.recent}</caption>
+          <thead><tr><th>{c.daily.date}</th><th className="r">{c.daily.income}</th><th className="r">{c.daily.rides}</th></tr></thead>
+          <tbody>
+            {items.slice(0, 7).map((d) => (
+              <tr key={d.day}>
+                <td>{d.day}{pending(d.status)}</td>
+                <td className="r">{formatUsdt(d.net)}</td>
+                <td className="r">{d.rides ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

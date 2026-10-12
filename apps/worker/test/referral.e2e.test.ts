@@ -4,7 +4,6 @@ import {
   assetRegistryAbi,
   auditRegistryAbi,
   buildReferralTree,
-  identityRegistryAbi,
   offeringManagerAbi,
   projectFactoryAbi,
   referralReward,
@@ -79,7 +78,7 @@ describe("referral rewards against a local chain", () => {
     await asSafe(c, (tl) =>
       send(c, tl, {
         address: c.addr.ProjectFactory!, abi: projectFactoryAbi, functionName: "deployProject",
-        args: [{ projectId: PID, name: "RoboShare Vehicle R", symbol: "RSVR", allowedClassesMask: 2n, treasury: A.treasury }],
+        args: [{ projectId: PID, name: "RoboShare Vehicle R", symbol: "RSVR", treasury: A.treasury }],
       }),
     );
     offering = (await c.pub.readContract({ address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "offeringOf", args: [PID] })) as Address;
@@ -92,9 +91,6 @@ describe("referral rewards against a local chain", () => {
       await send(c, tl, { address: offering, abi: offeringManagerAbi, functionName: "open" });
       await send(c, tl, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "setReferralTerms", args: [true, 2_000, 365n * 86_400n] });
     });
-    for (const who of [A.alice!, A.bob!, A.carol!, A.dave!]) {
-      await send(c, A.agent!, { address: c.addr.IdentityRegistry!, abi: identityRegistryAbi, functionName: "setEligibility", args: [who, 1, 840, now + 3_650n * 86_400n, bytes32("kyc")] });
-    }
     await subscribe(A.alice!, 40);
     await subscribe(A.bob!, 30, A.alice!);
     await subscribe(A.dave!, 10, A.bob!); // alice is dave's second level

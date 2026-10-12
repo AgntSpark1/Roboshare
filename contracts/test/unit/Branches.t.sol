@@ -35,7 +35,7 @@ contract ConstructorValidationTest is BaseTest {
 
     function test_RevertWhen_TokenOrOfferingMisconfigured() public {
         vm.expectRevert(RwaShareToken.ZeroValue.selector);
-        new RwaShareToken("n", "s", PID, assets, identity, 0, gov, pauser, gov);
+        new RwaShareToken("n", "s", bytes32(0), assets, identity, gov, pauser, gov);
         vm.expectRevert(OfferingManager.ZeroValue.selector);
         new OfferingManager(PID, assets, identity, IRwaShareToken(address(0)), address(router), gov, operator, pauser);
     }
@@ -100,13 +100,13 @@ contract ConstructorValidationTest is BaseTest {
         vm.prank(gov);
         vm.expectRevert(); // project not registered
         factory.deployProject(
-            ProjectFactory.ProjectParams({projectId: PID, name: "n", symbol: "s", allowedClassesMask: CLASS_MASK, treasury: treasury})
+            ProjectFactory.ProjectParams({projectId: PID, name: "n", symbol: "s", treasury: treasury})
         );
         _registerAndVerify();
         vm.prank(gov);
         vm.expectRevert(ProjectFactory.ZeroValue.selector);
         factory.deployProject(
-            ProjectFactory.ProjectParams({projectId: PID, name: "n", symbol: "s", allowedClassesMask: CLASS_MASK, treasury: address(0)})
+            ProjectFactory.ProjectParams({projectId: PID, name: "n", symbol: "s", treasury: address(0)})
         );
         vm.prank(gov);
         vm.expectRevert(ProjectFactory.ZeroValue.selector);
@@ -117,34 +117,20 @@ contract ConstructorValidationTest is BaseTest {
 }
 
 contract IdentityBranchesTest is BaseTest {
-    function test_BatchValidation() public {
-        address[] memory w = new address[](2);
-        uint16[] memory c = new uint16[](1);
-        vm.prank(agent);
-        vm.expectRevert(IdentityRegistry.LengthMismatch.selector);
-        identity.batchSetEligibility(w, c, new uint16[](2), new uint64[](2), new bytes32[](2));
-        vm.prank(agent);
-        vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.BatchTooLarge.selector, 51));
-        identity.batchSetEligibility(new address[](51), new uint16[](51), new uint16[](51), new uint64[](51), new bytes32[](51));
-    }
-
-    function test_FrozenWalletCannotBeRevokedOrUnfrozenTwice() public {
+    function test_FrozenWalletCannotBeFrozenOrUnfrozenTwice() public {
         address w = makeAddr("w");
         vm.startPrank(agent);
         vm.expectRevert(IdentityRegistry.ZeroAddress.selector);
         identity.freeze(address(0), "X");
         identity.freeze(w, "X");
         vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.WalletIsFrozen.selector, w));
-        identity.revoke(w, "X");
+        identity.freeze(w, "X");
         vm.stopPrank();
         vm.prank(gov);
         identity.unfreeze(w);
         vm.prank(gov);
         vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.WalletNotFrozen.selector, w));
         identity.unfreeze(w);
-        vm.prank(agent);
-        vm.expectRevert(IdentityRegistry.ZeroAddress.selector);
-        identity.setEligibility(address(0), 1, 840, uint64(block.timestamp + 1 days), "r");
     }
 }
 
@@ -316,13 +302,11 @@ contract TokenBranchesTest is BaseTest {
     function test_CanTransferReasons() public {
         (bool ok, bytes32 why) = token.canTransfer(alice, bob, 0);
         assertEq(why, token.REASON_ZERO_AMOUNT());
+        _freeze(bob);
         (ok, why) = token.canTransfer(alice, bob, 1);
-        assertEq(why, token.REASON_RECEIVER_NOT_ELIGIBLE());
-        vm.prank(agent);
-        identity.setEligibility(bob, 2, 840, uint64(block.timestamp + 1 days), "r"); // class 2 not allowed
-        (ok, why) = token.canTransfer(alice, bob, 1);
-        assertEq(why, token.REASON_CLASS());
-        _makeEligible(bob);
+        assertEq(why, token.REASON_RECEIVER_FROZEN());
+        vm.prank(gov);
+        identity.unfreeze(bob);
         (ok, why) = token.canTransfer(alice, bob, 101);
         assertEq(why, token.REASON_BALANCE());
         (ok, why) = token.canTransfer(alice, bob, 1);
@@ -350,7 +334,7 @@ contract TokenBranchesTest is BaseTest {
         vm.prank(address(factory));
         vm.expectRevert(RwaShareToken.MinterAlreadyBound.selector);
         token.bindMinter(address(1));
-        RwaShareToken fresh = new RwaShareToken("n", "s", PID, assets, identity, CLASS_MASK, gov, pauser, address(this));
+        RwaShareToken fresh = new RwaShareToken("n", "s", PID, assets, identity, gov, pauser, address(this));
         vm.expectRevert(RwaShareToken.ZeroValue.selector);
         fresh.bindMinter(address(0));
     }
@@ -420,10 +404,9 @@ contract OfferingBranchesTest is BaseTest {
         offering.subscribeFor(alice, 1, 1);
         vm.stopPrank();
 
-        vm.prank(agent);
-        identity.setEligibility(alice, 2, 840, uint64(block.timestamp + 1 days), "r"); // class not allowed
+        _freeze(alice);
         vm.prank(address(router));
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OfferingManager.InvestorFrozen.selector, alice));
         offering.subscribeFor(alice, 1, UNIT_PRICE);
     }
 
@@ -435,7 +418,6 @@ contract OfferingBranchesTest is BaseTest {
 
     function test_ExcludedWalletCannotSubscribeAgain() public {
         _openOffering(10);
-        _makeEligible(alice);
         _subscribe(alice, 5);
         vm.prank(gov);
         offering.excludeSubscriber(alice, REASON);

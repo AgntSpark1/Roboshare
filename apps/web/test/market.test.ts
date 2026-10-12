@@ -2,22 +2,22 @@ import { describe, expect, it } from "vitest";
 import { buyBlockReason, listingStatus, sellInput } from "@/components/MarketPanel";
 import { activeListings, browseListings, premiumPct, type MarketListing } from "@/lib/market";
 
-const ok = { eligible: true, available: 5, units: 2, balance: 10_000n, cost: 1_800n, acknowledged: true };
+const ok = { frozen: false, available: 5, units: 2, balance: 10_000n, cost: 1_800n, acknowledged: true };
 
 describe("market buy gating", () => {
-  it("allows an eligible buyer with funds who accepted the risks", () => {
+  it("allows an unfrozen buyer with funds who accepted the risks", () => {
     expect(buyBlockReason(ok)).toBeNull();
   });
 
   it("explains the first thing to fix, in order", () => {
-    expect(buyBlockReason({ ...ok, eligible: false })).toBe("你的钱包还未开通认购资格");
+    expect(buyBlockReason({ ...ok, frozen: true })).toBe("该钱包已被冻结，暂时无法交易");
     expect(buyBlockReason({ ...ok, units: 6 })).toBe("可买 1–5 份");
     expect(buyBlockReason({ ...ok, balance: 1_000n })).toBe("USDT 余额不足");
     expect(buyBlockReason({ ...ok, acknowledged: false })).toBe("请先勾选确认");
   });
 
-  it("does not block while eligibility or balance are still loading", () => {
-    expect(buyBlockReason({ ...ok, eligible: undefined, balance: undefined })).toBeNull();
+  it("does not block while the freeze status or balance are still loading", () => {
+    expect(buyBlockReason({ ...ok, frozen: undefined, balance: undefined })).toBeNull();
   });
 });
 

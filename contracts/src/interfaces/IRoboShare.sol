@@ -52,9 +52,7 @@ struct AuditRecord {
 }
 
 interface IIdentityRegistry {
-    function isEligible(address wallet) external view returns (bool);
     function isFrozen(address wallet) external view returns (bool);
-    function classOf(address wallet) external view returns (uint16);
 }
 
 interface IAssetRegistry {
@@ -75,7 +73,6 @@ interface IAuditRegistry {
 interface IRwaShareToken {
     function mint(address to, uint256 units) external;
     function bindMinter(address minter) external;
-    function isClassAllowed(uint16 investorClass) external view returns (bool);
     function balanceOfAt(address account, uint256 blockNumber) external view returns (uint256);
     function totalSupplyAt(uint256 blockNumber) external view returns (uint256);
     function CAP() external view returns (uint256);

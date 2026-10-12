@@ -99,3 +99,7 @@ footer .links{display:inline-flex;gap:14px;flex-wrap:wrap}
 .mkt-price em{font-style:normal;font-size:.74rem;padding:2px 8px;border-radius:999px;background:var(--panel2)}
 .mkt-price em.down{color:var(--good)} .mkt-price em.up{color:var(--warn)}
 .home-mkt{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.term-line{font-size:.78rem;color:var(--mute);line-height:1.5;margin:0}
+.tag-s{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:999px;border:1px solid currentColor;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.daily-today{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin:6px 0 12px}
+.daily-today .num{font-size:1.6rem}

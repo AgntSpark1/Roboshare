@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBalance, readContract } from "@wagmi/core";
 import { erc20Abi, type Address } from "viem";
 import { subscriptionRouterAbi } from "@roboshare/shared";
-import { api, contractOf, useSession, useWalletConfig, type ContractsResponse, type ProjectDetail, type ProjectListItem } from "@roboshare/ui";
+import { api, contractOf, useSession, useWalletConfig, type ContractsResponse, type DailyRevenueItem, type ProjectDetail, type ProjectListItem } from "@roboshare/ui";
 
 export function useProjects() {
   return useQuery({ queryKey: ["projects"], queryFn: () => api.get<{ items: ProjectListItem[] }>("/projects") });
@@ -37,11 +37,23 @@ export interface BatchItem {
   totalNet: string;
   totalFee: string;
   snapshotBlock: string;
+  /** Sale proceeds paid back at the end of the term, not monthly profit. */
+  capitalReturn?: boolean;
   chain: { txHash: string | null };
 }
 
 export function useProjectDistributions(id: string) {
   return useQuery({ queryKey: ["distributions", id], queryFn: () => api.get<{ items: BatchItem[] }>(`/projects/${id}/distributions`) });
+}
+
+/** Last `days` days of operations, newest first. */
+export function useDailyRevenue(id: string, days = 7) {
+  return useQuery({
+    queryKey: ["daily-revenue", id, days],
+    queryFn: () => api.get<{ items: DailyRevenueItem[] }>(`/projects/${id}/daily-revenue?days=${days}`),
+    enabled: /^0x[0-9a-fA-F]{64}$/.test(id),
+    retry: false,
+  });
 }
 
 export function useHealth() {
@@ -88,15 +100,16 @@ export function useUsdtState(owner: Address | undefined) {
   });
 }
 
-export interface Eligibility {
-  status: string;
+/** There is no KYC: any wallet may invest unless it is on the on-chain freeze list. */
+export interface FreezeStatus {
+  wallet: string;
+  frozen: boolean;
   eligibleNow: boolean;
-  expiresAt: string | null;
 }
 
-export function useEligibility() {
+export function useFreezeStatus() {
   const { me } = useSession();
-  return useQuery({ queryKey: ["me", "eligibility", me?.wallet], enabled: !!me, queryFn: () => api.get<Eligibility>("/me/eligibility") });
+  return useQuery({ queryKey: ["me", "eligibility", me?.wallet], enabled: !!me, queryFn: () => api.get<FreezeStatus>("/me/eligibility") });
 }
 
 export interface MySubscription {

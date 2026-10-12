@@ -22,8 +22,9 @@ export interface TxRun {
 
 /** Contract custom errors an investor can run into, grouped by what we tell them. Anything else shows its raw name. */
 const CONTRACT_ERROR_KIND: Record<string, keyof ContractErrorStrings> = {
-  NotEligible: "ineligible",
-  SubscriberIneligible: "ineligible",
+  InvestorFrozen: "frozen",
+  SubscriberFrozen: "frozen",
+  ReceiverFrozen: "frozen",
   WalletIsFrozen: "frozen",
   HolderFrozen: "frozen",
   SenderFrozen: "frozen",
