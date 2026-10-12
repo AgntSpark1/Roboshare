@@ -1,6 +1,7 @@
 import { Module, type DynamicModule, type MiddlewareConsumer, type NestModule } from "@nestjs/common";
 import { AdminController } from "./admin/admin.controller.js";
 import { GovernanceController } from "./admin/governance.controller.js";
+import { OpsController } from "./admin/ops.controller.js";
 import { AuthController } from "./auth/auth.controller.js";
 import { InvestorGuard, RoleGuard } from "./auth/guards.js";
 import { IdempotencyInterceptor } from "./common/idempotency.js";
@@ -18,13 +19,13 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(RateLimitMiddleware)
-      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, MeReferralController, AdminReferralController);
+      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, MeReferralController, AdminReferralController);
   }
 
   static forRoot(cfg: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, MeReferralController, AdminReferralController],
+      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, MeReferralController, AdminReferralController],
       providers: [
         { provide: APP_CONFIG, useValue: cfg },
         { provide: REDIS, useFactory: () => createRedis(cfg.redisUrl) },

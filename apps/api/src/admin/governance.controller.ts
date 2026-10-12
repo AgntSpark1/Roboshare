@@ -20,7 +20,7 @@ import { PrismaService } from "../common/prisma.service.js";
 import { lc, plain } from "../common/serialize.js";
 import { ZodPipe } from "../common/zod.pipe.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
-import { call, prepare, viaSafe } from "./prepare.js";
+import { call, prepare, queueSafe, viaSafe } from "./prepare.js";
 
 const bytes32 = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 const address = z.string().refine((v) => isAddress(v), "invalid address");
@@ -71,10 +71,10 @@ export class GovernanceController {
       termsHash: body.termsHash as Hex,
     };
     const offering = getAddress(p.offeringAddress);
-    const proposal = viaSafe(this.cfg.chainId, this.safe(), [
+    const proposal = await this.queue(req, viaSafe(this.cfg.chainId, this.safe(), [
       call(offering, offeringManagerAbi, "configure", [cfg]),
       call(offering, offeringManagerAbi, "open", []),
-    ], `configure and open offering ${id}`);
+    ], `configure and open offering ${id}`));
     await this.audit(req, "OFFERING_PROPOSE", "project", id, body);
     return plain({ proposal });
   }
@@ -104,9 +104,9 @@ export class GovernanceController {
     const p = await this.project(id);
     const sub = await this.prisma.subscription.findUnique({ where: { projectIdOnchain_wallet: { projectIdOnchain: id, wallet: lc(body.wallet) } } });
     if (!sub || sub.status !== "ESCROWED") throw notFound("escrowed subscription");
-    const proposal = viaSafe(this.cfg.chainId, this.safe(), [
+    const proposal = await this.queue(req, viaSafe(this.cfg.chainId, this.safe(), [
       call(getAddress(p.offeringAddress!), offeringManagerAbi, "excludeSubscriber", [getAddress(body.wallet), keccak256(stringToHex(body.reason))]),
-    ], `exclude ${body.wallet} from offering ${id}`);
+    ], `exclude ${body.wallet} from offering ${id}`));
     await this.audit(req, "OFFERING_EXCLUDE_PROPOSE", "project", id, body);
     return plain({ proposal });
   }
@@ -121,7 +121,7 @@ export class GovernanceController {
     if (REVIEWER_DIRECT.has(body.to) && req.staffRoles?.includes("REVIEWER")) {
       return { tx: prepare(this.cfg.chainId, registry, assetRegistryAbi, "transition", args, `Move project to ${body.to} (reviewer wallet, not the registrant)`) };
     }
-    const proposal = viaSafe(this.cfg.chainId, this.safe(), [call(registry, assetRegistryAbi, "transition", args)], `move project ${id} to ${body.to}`);
+    const proposal = await this.queue(req, viaSafe(this.cfg.chainId, this.safe(), [call(registry, assetRegistryAbi, "transition", args)], `move project ${id} to ${body.to}`));
     return plain({ proposal });
   }
 
@@ -179,6 +179,10 @@ export class GovernanceController {
     const p = await this.prisma.project.findUnique({ where: { projectIdOnchain: id } }).catch(() => null);
     if (!p) throw notFound("project");
     return p;
+  }
+
+  private queue(req: AuthedRequest, proposal: ReturnType<typeof viaSafe>) {
+    return queueSafe(this.prisma, proposal, req.session!.wallet);
   }
 
   private safe(): Address {

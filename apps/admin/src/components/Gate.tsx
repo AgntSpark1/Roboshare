@@ -14,6 +14,7 @@ const NAV: { href: string; label: string; group: string }[] = [
   { href: "/reports", label: "财务报告", group: "资金" },
   { href: "/distributions", label: "分配批次", group: "资金" },
   { href: "/referrals", label: "邀请奖励", group: "资金" },
+  { href: "/safe", label: "多签待签", group: "治理" },
   { href: "/governance", label: "治理提案", group: "治理" },
   { href: "/roles", label: "角色与权限", group: "治理" },
   { href: "/audit", label: "对账与审计日志", group: "治理" },

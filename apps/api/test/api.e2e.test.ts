@@ -626,3 +626,41 @@ describe("rate limiting", () => {
     }
   });
 });
+
+describe("console operations (Safe queue)", () => {
+  it("queues governance proposals so owners confirm them in the console", async () => {
+    const r = await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "queue test" }).expect(201);
+    const id = r.body.proposal.queueId;
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    const list = await http().get("/api/v1/admin/safe-txs").set("Cookie", cookies.operator!).expect(200);
+    const row = list.body.items.find((i: any) => i.id === id);
+    expect(row).toMatchObject({ status: "PENDING", safeNonce: null, safe: SAFE.toLowerCase(), to: ADDR(0xa55e).toLowerCase(), operation: 0 });
+    expect(row.calls).toHaveLength(1);
+  });
+
+  it("fixes each nonce once and never gives two pending transactions the same one", async () => {
+    const mk = async () => (await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "nonce test" }).expect(201)).body.proposal.queueId as string;
+    const a = await mk();
+    const b = await mk();
+    await http().post(`/api/v1/admin/safe-txs/${a}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(200);
+    // idempotent for the same value, refused for another
+    await http().post(`/api/v1/admin/safe-txs/${a}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(200);
+    expect((await http().post(`/api/v1/admin/safe-txs/${a}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 8 }).expect(409)).body.error.code).toBe("CONFLICT");
+    await http().post(`/api/v1/admin/safe-txs/${b}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(409);
+    await http().post(`/api/v1/admin/safe-txs/${b}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 8 }).expect(200);
+
+    // Cancelling a numbered transaction frees the later nonces so the queue never has a gap.
+    await http().post(`/api/v1/admin/safe-txs/${a}/cancel`).set("Cookie", cookies.reviewer!).send({ reason: "duplicate" }).expect(200);
+    const after = (await http().get("/api/v1/admin/safe-txs").set("Cookie", cookies.reviewer!).expect(200)).body.items;
+    expect(after.find((i: any) => i.id === a)).toBeUndefined();
+    expect(after.find((i: any) => i.id === b).safeNonce).toBeNull();
+
+    await http().post(`/api/v1/admin/safe-txs/${b}/executed`).set("Cookie", cookies.reviewer!).send({ txHash: `0x${"ee".repeat(32)}` }).expect(409);
+    await http().post(`/api/v1/admin/safe-txs/${b}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(200);
+    await http().post(`/api/v1/admin/safe-txs/${b}/executed`).set("Cookie", cookies.reviewer!).send({ txHash: `0x${"ee".repeat(32)}` }).expect(200);
+    await http().post(`/api/v1/admin/safe-txs/${b}/cancel`).set("Cookie", cookies.reviewer!).send({ reason: "too late" }).expect(409);
+    const hist = (await http().get("/api/v1/admin/safe-txs?status=all").set("Cookie", cookies.reviewer!).expect(200)).body.items;
+    expect(hist.find((i: any) => i.id === b)).toMatchObject({ status: "EXECUTED", execTxHash: `0x${"ee".repeat(32)}`, safeNonce: 7 });
+    expect(hist.find((i: any) => i.id === a)).toMatchObject({ status: "CANCELLED", closeReason: "duplicate" });
+  });
+});
