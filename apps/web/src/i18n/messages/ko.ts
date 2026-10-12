@@ -100,6 +100,8 @@ export const ko: Messages = {
     tabProjects: "프로젝트",
     tabPortfolio: "자산",
     referral: "추천 센터",
+    market: "양도 마켓",
+    tabMarket: "마켓",
     tabReferral: "추천",
     homeAria: "RoboShare 홈",
     main: "주 메뉴",

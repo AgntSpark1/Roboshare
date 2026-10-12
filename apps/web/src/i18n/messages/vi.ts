@@ -100,6 +100,8 @@ export const vi: Messages = {
     tabProjects: "Dự án",
     tabPortfolio: "Tài sản",
     referral: "Giới thiệu",
+    market: "Chợ chuyển nhượng",
+    tabMarket: "Chợ",
     tabReferral: "Giới thiệu",
     homeAria: "Trang chủ RoboShare",
     main: "Điều hướng chính",

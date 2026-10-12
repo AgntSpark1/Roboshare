@@ -100,6 +100,8 @@ export const id: Messages = {
     tabProjects: "Proyek",
     tabPortfolio: "Aset",
     referral: "Referal",
+    market: "Pasar transfer",
+    tabMarket: "Pasar",
     tabReferral: "Referal",
     homeAria: "Beranda RoboShare",
     main: "Navigasi utama",

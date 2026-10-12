@@ -100,6 +100,8 @@ export const zhTW: Messages = {
     tabProjects: "項目",
     tabPortfolio: "資產",
     referral: "推廣中心",
+    market: "轉讓市場",
+    tabMarket: "市場",
     tabReferral: "推廣",
     homeAria: "RoboShare 首頁",
     main: "主導覽",

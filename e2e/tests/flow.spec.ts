@@ -203,7 +203,7 @@ test("investor lists units for early exit and another investor buys them", async
 
   // Seller: from the portfolio's 转让 link straight into the market's sell form.
   const seller = pages.alice!;
-  await seller.getByRole("link", { name: "转让" }).first().click();
+  await seller.getByRole("link", { name: "转让", exact: true }).first().click();
   await expect(seller.getByRole("heading", { name: "转让市场" })).toBeVisible();
   const sell = seller.getByRole("dialog", { name: "我要卖" });
   await sell.getByLabel("出售份数").fill("10");

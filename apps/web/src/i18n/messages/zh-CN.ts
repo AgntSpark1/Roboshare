@@ -22,6 +22,8 @@ export const zhCN = {
     tabProjects: "项目",
     tabPortfolio: "资产",
     referral: "推广中心",
+    market: "转让市场",
+    tabMarket: "市场",
     tabReferral: "推广",
     homeAria: "RoboShare 首页",
     main: "主导航",
