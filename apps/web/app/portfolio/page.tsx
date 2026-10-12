@@ -133,7 +133,7 @@ function Dashboard() {
                     <h3 className="h4"><Link href={`/projects/${h.projectId}`}>{name(h.projectId)}</Link></h3>
                     <small>{stateLabel(project(h.projectId)?.state ?? "", t.ui.states)} · {c.shareOfIssued(formatBps(h.shareBps))}</small>
                     {["FUNDED", "ACTIVE"].includes(project(h.projectId)?.state ?? "") && (
-                      <small> · <Link href={`/projects/${h.projectId}#market`} style={{ color: "var(--amber)" }}>{c.transfer}</Link></small>
+                      <small> · <Link href={`/market?sell=${h.projectId}`} style={{ color: "var(--amber)" }}>{c.transfer}</Link></small>
                     )}
                   </div>
                   <div className="r"><b className="num">{t.units.n(h.units)}</b><br /><small>{c.cost} {h.costBasis ? formatUsdt(h.costBasis) : "—"}</small></div>

@@ -166,6 +166,56 @@ export class PublicController {
     });
   }
 
+  /**
+   * Completed resale-market trades (ShareMarket Purchased events), newest first, plus a per-project
+   * reference: last traded price and 30-day activity. Listings themselves are read from the chain.
+   */
+  @Get("market/trades")
+  async marketTrades(@Query("projectId") projectId?: string) {
+    if (projectId !== undefined && !PROJECT_ID.test(projectId)) throw new ApiError(400, "VALIDATION_FAILED", "projectId must be a 32-byte hex string");
+    const markets = await this.prisma.contractDeployment.findMany({ where: { chainId: this.cfg.chainId, kind: "SHARE_MARKET" } });
+    if (markets.length === 0) return { items: [], stats: [] };
+    const events = await this.prisma.chainEvent.findMany({
+      where: {
+        chainId: this.cfg.chainId,
+        name: "Purchased",
+        address: { in: markets.map((m) => m.address) },
+        ...(projectId ? { args: { path: ["projectId"], equals: projectId.toLowerCase() } } : {}),
+      },
+      orderBy: [{ blockNumber: "desc" }, { logIndex: "desc" }],
+      take: 1000,
+    });
+    const blocks = await this.prisma.chainBlock.findMany({
+      where: { chainId: this.cfg.chainId, number: { in: [...new Set(events.map((e) => e.blockNumber))] } },
+    });
+    const at = new Map(blocks.map((b) => [b.number, b.timestamp]));
+    const trades = events.map((e) => {
+      const a = e.args as Record<string, string>;
+      return {
+        projectId: a.projectId!.toLowerCase(),
+        listingId: a.listingId,
+        buyer: a.buyer,
+        seller: a.seller,
+        units: Number(a.units),
+        pricePerUnit: a.pricePerUnit,
+        cost: a.cost,
+        at: at.get(e.blockNumber) ?? null,
+        chain: { chainId: e.chainId, txHash: e.txHash, blockNumber: e.blockNumber, confirmed: true },
+      };
+    });
+    const since = Date.now() - 30 * 86_400_000;
+    const stats = new Map<string, { projectId: string; lastPrice: string; lastAt: Date | null; trades30d: number; units30d: number }>();
+    for (const t of trades) {
+      const s = stats.get(t.projectId) ?? { projectId: t.projectId, lastPrice: t.pricePerUnit!, lastAt: t.at, trades30d: 0, units30d: 0 };
+      if (t.at && t.at.getTime() >= since) {
+        s.trades30d += 1;
+        s.units30d += t.units;
+      }
+      stats.set(t.projectId, s);
+    }
+    return plain({ items: trades.slice(0, 50), stats: [...stats.values()] });
+  }
+
   /** Phase 5: read-only Aave V3 (BNB Chain) market data. Informational only; RoboShare never deposits. */
   @Get("aave/markets")
   async aaveMarkets() {

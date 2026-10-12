@@ -73,6 +73,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               <p className="muted" style={{ fontSize: ".84rem" }}>
                 {p.state === "ACTIVE" ? c.activeNote : c.closedNote}
               </p>
+              {(p.state === "FUNDED" || p.state === "ACTIVE") && <Link className="btn primary" href={`/market?project=${p.id}`}>{t.p2p.goMarket}</Link>}
               <Link className="btn ghost" href="/portfolio">{c.viewPortfolio}</Link>
             </aside>
           )}
