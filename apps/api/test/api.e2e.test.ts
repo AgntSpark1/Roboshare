@@ -611,6 +611,41 @@ describe("referrals", () => {
   });
 });
 
+describe("resale market", () => {
+  it("lists trades from the market newest first with a per-project reference price", async () => {
+    const market = ADDR(0x3a7).toLowerCase();
+    const OTHER_PID = keccak256(stringToHex("api-project-2"));
+    const now = new Date();
+    await prisma.contractDeployment.create({ data: { chainId: 31337, address: market, kind: "SHARE_MARKET", deployedBlock: 1n } });
+    await prisma.chainBlock.createMany({
+      data: [
+        { chainId: 31337, number: 900n, hash: "0x900", timestamp: new Date(now.getTime() - 40 * 86_400_000) },
+        { chainId: 31337, number: 901n, hash: "0x901", timestamp: now },
+      ],
+      skipDuplicates: true,
+    });
+    const ev = (block: bigint, i: number, pid: string, units: string, price: string, address = market) => ({
+      chainId: 31337, blockNumber: block, blockHash: `0x${block}`, txHash: `0xfeed${i}`, logIndex: 0, address, name: "Purchased",
+      args: { listingId: String(i), projectId: pid, buyer: other.address, seller: investor.address, units, pricePerUnit: price, cost: String(BigInt(units) * BigInt(price)) },
+    });
+    await prisma.chainEvent.createMany({
+      data: [
+        ev(900n, 1, PID, "2", (950n * ONE).toString()),
+        ev(901n, 2, PID, "3", (980n * ONE).toString()),
+        ev(901n, 3, OTHER_PID, "1", (1000n * ONE).toString()),
+        // a Purchased-named event from some other contract is ignored
+        ev(901n, 4, PID, "9", "1", ADDR(0xbad).toLowerCase()),
+      ].map((e, i) => ({ ...e, logIndex: i })),
+    });
+    const all = await http().get("/api/v1/market/trades").expect(200);
+    expect(all.body.items.map((t: any) => t.chain.txHash)).toEqual(["0xfeed3", "0xfeed2", "0xfeed1"]);
+    const one = await http().get(`/api/v1/market/trades?projectId=${PID}`).expect(200);
+    expect(one.body.items).toHaveLength(2);
+    expect(one.body.stats).toEqual([expect.objectContaining({ projectId: PID, lastPrice: (980n * ONE).toString(), trades30d: 1, units30d: 3 })]);
+    await http().get("/api/v1/market/trades?projectId=nope").expect(400);
+  });
+});
+
 describe("rate limiting", () => {
   it("returns 429 past the per-minute limit", async () => {
     const strict = await createApp({ ...cfg, rateLimitPerMinute: 3 });

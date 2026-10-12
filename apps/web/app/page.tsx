@@ -8,6 +8,7 @@ import { ProjectCard } from "@/components/ProjectCard";
 import { WhitepaperBand } from "@/components/Whitepaper";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useProjects } from "@/lib/data";
+import { browseListings, useAllListings, useMarketAddress } from "@/lib/market";
 
 const SAMPLE_D = 880n * 10n ** 18n; // illustrative distributable profit for the calculator only
 
@@ -38,6 +39,8 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      <MarketBand />
 
       <section style={{ paddingTop: 0 }}>
         <div className="wrap">
@@ -128,6 +131,33 @@ function TierCalculator({ termDays }: { termDays?: number }) {
             <div className="line total"><span>{h.calcYou}</span><b>{formatUsdt(mine.net)} USDT</b></div>
             <p className="fine">{h.calcNote}</p>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Entry to the resale market, shown once the market contract is live. */
+function MarketBand() {
+  const { t } = useI18n();
+  const x = t.p2p;
+  const market = useMarketAddress();
+  const listings = useAllListings();
+  if (!market) return null;
+  const live = browseListings(listings.data ?? [], { sort: "price" });
+  const units = live.reduce((a, l) => a + l.fillable, 0);
+  return (
+    <section style={{ paddingTop: 0 }}>
+      <div className="wrap">
+        <div className="panel home-mkt" data-testid="home-market">
+          <div>
+            <h2 className="h3">{x.homeTitle}</h2>
+            <p className="muted" style={{ fontSize: ".86rem" }}>
+              {x.homeText(units)}
+              {live[0] && <> {x.lowest(formatUsdt(live[0].pricePerUnit))}</>}
+            </p>
+          </div>
+          <Link className="btn primary" href="/market">{x.homeCta}</Link>
         </div>
       </div>
     </section>

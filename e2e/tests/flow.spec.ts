@@ -201,32 +201,56 @@ test("investor lists units for early exit and another investor buys them", async
   await s.mintUsdt(ROLES.bob, 10_000n * ONE);
   await s.indexed();
 
-  // Seller: from the portfolio to the project's resale market.
+  // Seller: from the portfolio's 转让 link straight into the market's sell form.
   const seller = pages.alice!;
   await seller.getByRole("link", { name: "转让" }).first().click();
   await expect(seller.getByRole("heading", { name: "转让市场" })).toBeVisible();
-  await seller.getByLabel("出售份数").fill("10");
-  await seller.getByLabel("每份价格（USDT）").fill("900");
-  await expect(seller.getByText("全部卖出可得 9,000.00 USDT")).toBeVisible();
-  await runTx(seller, seller.getByRole("button", { name: "挂单出售" }));
-  await expect(seller.getByRole("status").filter({ hasText: "挂单成功" })).toBeVisible();
-  await expect(seller.locator('[data-testid^="my-listing-"]')).toContainText("10 份");
-  await axe(seller, "project market (seller)");
+  const sell = seller.getByRole("dialog", { name: "我要卖" });
+  await sell.getByLabel("出售份数").fill("10");
+  await sell.getByLabel("每份价格（USDT）").fill("900");
+  await expect(sell.getByText("全部卖出可得 9,000.00 USDT")).toBeVisible();
+  await runTx(seller, sell.getByRole("button", { name: "挂单出售" }));
+  await expect(sell.getByRole("status").filter({ hasText: "挂单成功" })).toBeVisible();
+  await sell.getByRole("button", { name: "关闭" }).click();
 
-  // Buyer: a second investor buys 4 of them.
+  // The seller manages the listing: lower the price.
+  await seller.getByRole("tab", { name: /我的挂单/ }).click();
+  const mine = seller.locator('[data-testid^="my-listing-"]');
+  await expect(mine).toContainText("10 份");
+  await expect(mine).toContainText("在售");
+  await mine.getByRole("button", { name: "改价" }).click();
+  await seller.getByLabel("每份价格（USDT）").fill("880");
+  await runTx(seller, seller.getByRole("button", { name: "保存修改" }));
+  await expect(seller.getByRole("status").filter({ hasText: "挂单已更新" })).toBeVisible();
+  await expect(mine).toContainText("880.00");
+  await axe(seller, "market (seller)");
+
+  // Buyer: a second investor finds the offer on the site-wide market and buys 4.
   const buyer = await open(browser, "bob");
-  await buyer.goto(`${WEB}/projects/${pid}`);
+  await buyer.goto(`${WEB}/market`);
+  const card = buyer.locator('[data-testid^="market-listing-"]').first();
+  await expect(card).toContainText("880.00");
+  await expect(card).toContainText("10 份");
   await buyer.getByRole("button", { name: "连接钱包" }).first().click();
   await buyer.getByRole("button", { name: new RegExp(`测试钱包 ${ROLES.bob.slice(0, 6)}`, "i") }).click();
   await buyer.getByRole("button", { name: /签名登录/ }).first().click();
-  const row = buyer.locator('[data-testid^="listing-"]').first();
-  await expect(row).toContainText("10 份");
-  await row.getByRole("button", { name: "购买", exact: true }).click();
-  await buyer.getByLabel("购买份数").fill("4");
-  await expect(buyer.getByText("3,600.00 USDT").first()).toBeVisible();
-  await buyer.getByRole("checkbox", { name: /投资须知/ }).check();
-  await runTx(buyer, buyer.getByRole("button", { name: "授权并购买" }));
-  await expect(buyer.getByRole("status").filter({ hasText: "购买成功" })).toBeVisible();
+  await card.getByRole("button", { name: "买入", exact: true }).click();
+  const buy = buyer.getByRole("dialog");
+  await buy.getByLabel("购买份数").fill("4");
+  await expect(buy.getByText("3,520.00 USDT").first()).toBeVisible();
+  await buy.getByRole("checkbox", { name: /投资须知/ }).check();
+  await axe(buyer, "market (buy)");
+  await runTx(buyer, buy.getByRole("button", { name: "授权并购买" }));
+  await expect(buy.getByRole("status").filter({ hasText: "购买成功" })).toBeVisible();
+  await buy.getByRole("button", { name: "关闭" }).click();
+
+  // The trade shows in the history and sets the project's reference price.
+  await s.indexed();
+  await buyer.reload();
+  await buyer.getByRole("tab", { name: "成交记录" }).click();
+  await expect(buyer.getByRole("row").filter({ hasText: "3,520.00" })).toBeVisible();
+  await buyer.goto(`${WEB}/projects/${pid}`);
+  await expect(buyer.locator("#market").getByText("最近成交 880.00 USDT/份").first()).toBeVisible();
 
   const token = await s.tokenOf(pid);
   const units = (who: `0x${string}`) => s.pub.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [who] });

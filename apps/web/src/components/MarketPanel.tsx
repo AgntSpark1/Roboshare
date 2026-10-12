@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { erc20Abi, maxUint256, type Address, type Hash } from "viem";
 import { shareMarketAbi } from "@roboshare/shared";
 import {
@@ -18,16 +18,18 @@ import {
 } from "@roboshare/ui";
 import { explorer } from "@/env";
 import { useFreezeStatus, usePaymentSetup, useRefreshAfterTx } from "@/lib/data";
-import { activeListings, useListings, useMarketAddress, useMarketWallet, type MarketListing } from "@/lib/market";
+import { browseListings, useListings, useMarketAddress, useMarketTrades, useMarketWallet, type MarketListing } from "@/lib/market";
 import { useI18n } from "@/i18n/I18nProvider";
 import { zhCN, type Messages } from "@/i18n/messages/zh-CN";
 
 type Purpose = "APPROVE" | "MARKET_LIST" | "MARKET_BUY" | "MARKET_CANCEL";
-type Step = TxStep & { purpose: Purpose };
-type UsdtState = { balance: bigint | undefined; allowance: bigint | undefined };
+export type MarketStep = TxStep & { purpose: Purpose };
+export type Exec = (s: MarketStep[], message: string) => Promise<boolean>;
+export type UsdtState = { balance: bigint | undefined; allowance: bigint | undefined };
 
 const DAY = 86_400;
-const DURATIONS = [7, 30, 90] as const;
+export const DURATIONS = [7, 30, 90] as const;
+type Duration = (typeof DURATIONS)[number];
 
 /** Why the buy button is disabled. Exported for tests. */
 export function buyBlockReason(input: {
@@ -60,28 +62,22 @@ export function sellInput(held: number, units: number, priceText: string, m: Mes
   return { price };
 }
 
-/** Peer-to-peer resale (EARLY_EXIT_DESIGN.md): buy listed units, or list your own for sale. */
-export function MarketPanel({ p }: { p: ProjectDetail }) {
-  const market = useMarketAddress();
-  const { t } = useI18n();
-  const m = t.market;
-  const { address, isConnected } = useAccount();
-  const { me } = useSession();
-  const listings = useListings(p.id);
-  const wallet = useMarketWallet(p.contracts.token, address);
+/** A listing's state from the seller's side. Exported for tests. */
+export function listingStatus(l: MarketListing, nowSec = Math.floor(Date.now() / 1000)): "live" | "expired" | "short" {
+  if (l.expiresAt <= nowSec) return "expired";
+  return l.fillable < l.units ? "short" : "live";
+}
+
+const expiryIn = (days: Duration) => BigInt(Math.floor(Date.now() / 1000) + days * DAY);
+
+/** Runs market transactions with one progress display; API views refresh afterwards. */
+export function useMarketTx(): { exec: Exec; running: boolean; progress: ReactNode } {
   const { run, start, reset } = useTxRunner();
-  const [steps, setSteps] = useState<Step[]>([]);
+  const [steps, setSteps] = useState<MarketStep[]>([]);
   const [done, setDone] = useState<string | null>(null);
   const refresh = useRefreshAfterTx();
 
-  if (!market || !p.contracts.token) return null;
-
-  const mine = (l: MarketListing) => !!address && l.seller.toLowerCase() === address.toLowerCase();
-  const open = activeListings(listings.data ?? []);
-  const forSale = open.filter((l) => !mine(l));
-  const myListings = (listings.data ?? []).filter((l) => mine(l) && l.units > 0);
-
-  async function exec(s: Step[], message: string) {
+  async function exec(s: MarketStep[], message: string) {
     reset();
     setDone(null);
     setSteps(s);
@@ -91,19 +87,56 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
     });
     if (ok) {
       setDone(message);
-      void listings.refetch();
-      void wallet.refetch();
       refresh();
     }
+    return ok;
   }
 
+  const progress = (
+    <>
+      {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
+      {done && <p className="okmsg" role="status">{done}</p>}
+    </>
+  );
+  return { exec, running: run.running, progress };
+}
+
+/** Peer-to-peer resale for one project (EARLY_EXIT_DESIGN.md), linking to the site-wide market. */
+export function MarketPanel({ p }: { p: ProjectDetail }) {
+  const market = useMarketAddress();
+  const { t } = useI18n();
+  const m = t.market;
+  const x = t.p2p;
+  const { address, isConnected } = useAccount();
+  const { me } = useSession();
+  const listings = useListings(p.id);
+  const trades = useMarketTrades(p.id);
+  const wallet = useMarketWallet(p.contracts.token, address);
+  const usdt: UsdtState = { balance: wallet.data?.usdtBalance, allowance: wallet.data?.usdtAllowance };
+  const tx = useMarketTx();
+
+  if (!market || !p.contracts.token) return null;
+
+  const all = listings.data ?? [];
+  const mine = (l: MarketListing) => !!address && l.seller.toLowerCase() === address.toLowerCase();
+  const forSale = browseListings(all, { sort: "price", exclude: address });
+  const myListings = all.filter(mine);
+  const low = browseListings(all, { sort: "price" })[0];
+  const last = trades.data?.stats[0];
   const signedIn = isConnected && !!me;
-  const usdtState: UsdtState = { balance: wallet.data?.usdtBalance, allowance: wallet.data?.usdtAllowance };
 
   return (
     <div className="panel" id="market" style={{ marginTop: 24 }}>
-      <h2 className="h3">{m.title}</h2>
+      <h2 className="h3">
+        {m.title}
+        <Link className="btn ghost sm" href={`/market?project=${p.id}`}>{x.viewAll}</Link>
+      </h2>
       <p className="muted" style={{ fontSize: ".84rem" }}>{m.intro}</p>
+      <div className="mkt-ref">
+        {p.offering && <span>{x.issuePrice(formatUsdt(p.offering.unitPrice))}</span>}
+        {low && <span>{x.lowest(formatUsdt(low.pricePerUnit))}</span>}
+        {last && <span>{x.lastTrade(formatUsdt(last.lastPrice))}</span>}
+      </div>
 
       {forSale.length ? (
         <div className="table-wrap">
@@ -112,7 +145,7 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
             <thead><tr><th>{m.colForSale}</th><th className="r">{m.colPrice}</th><th>{m.colExpires}</th><th><span className="sr-only">{m.actions}</span></th></tr></thead>
             <tbody>
               {forSale.map((l) => (
-                <ListingRow key={l.id.toString()} l={l} market={market} signedIn={signedIn} usdtState={usdtState} running={run.running} exec={exec} />
+                <ListingRow key={l.id.toString()} l={l} market={market} signedIn={signedIn} usdtState={usdt} running={tx.running} exec={tx.exec} />
               ))}
             </tbody>
           </table>
@@ -128,66 +161,22 @@ export function MarketPanel({ p }: { p: ProjectDetail }) {
           {myListings.length > 0 && (
             <div style={{ marginTop: 16 }}>
               <h3 className="h3" style={{ fontSize: ".95rem" }}>{m.myListings}</h3>
-              <div className="table-wrap">
-                <table>
-                  <caption className="sr-only">{m.myListings}</caption>
-                  <thead><tr><th>{m.colRemaining}</th><th className="r">{m.colPrice}</th><th>{m.colExpires}</th><th><span className="sr-only">{m.actions}</span></th></tr></thead>
-                  <tbody>
-                    {myListings.map((l) => (
-                      <tr key={l.id.toString()} data-testid={`my-listing-${l.id}`}>
-                        <td>{t.units.n(l.units)}</td>
-                        <td className="r">{formatUsdt(l.pricePerUnit)}</td>
-                        <td>{formatDate(l.expiresAt * 1000).slice(0, 10)}</td>
-                        <td className="r">
-                          <button
-                            type="button"
-                            className="btn ghost sm"
-                            disabled={run.running}
-                            onClick={() =>
-                              exec(
-                                [{ label: m.cancelStep, purpose: "MARKET_CANCEL", write: { address: market, abi: shareMarketAbi, functionName: "cancel", args: [l.id] } }],
-                                m.cancelled,
-                              )
-                            }
-                          >
-                            {m.cancel}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <MyListings items={myListings} market={market} held={() => wallet.data?.units} running={tx.running} exec={tx.exec} />
             </div>
           )}
           {(wallet.data?.units ?? 0) > 0 && (
-            <SellForm p={p} market={market} held={wallet.data!.units} unitAllowance={wallet.data!.unitAllowance} running={run.running} exec={exec} />
+            <SellForm p={p} market={market} held={wallet.data!.units} unitAllowance={wallet.data!.unitAllowance} running={tx.running} exec={tx.exec} lastPrice={last?.lastPrice} />
           )}
         </>
       )}
 
-      {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
-      {done && <p className="okmsg" role="status">{done}</p>}
+      {tx.progress}
       <p className="fine" style={{ marginTop: 10 }}>{m.fine}</p>
     </div>
   );
 }
 
-function ListingRow({
-  l,
-  market,
-  signedIn,
-  usdtState,
-  running,
-  exec,
-}: {
-  l: MarketListing;
-  market: Address;
-  signedIn: boolean;
-  usdtState: UsdtState;
-  running: boolean;
-  exec: (s: Step[], message: string) => Promise<void>;
-}) {
+function ListingRow({ l, market, signedIn, usdtState, running, exec }: { l: MarketListing; market: Address; signedIn: boolean; usdtState: UsdtState; running: boolean; exec: Exec }) {
   const [openBuy, setOpenBuy] = useState(false);
   const { t } = useI18n();
   return (
@@ -215,7 +204,8 @@ function ListingRow({
   );
 }
 
-function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; market: Address; usdtState: UsdtState; running: boolean; exec: (s: Step[], message: string) => Promise<void> }) {
+/** Buys units from one listing. USDT is approved once without a limit, as in the subscribe flow. */
+export function BuyForm({ l, market, usdtState, running, exec, onDone }: { l: MarketListing; market: Address; usdtState: UsdtState; running: boolean; exec: Exec; onDone?: () => void }) {
   const freeze = useFreezeStatus();
   const { t } = useI18n();
   const m = t.market;
@@ -227,11 +217,11 @@ function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; ma
   const needApproval = usdtState.allowance === undefined ? true : usdtState.allowance < cost;
   const reason = buyBlockReason({ frozen: freeze.data?.frozen, available: l.fillable, units, balance: usdtState.balance, cost, acknowledged: ack }, t);
 
-  const steps = useMemo<Step[]>(() => {
+  const steps = useMemo<MarketStep[]>(() => {
     if (!usdt) return [];
-    const s: Step[] = [];
+    const s: MarketStep[] = [];
     if (needApproval) {
-      s.push({ label: c.stepApprove(formatUsdt(cost)), purpose: "APPROVE", write: { address: usdt, abi: erc20Abi, functionName: "approve", args: [market, cost] } });
+      s.push({ label: c.stepApproveUnlimited, purpose: "APPROVE", write: { address: usdt, abi: erc20Abi, functionName: "approve", args: [market, maxUint256] } });
     }
     s.push({
       label: m.stepBuy(units),
@@ -239,7 +229,7 @@ function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; ma
       write: { address: market, abi: shareMarketAbi, functionName: "buy", args: [l.id, units, l.pricePerUnit] },
     });
     return s;
-  }, [usdt, needApproval, cost, market, l.id, l.pricePerUnit, units, c, m]);
+  }, [usdt, needApproval, market, l.id, l.pricePerUnit, units, c, m]);
 
   const set = (n: number) => setUnits(Math.max(1, Math.min(Math.max(l.fillable, 1), Math.floor(n) || 1)));
 
@@ -251,12 +241,25 @@ function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; ma
         <input id={`buy-units-${l.id}`} inputMode="numeric" value={units} onChange={(e) => set(Number(e.target.value))} />
         <button type="button" aria-label={c.more} onClick={() => set(units + 1)} disabled={units >= l.fillable}>+</button>
       </div>
+      {l.fillable > 1 && (
+        <button type="button" className="btn ghost sm" style={{ justifySelf: "start" }} onClick={() => set(l.fillable)}>
+          {t.p2p.buyAll(l.fillable)}
+        </button>
+      )}
+      <div className="line"><span className="muted">{t.p2p.perUnit}</span><b>{formatUsdt(l.pricePerUnit)} USDT</b></div>
       <div className="line total"><span>{c.due}</span><b>{formatUsdt(cost)} USDT</b></div>
       <label className="check">
         <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
         <span>{c.ackBefore}<Link href="/risk" style={{ color: "var(--amber)" }}>{t.layout.investorNotes}</Link>{c.ackAfter}</span>
       </label>
-      <button type="button" className="btn primary" disabled={!!reason || running || steps.length === 0} onClick={() => exec(steps, m.bought(units))}>
+      <button
+        type="button"
+        className="btn primary"
+        disabled={!!reason || running || steps.length === 0}
+        onClick={async () => {
+          if (await exec(steps, m.bought(units))) onDone?.();
+        }}
+      >
         {needApproval ? m.approveAndBuy : m.confirmBuy}
       </button>
       {reason && <p className="muted" style={{ fontSize: ".8rem" }}>{reason}</p>}
@@ -264,38 +267,42 @@ function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; ma
   );
 }
 
-function SellForm({
+/** Lists units of one project for sale. */
+export function SellForm({
   p,
   market,
   held,
   unitAllowance,
   running,
   exec,
+  lastPrice,
+  onDone,
 }: {
   p: ProjectDetail;
   market: Address;
   held: number;
   unitAllowance: bigint;
   running: boolean;
-  exec: (s: Step[], message: string) => Promise<void>;
+  exec: Exec;
+  lastPrice?: string;
+  onDone?: () => void;
 }) {
   const { t } = useI18n();
   const m = t.market;
   const [units, setUnits] = useState(1);
   const [priceText, setPriceText] = useState("");
-  const [days, setDays] = useState<(typeof DURATIONS)[number]>(30);
+  const [days, setDays] = useState<Duration>(30);
   const parsed = sellInput(held, units, priceText, m);
 
-  function list() {
+  async function list() {
     if ("error" in parsed) return;
-    const s: Step[] = [];
+    const s: MarketStep[] = [];
     // One approval covers every unit held, so later listings need no extra step.
     if (unitAllowance < BigInt(held)) {
       s.push({ label: m.approveUnits, purpose: "APPROVE", write: { address: p.contracts.token!, abi: erc20Abi, functionName: "approve", args: [market, maxUint256] } });
     }
-    const expiresAt = BigInt(Math.floor(Date.now() / 1000) + days * DAY);
-    s.push({ label: m.stepList(units), purpose: "MARKET_LIST", write: { address: market, abi: shareMarketAbi, functionName: "list", args: [p.id, units, parsed.price, expiresAt] } });
-    void exec(s, m.listed);
+    s.push({ label: m.stepList(units), purpose: "MARKET_LIST", write: { address: market, abi: shareMarketAbi, functionName: "list", args: [p.id, units, parsed.price, expiryIn(days)] } });
+    if (await exec(s, m.listed)) onDone?.();
   }
 
   return (
@@ -312,17 +319,174 @@ function SellForm({
         </label>
         <label className="field">
           <span>{m.duration}</span>
-          <select value={days} onChange={(e) => setDays(Number(e.target.value) as (typeof DURATIONS)[number])}>
+          <select value={days} onChange={(e) => setDays(Number(e.target.value) as Duration)}>
             {DURATIONS.map((d) => <option key={d} value={d}>{m.days(d)}</option>)}
           </select>
         </label>
       </div>
-      {p.offering && <p className="muted" style={{ fontSize: ".8rem" }}>{m.refPrice(formatUsdt(p.offering.unitPrice))}</p>}
+      <div className="mkt-ref">
+        {p.offering && <span>{t.p2p.issuePrice(formatUsdt(p.offering.unitPrice))}</span>}
+        {lastPrice && <span>{t.p2p.lastTrade(formatUsdt(lastPrice))}</span>}
+      </div>
       {"price" in parsed && <p className="muted" style={{ fontSize: ".84rem" }}>{m.proceeds(formatUsdt(parsed.price * BigInt(units)))}</p>}
       <button type="button" className="btn primary" style={{ marginTop: 8 }} disabled={"error" in parsed || running} onClick={list}>
         {m.listBtn}
       </button>
       {"error" in parsed && priceText !== "" && <p className="muted" style={{ fontSize: ".8rem" }}>{parsed.error}</p>}
+    </div>
+  );
+}
+
+/** The seller's own listings: status, change price/units/validity, or cancel. */
+export function MyListings({
+  items,
+  market,
+  held,
+  running,
+  exec,
+  label,
+}: {
+  items: MarketListing[];
+  market: Address;
+  /** Units the seller holds in a project, when known; caps the edit form. */
+  held: (projectId: string) => number | undefined;
+  running: boolean;
+  exec: Exec;
+  /** Adds a project column (site-wide market). */
+  label?: (projectId: string) => ReactNode;
+}) {
+  const { t } = useI18n();
+  const m = t.market;
+  const x = t.p2p;
+  const [editing, setEditing] = useState<bigint | null>(null);
+  const cols = label ? 5 : 4;
+  return (
+    <div className="table-wrap">
+      <table>
+        <caption className="sr-only">{m.myListings}</caption>
+        <thead>
+          <tr>
+            {label && <th>{x.colProject}</th>}
+            <th>{m.colRemaining}</th>
+            <th className="r">{m.colPrice}</th>
+            <th>{m.colExpires}</th>
+            <th><span className="sr-only">{m.actions}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((l) => {
+            const status = listingStatus(l);
+            const open = editing === l.id;
+            return (
+              <MyListingRow key={l.id.toString()} l={l} cols={cols} label={label} status={status} open={open} toggle={() => setEditing(open ? null : l.id)} market={market} held={held(l.projectId)} running={running} exec={exec} />
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MyListingRow({
+  l,
+  cols,
+  label,
+  status,
+  open,
+  toggle,
+  market,
+  held,
+  running,
+  exec,
+}: {
+  l: MarketListing;
+  cols: number;
+  label?: (projectId: string) => ReactNode;
+  status: "live" | "expired" | "short";
+  open: boolean;
+  toggle: () => void;
+  market: Address;
+  held: number | undefined;
+  running: boolean;
+  exec: Exec;
+}) {
+  const { t } = useI18n();
+  const m = t.market;
+  const x = t.p2p;
+  return (
+    <>
+      <tr data-testid={`my-listing-${l.id}`}>
+        {label && <td>{label(l.projectId)}</td>}
+        <td>{t.units.n(l.units)} <span className={`mkt-st ${status}`}>{x.status[status]}</span></td>
+        <td className="r">{formatUsdt(l.pricePerUnit)}</td>
+        <td>{formatDate(l.expiresAt * 1000).slice(0, 10)}</td>
+        <td className="r" style={{ whiteSpace: "nowrap" }}>
+          <button type="button" className="btn ghost sm" aria-expanded={open} disabled={running} onClick={toggle}>
+            {x.edit}
+          </button>{" "}
+          <button
+            type="button"
+            className="btn ghost sm"
+            disabled={running}
+            onClick={() =>
+              exec([{ label: m.cancelStep, purpose: "MARKET_CANCEL", write: { address: market, abi: shareMarketAbi, functionName: "cancel", args: [l.id] } }], m.cancelled)
+            }
+          >
+            {m.cancel}
+          </button>
+        </td>
+      </tr>
+      {open && (
+        <tr>
+          <td colSpan={cols}>
+            <EditListing l={l} market={market} held={held} running={running} exec={exec} onDone={toggle} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function EditListing({ l, market, held, running, exec, onDone }: { l: MarketListing; market: Address; held: number | undefined; running: boolean; exec: Exec; onDone: () => void }) {
+  const { t } = useI18n();
+  const m = t.market;
+  const x = t.p2p;
+  const [units, setUnits] = useState(Math.min(l.units, held ?? l.units) || l.units);
+  const [priceText, setPriceText] = useState(formatUsdt(l.pricePerUnit).replace(/,/g, ""));
+  const [days, setDays] = useState<Duration>(30);
+  const parsed = sellInput(held ?? l.units, units, priceText, m);
+
+  async function save() {
+    if ("error" in parsed) return;
+    const ok = await exec(
+      [{ label: x.saveStep, purpose: "MARKET_LIST", write: { address: market, abi: shareMarketAbi, functionName: "updateListing", args: [l.id, units, parsed.price, expiryIn(days)] } }],
+      x.saved,
+    );
+    if (ok) onDone();
+  }
+
+  return (
+    <div className="form" style={{ padding: "8px 0" }}>
+      <div className="row">
+        <label className="field">
+          <span>{m.sellUnits}</span>
+          <input inputMode="numeric" value={units} onChange={(e) => setUnits(Math.floor(Number(e.target.value)) || 0)} />
+        </label>
+        <label className="field">
+          <span>{m.sellPrice}</span>
+          <input inputMode="decimal" value={priceText} onChange={(e) => setPriceText(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>{x.renew}</span>
+          <select value={days} onChange={(e) => setDays(Number(e.target.value) as Duration)}>
+            {DURATIONS.map((d) => <option key={d} value={d}>{m.days(d)}</option>)}
+          </select>
+        </label>
+      </div>
+      <button type="button" className="btn primary sm" style={{ marginTop: 8 }} disabled={"error" in parsed || running} onClick={save}>
+        {x.save}
+      </button>
+      {"error" in parsed && <p className="muted" style={{ fontSize: ".8rem" }}>{parsed.error}</p>}
     </div>
   );
 }
