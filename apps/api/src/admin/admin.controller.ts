@@ -11,6 +11,9 @@ import {
   reportHash,
   type FinancialReport,
 } from "@roboshare/shared";
+
+/** Capital return batches charge no fee (RevenueDistributor.proposeCapitalReturnBatch). */
+const NO_FEE_TIERS = [{ minUnits: 1, bps: 0 }] as const;
 import { getAddress, keccak256, stringToHex, toHex, type Address, type Hex } from "viem";
 import { z } from "zod";
 import { Roles, RoleGuard, type AuthedRequest } from "../auth/guards.js";
@@ -38,6 +41,8 @@ const createProjectBody = z.object({
   rightsDocHash: bytes32,
 });
 
+const termBody = z.object({ termDays: z.number().int().min(1).max(3650) });
+
 const reviewBody = z.object({ decision: z.enum(["APPROVE", "REJECT"]), reason: z.string().max(500).optional() });
 
 const distributionBody = z.object({
@@ -45,6 +50,8 @@ const distributionBody = z.object({
   reportRecordId: bytes32,
   amount: z.string().regex(/^[1-9][0-9]*$/),
   snapshotBlock: z.coerce.bigint().positive(),
+  /** Fee-free return of capital at term end (vehicle sale, reserve, insurance). EXIT_PENDING / TERMINATED only. */
+  capitalReturn: z.boolean().optional(),
 });
 type DistributionBody = z.infer<typeof distributionBody>;
 
@@ -76,6 +83,23 @@ export class AdminController {
       projectId,
       assetId,
       tx: prepare(this.cfg.chainId, registry, assetRegistryAbi, "registerProject", [projectId, assetId, body.issuerId, body.rightsDocHash], "Register the project draft (operator wallet)"),
+    };
+  }
+
+  /** Operating term; the contract only accepts it before the offering opens (default 720 days). */
+  @Post("projects/:id/term")
+  @Roles("OPERATOR")
+  async setTerm(@Req() req: AuthedRequest, @Param("id") id: string, @Body(new ZodPipe(termBody)) body: z.infer<typeof termBody>) {
+    const registry = this.need(this.cfg.assetRegistry, "ASSET_REGISTRY");
+    const project = await this.prisma.project.findUnique({ where: { projectIdOnchain: id } });
+    if (!project) throw notFound("project");
+    if (!["DRAFT", "VERIFIED"].includes(project.state)) {
+      throw new ApiError(409, "PROJECT_STATE_INVALID", "the term is fixed once the offering opens");
+    }
+    await this.audit(req, "PROJECT_TERM_SET", "project", id, body);
+    return {
+      projectId: id,
+      tx: prepare(this.cfg.chainId, registry, assetRegistryAbi, "setOperatingTerm", [id as Hex, body.termDays], "Set the operating term (operator wallet)"),
     };
   }
 
@@ -219,9 +243,11 @@ export class AdminController {
         this.cfg.chainId,
         p.distributor,
         revenueDistributorAbi,
-        "proposeBatch",
+        body.capitalReturn ? "proposeCapitalReturnBatch" : "proposeBatch",
         [body.reportRecordId, BigInt(body.amount), body.snapshotBlock, p.holders.map((h) => getAddress(h.address))],
-        "Propose the distribution batch (operator wallet); a different reviewer approves it",
+        body.capitalReturn
+          ? "Propose the fee-free capital return batch (operator wallet); a different reviewer approves it"
+          : "Propose the distribution batch (operator wallet); a different reviewer approves it",
       ),
     });
   }
@@ -229,7 +255,8 @@ export class AdminController {
   private async planDistribution(body: DistributionBody) {
     const project = await this.prisma.project.findUnique({ where: { projectIdOnchain: body.projectId } });
     if (!project?.distributorAddress) throw notFound("project");
-    if (!["ACTIVE", "EXIT_PENDING", "TERMINATED"].includes(project.state)) {
+    const allowed = body.capitalReturn ? ["EXIT_PENDING", "TERMINATED"] : ["ACTIVE", "EXIT_PENDING", "TERMINATED"];
+    if (!allowed.includes(project.state)) {
       throw new ApiError(409, "PROJECT_STATE_INVALID", `project is ${project.state}`);
     }
     const lastRun = await this.prisma.reconciliationRun.findFirst({ orderBy: { runAt: "desc" } });
@@ -266,7 +293,7 @@ export class AdminController {
       orderBy: { batchIdOnchain: "desc" },
     });
     const carriedDust = lastBatch ? BigInt(lastBatch.dustOut.toFixed()) : 0n;
-    const result = allocate(BigInt(body.amount), carriedDust, holders);
+    const result = allocate(BigInt(body.amount), carriedDust, holders, body.capitalReturn ? NO_FEE_TIERS : undefined);
     return { result: { ...result, carriedDustIn: carriedDust }, holders, distributor: getAddress(project.distributorAddress) as Address };
   }
 

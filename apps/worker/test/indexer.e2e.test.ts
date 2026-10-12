@@ -98,6 +98,8 @@ describe("indexer against a local chain", () => {
     distributor = project.distributorAddress as Address;
     expect(project.state).toBe("ACTIVE");
     expect(project.fundedAtBlock).not.toBeNull();
+    expect(project.termDays).toBe(720);
+    expect(project.operatingStartedAt).not.toBeNull();
     expect(project.offering?.status).toBe("SETTLED");
     expect(project.offering?.unitsSold).toBe(100);
     const units = Object.fromEntries(project.holdings.map((h) => [h.wallet, h.units]));

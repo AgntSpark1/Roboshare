@@ -110,6 +110,15 @@ export async function applyEvent(tx: Tx, e: StoredEvent): Promise<void> {
       });
       return;
     }
+    case "OperatingTermSet":
+      await tx.project.update({ where: { projectIdOnchain: a.projectId }, data: { termDays: Number(a.termDays) } });
+      return;
+    case "OperatingStarted":
+      await tx.project.update({
+        where: { projectIdOnchain: a.projectId },
+        data: { operatingStartedAt: new Date(Number(a.startedAt) * 1000) },
+      });
+      return;
     case "ProjectContractsLinked":
       await tx.project.update({
         where: { projectIdOnchain: a.projectId },
@@ -304,6 +313,14 @@ export async function applyEvent(tx: Tx, e: StoredEvent): Promise<void> {
           dustOut: a.dustOut,
           snapshotBlock: BigInt(a.snapshotBlock),
         },
+      });
+      return;
+    case "CapitalReturnProposed":
+      // Emitted after BatchProposed in the same transaction.
+      await ensureBatch(tx, e);
+      await tx.distributionBatch.update({
+        where: { projectIdOnchain_batchIdOnchain: { projectIdOnchain: e.projectId!, batchIdOnchain: Number(a.batchId) } },
+        data: { capitalReturn: true },
       });
       return;
     case "BatchApproved":
