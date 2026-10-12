@@ -17,7 +17,7 @@ import {
   type TxStep,
 } from "@roboshare/ui";
 import { explorer } from "@/env";
-import { useEligibility, usePaymentSetup, useRefreshAfterTx } from "@/lib/data";
+import { useFreezeStatus, usePaymentSetup, useRefreshAfterTx } from "@/lib/data";
 import { activeListings, useListings, useMarketAddress, useMarketWallet, type MarketListing } from "@/lib/market";
 import { useI18n } from "@/i18n/I18nProvider";
 import { zhCN, type Messages } from "@/i18n/messages/zh-CN";
@@ -31,7 +31,7 @@ const DURATIONS = [7, 30, 90] as const;
 
 /** Why the buy button is disabled. Exported for tests. */
 export function buyBlockReason(input: {
-  eligible: boolean | undefined;
+  frozen: boolean | undefined;
   available: number;
   units: number;
   balance: bigint | undefined;
@@ -39,7 +39,7 @@ export function buyBlockReason(input: {
   acknowledged: boolean;
 }, t: Messages = zhCN): string | null {
   const b = t.subscribe.block;
-  if (input.eligible === false) return b.ineligible;
+  if (input.frozen) return b.frozen;
   if (input.units < 1 || input.units > input.available) return t.market.buyRange(input.available);
   if (input.balance !== undefined && input.balance < input.cost) return b.balance;
   if (!input.acknowledged) return b.ack;
@@ -216,7 +216,7 @@ function ListingRow({
 }
 
 function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; market: Address; usdtState: UsdtState; running: boolean; exec: (s: Step[], message: string) => Promise<void> }) {
-  const elig = useEligibility();
+  const freeze = useFreezeStatus();
   const { t } = useI18n();
   const m = t.market;
   const c = t.subscribe;
@@ -225,7 +225,7 @@ function BuyForm({ l, market, usdtState, running, exec }: { l: MarketListing; ma
   const [ack, setAck] = useState(false);
   const cost = l.pricePerUnit * BigInt(units);
   const needApproval = usdtState.allowance === undefined ? true : usdtState.allowance < cost;
-  const reason = buyBlockReason({ eligible: elig.data?.eligibleNow, available: l.fillable, units, balance: usdtState.balance, cost, acknowledged: ack }, t);
+  const reason = buyBlockReason({ frozen: freeze.data?.frozen, available: l.fillable, units, balance: usdtState.balance, cost, acknowledged: ack }, t);
 
   const steps = useMemo<Step[]>(() => {
     if (!usdt) return [];

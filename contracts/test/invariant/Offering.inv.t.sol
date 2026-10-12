@@ -52,7 +52,6 @@ contract OfferingInvariantTest is BaseTest {
         address[] memory actors = new address[](4);
         for (uint256 i; i < 4; ++i) {
             actors[i] = makeAddr(string(abi.encodePacked("sub", vm.toString(i))));
-            _makeEligible(actors[i]);
         }
         handler = new OfferingHandler(offering, router, usdt, PID, actors);
         targetContract(address(handler));

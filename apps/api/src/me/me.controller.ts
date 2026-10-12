@@ -5,7 +5,6 @@ import { ZodPipe } from "../common/zod.pipe.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
 import { PrismaService } from "../common/prisma.service.js";
 import { plain } from "../common/serialize.js";
-import { eligibilityChecksRequired } from "../common/compliance.js";
 import { InvestorGuard, type AuthedRequest } from "../auth/guards.js";
 
 /** Investor views. Value-moving actions are signed by the wallet directly against the contracts. */
@@ -61,22 +60,12 @@ export class MeController {
     return plain({ version: row.version, acceptedAt: row.acceptedAt });
   }
 
+  /** There is no KYC (owner decision, 2026-10-11): any wallet may invest unless it is on the freeze list. */
   @Get("eligibility")
   async eligibility(@Req() req: AuthedRequest) {
-    const [e, checksRequired] = await Promise.all([
-      this.prisma.eligibility.findUnique({ where: { wallet: req.session!.wallet } }),
-      eligibilityChecksRequired(this.prisma, this.cfg.chainId),
-    ]);
-    const expired = !!e?.expiresAt && e.expiresAt.getTime() <= Date.now();
-    return plain({
-      checksRequired,
-      wallet: req.session!.wallet,
-      status: e?.status ?? "NONE",
-      investorClass: e?.investorClass ?? null,
-      expiresAt: e?.expiresAt ?? null,
-      // With checks off any wallet may invest unless it is frozen.
-      eligibleNow: checksRequired ? e?.status === "ELIGIBLE" && !expired : e?.status !== "FROZEN",
-    });
+    const e = await this.prisma.eligibility.findUnique({ where: { wallet: req.session!.wallet } });
+    const frozen = e?.status === "FROZEN";
+    return plain({ wallet: req.session!.wallet, frozen, eligibleNow: !frozen });
   }
 
   @Get("portfolio")

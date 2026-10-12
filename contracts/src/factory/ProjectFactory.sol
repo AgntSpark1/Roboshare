@@ -22,13 +22,12 @@ contract TokenDeployer {
         bytes32 projectId,
         IAssetRegistry assetRegistry,
         IIdentityRegistry identityRegistry,
-        uint256 allowedClassesMask,
         address admin,
         address pauser
     ) external returns (address) {
         return address(
             new RwaShareToken(
-                name, symbol, projectId, assetRegistry, identityRegistry, allowedClassesMask, admin, pauser, msg.sender
+                name, symbol, projectId, assetRegistry, identityRegistry, admin, pauser, msg.sender
             )
         );
     }
@@ -73,7 +72,6 @@ contract ProjectFactory is AccessControl {
         bytes32 projectId;
         string name;
         string symbol;
-        uint256 allowedClassesMask;
         address treasury; // issuer treasury Safe for this project
     }
 
@@ -142,7 +140,7 @@ contract ProjectFactory is AccessControl {
         Roles memory r = roles;
 
         d.token = tokenDeployer.deploy(
-            p.name, p.symbol, p.projectId, assetRegistry, identityRegistry, p.allowedClassesMask, r.admin, r.pauser
+            p.name, p.symbol, p.projectId, assetRegistry, identityRegistry, r.admin, r.pauser
         );
         d.offering = offeringDeployer.deploy(
             p.projectId, assetRegistry, identityRegistry, IRwaShareToken(d.token), address(router), r.admin, r.operator, r.pauser

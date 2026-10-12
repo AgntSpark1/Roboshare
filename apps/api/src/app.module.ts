@@ -12,20 +12,19 @@ import { MeController } from "./me/me.controller.js";
 import { TxController } from "./me/tx.controller.js";
 import { PublicController } from "./public/public.controller.js";
 import { AdminReferralController, MeReferralController } from "./referral/referral.controller.js";
-import { KycWebhookController } from "./webhooks/kyc.controller.js";
 
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(RateLimitMiddleware)
-      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, KycWebhookController, MeReferralController, AdminReferralController);
+      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, MeReferralController, AdminReferralController);
   }
 
   static forRoot(cfg: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, KycWebhookController, MeReferralController, AdminReferralController],
+      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, MeReferralController, AdminReferralController],
       providers: [
         { provide: APP_CONFIG, useValue: cfg },
         { provide: REDIS, useFactory: () => createRedis(cfg.redisUrl) },

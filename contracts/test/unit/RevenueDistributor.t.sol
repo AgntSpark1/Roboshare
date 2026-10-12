@@ -338,7 +338,6 @@ contract RevenueDistributorTest is BaseTest {
 
     function test_SnapshotIgnoresLaterTransfers() public {
         address newcomer = makeAddr("newcomer");
-        _makeEligible(newcomer);
         vm.prank(holders[0]);
         token.transfer(newcomer, 50); // after the snapshot block
         vm.roll(block.number + 1);
@@ -407,7 +406,6 @@ contract ReentrancyTest is BaseTest, IReentryTarget {
 
         // This contract is the only holder.
         _openOffering(100);
-        _makeEligible(address(this));
         evil.mint(address(this), 100 * UNIT_PRICE);
         evil.approve(address(router), type(uint256).max);
         router.subscribe(PID, 100, 100 * UNIT_PRICE);

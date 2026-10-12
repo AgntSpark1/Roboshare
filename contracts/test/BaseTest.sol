@@ -29,7 +29,6 @@ abstract contract BaseTest is Test {
 
     uint256 internal constant ONE = 1e18; // 1 USDT in base units (mock uses 18 decimals)
     uint256 internal constant UNIT_PRICE = 1_000 * ONE;
-    uint256 internal constant CLASS_MASK = 1 << 1; // only investor class 1 allowed
 
     bytes32 internal constant PID = keccak256("project-1");
     bytes32 internal constant ASSET_ID = keccak256("asset-1");
@@ -75,8 +74,6 @@ abstract contract BaseTest is Test {
         vm.startPrank(gov);
         identity.grantRole(identity.COMPLIANCE_AGENT_ROLE(), agent);
         identity.grantRole(identity.PAUSER_ROLE(), pauser);
-        // Most suites exercise the KYC-on mode; NoKycMode.t.sol covers the default (checks off).
-        identity.setChecksRequired(true);
         assets.grantRole(assets.OPERATOR_ROLE(), operator);
         assets.grantRole(assets.REVIEWER_ROLE(), reviewer);
         assets.grantRole(assets.PAUSER_ROLE(), pauser);
@@ -90,9 +87,9 @@ abstract contract BaseTest is Test {
     // Helpers
     // ---------------------------------------------------------------------
 
-    function _makeEligible(address wallet) internal {
+    function _freeze(address wallet) internal {
         vm.prank(agent);
-        identity.setEligibility(wallet, 1, 840, uint64(block.timestamp + 365 days), keccak256(abi.encode(wallet)));
+        identity.freeze(wallet, "STOLEN");
     }
 
     function _registerAndVerify() internal {
@@ -107,7 +104,7 @@ abstract contract BaseTest is Test {
         vm.prank(gov);
         ProjectFactory.Deployment memory d = factory.deployProject(
             ProjectFactory.ProjectParams({
-                projectId: PID, name: "RoboShare Vehicle 1", symbol: "RSV1", allowedClassesMask: CLASS_MASK, treasury: treasury
+                projectId: PID, name: "RoboShare Vehicle 1", symbol: "RSV1", treasury: treasury
             })
         );
         token = RwaShareToken(d.token);
@@ -154,7 +151,6 @@ abstract contract BaseTest is Test {
         }
         _openOffering(total);
         for (uint256 i; i < holders.length; ++i) {
-            _makeEligible(holders[i]);
             _subscribe(holders[i], units[i]);
         }
         vm.warp(block.timestamp + 31 days);

@@ -10,8 +10,8 @@ import {IAssetRegistry, IIdentityRegistry, IRwaShareToken, ProjectState} from ".
 
 /// @title RwaShareToken
 /// @notice One restricted-transfer token per vehicle project. ERC-20 interface and events with
-/// 0 decimals and a hard cap of 100 units. Transfers revert unless the receiver is eligible, neither
-/// side is frozen, and the project is FUNDED or ACTIVE. There is no forced transfer and no burn.
+/// 0 decimals and a hard cap of 100 units. Transfers revert if either side is on the freeze list
+/// (there is no KYC/eligibility check), and the project is FUNDED or ACTIVE. There is no forced transfer and no burn.
 /// A unit is a contractual economic right defined by the project's Rights Document; it is not
 /// ownership of the vehicle.
 contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
@@ -23,8 +23,6 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
     bytes32 public immutable projectId;
     IAssetRegistry public immutable assetRegistry;
     IIdentityRegistry public immutable identityRegistry;
-    /// @notice Bit `c` set means investor class `c` may hold this token.
-    uint256 public immutable allowedClassesMask;
     address public immutable minterBinder;
 
     address public minter;
@@ -37,8 +35,7 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
     bytes32 public constant REASON_ZERO_AMOUNT = "ZERO_AMOUNT";
     bytes32 public constant REASON_STATE = "TRANSFERS_DISABLED_IN_STATE";
     bytes32 public constant REASON_SENDER_FROZEN = "SENDER_FROZEN";
-    bytes32 public constant REASON_RECEIVER_NOT_ELIGIBLE = "RECEIVER_NOT_ELIGIBLE";
-    bytes32 public constant REASON_CLASS = "CLASS_NOT_ALLOWED";
+    bytes32 public constant REASON_RECEIVER_FROZEN = "RECEIVER_FROZEN";
     bytes32 public constant REASON_BALANCE = "INSUFFICIENT_BALANCE";
 
     event MinterBound(address indexed minter);
@@ -52,8 +49,7 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
     error BurnDisabled();
     error TransfersDisabledInState(ProjectState state);
     error SenderFrozen(address wallet);
-    error NotEligible(address wallet);
-    error ClassNotAllowed(address wallet, uint16 investorClass);
+    error ReceiverFrozen(address wallet);
     error FutureLookup(uint256 blockNumber);
 
     constructor(
@@ -62,19 +58,17 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
         bytes32 projectId_,
         IAssetRegistry assetRegistry_,
         IIdentityRegistry identityRegistry_,
-        uint256 allowedClassesMask_,
         address admin,
         address pauser,
         address minterBinder_
     ) ERC20(name_, symbol_) {
         if (
             projectId_ == 0 || address(assetRegistry_) == address(0) || address(identityRegistry_) == address(0)
-                || allowedClassesMask_ == 0 || admin == address(0) || minterBinder_ == address(0)
+                || admin == address(0) || minterBinder_ == address(0)
         ) revert ZeroValue();
         projectId = projectId_;
         assetRegistry = assetRegistry_;
         identityRegistry = identityRegistry_;
-        allowedClassesMask = allowedClassesMask_;
         minterBinder = minterBinder_;
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         if (pauser != address(0)) _grantRole(PAUSER_ROLE, pauser);
@@ -110,10 +104,6 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
     // Views
     // ---------------------------------------------------------------------
 
-    function isClassAllowed(uint16 investorClass) public view returns (bool) {
-        return investorClass != 0 && investorClass < 256 && (allowedClassesMask >> investorClass) & 1 == 1;
-    }
-
     /// @notice Balance of `account` at the end of block `blockNumber`. Only past blocks.
     function balanceOfAt(address account, uint256 blockNumber) external view returns (uint256) {
         if (blockNumber >= block.number) revert FutureLookup(blockNumber);
@@ -132,12 +122,7 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
         if (value == 0) return (false, REASON_ZERO_AMOUNT);
         if (!_transfersOpen()) return (false, REASON_STATE);
         if (identityRegistry.isFrozen(from)) return (false, REASON_SENDER_FROZEN);
-        if (identityRegistry.checksRequired()) {
-            if (!identityRegistry.isEligible(to)) return (false, REASON_RECEIVER_NOT_ELIGIBLE);
-            if (!isClassAllowed(identityRegistry.classOf(to))) return (false, REASON_CLASS);
-        } else if (identityRegistry.isFrozen(to)) {
-            return (false, REASON_RECEIVER_NOT_ELIGIBLE);
-        }
+        if (identityRegistry.isFrozen(to)) return (false, REASON_RECEIVER_FROZEN);
         if (balanceOf(from) < value) return (false, REASON_BALANCE);
         return (true, REASON_OK);
     }
@@ -158,7 +143,7 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
             if (!_transfersOpen()) revert TransfersDisabledInState(assetRegistry.stateOf(projectId));
             if (identityRegistry.isFrozen(from)) revert SenderFrozen(from);
         }
-        _checkReceiver(to);
+        if (identityRegistry.isFrozen(to)) revert ReceiverFrozen(to);
 
         super._update(from, to, value);
 
@@ -166,16 +151,6 @@ contract RwaShareToken is IRwaShareToken, ERC20, AccessControl, Pausable {
         if (from != address(0)) _balanceCheckpoints[from].push(key, SafeCast.toUint208(balanceOf(from)));
         _balanceCheckpoints[to].push(key, SafeCast.toUint208(balanceOf(to)));
         if (from == address(0)) _supplyCheckpoints.push(key, SafeCast.toUint208(totalSupply()));
-    }
-
-    function _checkReceiver(address to) private view {
-        if (!identityRegistry.checksRequired()) {
-            if (identityRegistry.isFrozen(to)) revert NotEligible(to);
-            return;
-        }
-        if (!identityRegistry.isEligible(to)) revert NotEligible(to);
-        uint16 cls = identityRegistry.classOf(to);
-        if (!isClassAllowed(cls)) revert ClassNotAllowed(to, cls);
     }
 
     function _transfersOpen() private view returns (bool) {

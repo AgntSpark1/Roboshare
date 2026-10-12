@@ -40,19 +40,6 @@ export const identityRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_BATCH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "PAUSER_ROLE",
     "inputs": [],
     "outputs": [
@@ -60,117 +47,6 @@ export const identityRegistryAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "batchSetEligibility",
-    "inputs": [
-      {
-        "name": "wallets",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "classes",
-        "type": "uint16[]",
-        "internalType": "uint16[]"
-      },
-      {
-        "name": "jurisdictions",
-        "type": "uint16[]",
-        "internalType": "uint16[]"
-      },
-      {
-        "name": "expiries",
-        "type": "uint64[]",
-        "internalType": "uint64[]"
-      },
-      {
-        "name": "attestationRefs",
-        "type": "bytes32[]",
-        "internalType": "bytes32[]"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "checksRequired",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "classOf",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "eligibilityOf",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple",
-        "internalType": "struct IdentityRegistry.Eligibility",
-        "components": [
-          {
-            "name": "status",
-            "type": "uint8",
-            "internalType": "enum IdentityRegistry.EligibilityStatus"
-          },
-          {
-            "name": "investorClass",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "jurisdiction",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "expiresAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "attestationRef",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
       }
     ],
     "stateMutability": "view"
@@ -256,25 +132,6 @@ export const identityRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "isEligible",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "isFrozen",
     "inputs": [
       {
@@ -288,25 +145,6 @@ export const identityRegistryAbi = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "jurisdictionOf",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -351,24 +189,6 @@ export const identityRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "revoke",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "reasonCode",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "revokeRole",
     "inputs": [
       {
@@ -380,52 +200,6 @@ export const identityRegistryAbi = [
         "name": "account",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setChecksRequired",
-    "inputs": [
-      {
-        "name": "required",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setEligibility",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "investorClass",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "jurisdiction",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "expiresAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "attestationRef",
-        "type": "bytes32",
-        "internalType": "bytes32"
       }
     ],
     "outputs": [],
@@ -469,93 +243,6 @@ export const identityRegistryAbi = [
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "event",
-    "name": "ChecksRequiredSet",
-    "inputs": [
-      {
-        "name": "required",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      },
-      {
-        "name": "admin",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EligibilityRevoked",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "reasonCode",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "agent",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EligibilitySet",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "investorClass",
-        "type": "uint16",
-        "indexed": false,
-        "internalType": "uint16"
-      },
-      {
-        "name": "jurisdiction",
-        "type": "uint16",
-        "indexed": false,
-        "internalType": "uint16"
-      },
-      {
-        "name": "expiresAt",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
-      },
-      {
-        "name": "attestationRef",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "agent",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
   },
   {
     "type": "event",
@@ -725,50 +412,12 @@ export const identityRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "BatchTooLarge",
-    "inputs": [
-      {
-        "name": "length",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },
   {
     "type": "error",
     "name": "ExpectedPause",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ExpiryInPast",
-    "inputs": [
-      {
-        "name": "expiresAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "InvalidClass",
-    "inputs": [
-      {
-        "name": "investorClass",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "LengthMismatch",
     "inputs": []
   },
   {
@@ -3352,11 +3001,6 @@ export const projectFactoryAbi = [
             "internalType": "string"
           },
           {
-            "name": "allowedClassesMask",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "treasury",
             "type": "address",
             "internalType": "address"
@@ -3859,11 +3503,6 @@ export const rwaShareTokenAbi = [
         "internalType": "contract IIdentityRegistry"
       },
       {
-        "name": "allowedClassesMask_",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "admin",
         "type": "address",
         "internalType": "address"
@@ -3935,19 +3574,6 @@ export const rwaShareTokenAbi = [
   },
   {
     "type": "function",
-    "name": "REASON_CLASS",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "REASON_OK",
     "inputs": [],
     "outputs": [
@@ -3974,7 +3600,7 @@ export const rwaShareTokenAbi = [
   },
   {
     "type": "function",
-    "name": "REASON_RECEIVER_NOT_ELIGIBLE",
+    "name": "REASON_RECEIVER_FROZEN",
     "inputs": [],
     "outputs": [
       {
@@ -4039,19 +3665,6 @@ export const rwaShareTokenAbi = [
         "internalType": "address"
       }
     ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "allowedClassesMask",
-    "inputs": [],
     "outputs": [
       {
         "name": "",
@@ -4271,25 +3884,6 @@ export const rwaShareTokenAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IIdentityRegistry"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isClassAllowed",
-    "inputs": [
-      {
-        "name": "investorClass",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -4757,22 +4351,6 @@ export const rwaShareTokenAbi = [
   },
   {
     "type": "error",
-    "name": "ClassNotAllowed",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "investorClass",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "ERC20InsufficientAllowance",
     "inputs": [
       {
@@ -4885,17 +4463,6 @@ export const rwaShareTokenAbi = [
   },
   {
     "type": "error",
-    "name": "NotEligible",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "OnlyMinter",
     "inputs": []
   },
@@ -4903,6 +4470,17 @@ export const rwaShareTokenAbi = [
     "type": "error",
     "name": "OnlyMinterBinder",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReceiverFrozen",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
@@ -5935,17 +5513,6 @@ export const offeringManagerAbi = [
   },
   {
     "type": "error",
-    "name": "ClassNotAllowed",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "CostMismatch",
     "inputs": [
       {
@@ -5982,12 +5549,7 @@ export const offeringManagerAbi = [
   },
   {
     "type": "error",
-    "name": "NotConfigured",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotEligible",
+    "name": "InvestorFrozen",
     "inputs": [
       {
         "name": "wallet",
@@ -5995,6 +5557,11 @@ export const offeringManagerAbi = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "NotConfigured",
+    "inputs": []
   },
   {
     "type": "error",
@@ -6077,7 +5644,7 @@ export const offeringManagerAbi = [
   },
   {
     "type": "error",
-    "name": "SubscriberIneligible",
+    "name": "SubscriberFrozen",
     "inputs": [
       {
         "name": "wallet",

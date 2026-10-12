@@ -43,30 +43,12 @@ export async function applyEvent(tx: Tx, e: StoredEvent): Promise<void> {
     }
 
     // ------------------------------------------------------------ identity
-    case "EligibilitySet":
-      await upsertEligibility(tx, a.wallet, e.blockNumber, {
-        status: "ELIGIBLE",
-        investorClass: Number(a.investorClass),
-        jurisdiction: Number(a.jurisdiction),
-        expiresAt: new Date(Number(a.expiresAt) * 1000),
-        attestationRef: a.attestationRef,
-      });
-      return;
-    case "EligibilityRevoked":
-      await upsertEligibility(tx, a.wallet, e.blockNumber, { status: "NONE" });
-      return;
+    // IdentityRegistry is a freeze list only (no KYC); the eligibility table records FROZEN or NONE.
     case "WalletFrozen":
-      await upsertEligibility(tx, a.wallet, e.blockNumber, { status: "FROZEN" });
+      await setFrozen(tx, a.wallet, e.blockNumber, true);
       return;
     case "WalletUnfrozen":
-      // IdentityRegistry.unfreeze resets the wallet to NONE; it must be re-attested.
-      await upsertEligibility(tx, a.wallet, e.blockNumber, {
-        status: "NONE",
-        investorClass: null,
-        jurisdiction: null,
-        expiresAt: null,
-        attestationRef: null,
-      });
+      await setFrozen(tx, a.wallet, e.blockNumber, false);
       return;
 
     // ------------------------------------------------------------ asset registry
@@ -370,16 +352,12 @@ export async function applyEvent(tx: Tx, e: StoredEvent): Promise<void> {
   }
 }
 
-async function upsertEligibility(
-  tx: Tx,
-  wallet: string,
-  block: bigint,
-  data: Partial<Prisma.EligibilityCreateInput> & { status: "NONE" | "ELIGIBLE" | "FROZEN" },
-) {
+async function setFrozen(tx: Tx, wallet: string, block: bigint, frozen: boolean) {
+  const status = frozen ? "FROZEN" : "NONE";
   await tx.eligibility.upsert({
     where: { wallet: lc(wallet) },
-    create: { wallet: lc(wallet), lastBlock: block, ...data },
-    update: { lastBlock: block, ...data },
+    create: { wallet: lc(wallet), lastBlock: block, status },
+    update: { lastBlock: block, status },
   });
 }
 
@@ -417,8 +395,8 @@ async function ensureBatch(tx: Tx, e: StoredEvent) {
 /**
  * Accrues each referrer's share of the platform fee charged to their referees in this batch, and the
  * second-level share for the referrer's own referrer. Both use the referee's binding window; a level is
- * skipped when its receiver is not eligible at approval time (frozen, revoked or expired), so rewards
- * only go to whitelisted wallets. There is no third level.
+ * skipped when its receiver is frozen at approval time. There is no KYC, so any other wallet earns
+ * rewards. There is no third level.
  */
 async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
   const allocations = await tx.distributionAllocation.findMany({
@@ -434,10 +412,7 @@ async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
   const upline = new Map(
     (await tx.referral.findMany({ where: { referee: { in: [...new Set(referrals.map((r) => r.referrer))] } } })).map((r) => [r.referee, r.referrer]),
   );
-  const eligible = async (wallet: string) => {
-    const elig = await tx.eligibility.findUnique({ where: { wallet } });
-    return elig?.status === "ELIGIBLE" && !(elig.expiresAt && elig.expiresAt.getTime() <= at);
-  };
+  const frozen = async (wallet: string) => (await tx.eligibility.findUnique({ where: { wallet } }))?.status === "FROZEN";
   for (const alloc of allocations) {
     const ref = byReferee.get(alloc.wallet);
     if (!ref || ref.expiresAt.getTime() <= at) continue;
@@ -447,7 +422,7 @@ async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
       [2, upline.get(ref.referrer), REFERRAL_LEVEL2_SHARE_BPS],
     ];
     for (const [level, receiver, shareBps] of levels) {
-      if (!receiver || !(await eligible(receiver))) continue;
+      if (!receiver || (await frozen(receiver))) continue;
       const reward = referralReward(fee, shareBps);
       if (reward === 0n) continue;
       await tx.referralAccrual.create({

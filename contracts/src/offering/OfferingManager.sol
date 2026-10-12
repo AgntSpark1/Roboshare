@@ -94,12 +94,11 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
     error CostMismatch(uint256 expected, uint256 provided);
     error UnitsExceedAvailable(uint32 requested, uint32 available);
     error PerWalletLimit(uint32 requested, uint32 allowed);
-    error NotEligible(address wallet);
-    error ClassNotAllowed(address wallet);
+    error InvestorFrozen(address wallet);
     error SubscriptionClosedForWallet(address wallet);
     error UnexpectedTransferAmount(uint256 expected, uint256 received);
     error SettlementConditionsNotMet();
-    error SubscriberIneligible(address wallet);
+    error SubscriberFrozen(address wallet);
     error FailureConditionsNotMet();
     error NotRefundable(address wallet);
 
@@ -182,12 +181,7 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
 
         SubStatus status = statusOf[investor];
         if (status != SubStatus.NONE && status != SubStatus.ESCROWED) revert SubscriptionClosedForWallet(investor);
-        if (identityRegistry.checksRequired()) {
-            if (!identityRegistry.isEligible(investor)) revert NotEligible(investor);
-            if (!token.isClassAllowed(identityRegistry.classOf(investor))) revert ClassNotAllowed(investor);
-        } else if (identityRegistry.isFrozen(investor)) {
-            revert NotEligible(investor);
-        }
+        if (identityRegistry.isFrozen(investor)) revert InvestorFrozen(investor);
 
         // `>=` rather than `==`: a direct USDT donation to this contract must not block subscriptions.
         // Any surplus stays outside `escrowed` and is never paid to anyone.
@@ -209,7 +203,7 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
     // Outcomes
     // ---------------------------------------------------------------------
 
-    /// @notice Governance removes a subscriber (e.g. eligibility lapsed) before settlement.
+    /// @notice Governance removes a subscriber (e.g. a frozen wallet) before settlement.
     function excludeSubscriber(address investor, bytes32 reasonHash) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (outcome != Outcome.NONE) revert OfferingFinalized();
         if (statusOf[investor] != SubStatus.ESCROWED) revert NotRefundable(investor);
@@ -231,15 +225,10 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         outcome = Outcome.SETTLED;
         uint256 proceeds;
         uint256 n = _subscribers.length;
-        bool checks = identityRegistry.checksRequired();
         for (uint256 i; i < n; ++i) {
             address s = _subscribers[i];
             if (statusOf[s] != SubStatus.ESCROWED) continue;
-            if (
-                checks
-                    ? !identityRegistry.isEligible(s) || !token.isClassAllowed(identityRegistry.classOf(s))
-                    : identityRegistry.isFrozen(s)
-            ) revert SubscriberIneligible(s);
+            if (identityRegistry.isFrozen(s)) revert SubscriberFrozen(s);
             statusOf[s] = SubStatus.SETTLED;
             proceeds += paidOf[s];
             token.mint(s, unitsOf[s]);

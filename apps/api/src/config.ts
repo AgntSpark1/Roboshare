@@ -22,7 +22,6 @@ export const configSchema = z.object({
   sessionSecret: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
   /** Host (or comma-separated hosts) allowed in SIWE messages, e.g. the investor DApp and the admin console. */
   siweDomain: z.string().min(1),
-  kycWebhookSecret: z.string().min(32).optional(),
   /** 32-byte hex key that encrypts staff TOTP secrets. Without it staff step-up is not enforced (dev only). */
   totpEncKey: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
   rateLimitPerMinute: z.coerce.number().int().positive().default(120),
@@ -50,7 +49,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     chainId: env.CHAIN_ID,
     sessionSecret: env.SESSION_SECRET,
     siweDomain: env.SIWE_DOMAIN,
-    kycWebhookSecret: env.KYC_WEBHOOK_SECRET || undefined,
     totpEncKey: env.TOTP_ENC_KEY || undefined,
     rateLimitPerMinute: env.RATE_LIMIT_PER_MINUTE,
     safe: env.SAFE,

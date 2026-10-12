@@ -19,8 +19,7 @@ import {
   type TxStep,
 } from "@roboshare/ui";
 import { explorer } from "@/env";
-import { useEligibility, useMySubscriptions, useRefreshAfterTx } from "@/lib/data";
-import { EligibilityHelp } from "@/components/Help";
+import { useFreezeStatus, useMySubscriptions, useRefreshAfterTx } from "@/lib/data";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface Holding {
@@ -75,7 +74,7 @@ function Dashboard() {
   const dists = useQuery({ queryKey: ["me", "distributions", wallet], queryFn: () => api.get<{ items: MyDistribution[] }>("/me/distributions") });
   const subs = useMySubscriptions();
   const txs = useQuery({ queryKey: ["me", "transactions", wallet], queryFn: () => api.get<{ items: MyTx[]; pending: { hash: string; purpose: string }[] }>("/me/transactions") });
-  const elig = useEligibility();
+  const freeze = useFreezeStatus();
   const ids = [...new Set([...(holdings.data?.items ?? []).map((h) => h.projectId), ...(subs.data?.items ?? []).map((s) => s.projectId), ...(dists.data?.items ?? []).map((d) => d.projectId)])];
   const details = useQueries({ queries: ids.map((id) => ({ queryKey: ["project", id], queryFn: () => api.get<ProjectDetail>(`/projects/${id}`) })) });
   const project = (id: string) => details.find((d) => d.data?.id === id)?.data;
@@ -95,16 +94,10 @@ function Dashboard() {
           <h1 className="h2">{c.title}</h1>
           <p>
             {c.wallet} <span className="mono">{shortAddr(wallet)}</span>
-            {/* With KYC checks off there is nothing to show unless the wallet is frozen. */}
-            {elig.data && (elig.data.checksRequired !== false || !elig.data.eligibleNow) && (
-              <>
-                {" · "}{c.eligibility}
-                {elig.data.eligibleNow ? <span className="ok-t"> {c.eligible}</span> : <span className="warn-t"> {c.notEligible}</span>}
-              </>
-            )}
+            {/* There is no KYC; the only status worth showing is a freeze. */}
+            {freeze.data?.frozen && <span className="warn-t">{" · "}{t.subscribe.block.frozen}</span>}
           </p>
         </div>
-        {elig.data && !elig.data.eligibleNow && <EligibilityHelp wallet={wallet} />}
         <div className="tiles">
           <div className="tile hl"><span className="eyebrow">{c.claimable}</span><span className="num" data-testid="claimable-total">{formatUsdt(totalClaimable)}</span><small className="muted">USDT</small></div>
           <div className="tile"><span className="eyebrow">{c.claimed}</span><span className="num">{formatUsdt(totalClaimed)}</span><small className="muted">USDT</small></div>

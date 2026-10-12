@@ -8,28 +8,14 @@ import {RwaShareToken} from "../../src/token/RwaShareToken.sol";
 import {ProjectState} from "../../src/interfaces/IRoboShare.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
-/// Default deployment mode (Charlene, 2026-10-11): no eligibility checks, frozen wallets still blocked.
-contract NoKycModeTest is BaseTest {
+/// No KYC/AML (owner decision, 2026-10-11): any wallet may take part; only frozen wallets are blocked.
+contract FreezeOnlyTest is BaseTest {
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
     function setUp() public override {
         super.setUp();
-        vm.prank(gov);
-        identity.setChecksRequired(false);
         _openOffering(10);
-    }
-
-    function test_DefaultsOff() public {
-        assertFalse(new IdentityRegistry(gov).checksRequired());
-    }
-
-    function test_OnlyAdminSwitches() public {
-        vm.prank(attacker);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, bytes32(0))
-        );
-        identity.setChecksRequired(true);
     }
 
     function test_UnregisteredWalletsSubscribeHoldAndTransfer() public {
@@ -48,22 +34,30 @@ contract NoKycModeTest is BaseTest {
         assertEq(token.balanceOf(stranger), 5);
     }
 
-    function test_FrozenWalletsStayBlocked() public {
-        vm.prank(agent);
-        identity.freeze(alice, "SANCTIONS");
+    function test_FrozenWalletCannotSubscribe() public {
+        _freeze(alice);
         usdt.mint(alice, UNIT_PRICE);
         vm.startPrank(alice);
         usdt.approve(address(router), type(uint256).max);
-        vm.expectRevert(abi.encodeWithSelector(OfferingManager.NotEligible.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(OfferingManager.InvestorFrozen.selector, alice));
         router.subscribe(PID, 1, UNIT_PRICE);
         vm.stopPrank();
+    }
 
-        _subscribe(bob, 100);
-        vm.prank(agent);
-        identity.freeze(bob, "SANCTIONS");
-        vm.prank(operator);
-        vm.expectRevert(abi.encodeWithSelector(OfferingManager.SubscriberIneligible.selector, bob));
+    function test_FrozenSubscriberBlocksSettleUntilExcluded() public {
+        _subscribe(alice, 50);
+        _subscribe(bob, 50);
+        _freeze(bob);
+        vm.prank(attacker); // settle is permissionless
+        vm.expectRevert(abi.encodeWithSelector(OfferingManager.SubscriberFrozen.selector, bob));
         offering.settle();
+        vm.prank(gov);
+        offering.excludeSubscriber(bob, REASON);
+        vm.warp(block.timestamp + 31 days);
+        vm.prank(attacker);
+        offering.settle();
+        assertEq(token.balanceOf(alice), 50);
+        assertEq(token.balanceOf(bob), 0);
     }
 
     function test_FrozenReceiverRejected() public {
@@ -72,10 +66,29 @@ contract NoKycModeTest is BaseTest {
         offering.settle();
         vm.prank(gov);
         assets.transition(PID, ProjectState.ACTIVE, REASON);
-        vm.prank(agent);
-        identity.freeze(bob, "SANCTIONS");
+        _freeze(bob);
+        (bool ok, bytes32 why) = token.canTransfer(alice, bob, 1);
+        assertFalse(ok);
+        assertEq(why, token.REASON_RECEIVER_FROZEN());
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.NotEligible.selector, bob));
+        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.ReceiverFrozen.selector, bob));
         token.transfer(bob, 1);
+
+        // Only governance lifts the freeze; then the transfer goes through.
+        vm.prank(agent);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, agent, bytes32(0))
+        );
+        identity.unfreeze(bob);
+        vm.prank(gov);
+        identity.unfreeze(bob);
+        vm.prank(alice);
+        token.transfer(bob, 1);
+        assertEq(token.balanceOf(bob), 1);
+    }
+
+    function test_FreshRegistryFreezesNobody() public {
+        IdentityRegistry fresh = new IdentityRegistry(gov);
+        assertFalse(fresh.isFrozen(alice));
     }
 }

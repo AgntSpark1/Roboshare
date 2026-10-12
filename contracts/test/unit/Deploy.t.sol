@@ -19,8 +19,7 @@ contract DeployScriptTest is Test {
             pauser: makeAddr("pauser"),
             complianceAgent: makeAddr("agent"),
             feeRecipient: makeAddr("feeRecipient"),
-            usdt: address(0),
-            requireEligibility: false
+            usdt: address(0)
         });
     }
 
@@ -39,7 +38,6 @@ contract DeployScriptTest is Test {
         assertEq(factoryAdmin, c.safe); // per-project contracts get the Safe as admin too
         assertTrue(d.referralRewards.hasRole(0x00, c.safe));
         assertFalse(d.referralRewards.claimsEnabled());
-        assertFalse(d.identity.checksRequired()); // no KYC by default (2026-10-11)
         assertTrue(d.shareMarket.hasRole(0x00, c.safe));
         assertFalse(d.shareMarket.hasRole(0x00, address(this)));
         assertFalse(d.router.referralsEnabled());

@@ -1,5 +1,5 @@
 // Phase 4 exit criterion: subscribe -> settle -> report -> batch -> claim, through the investor DApp and the admin
-// console on a local anvil chain. Governance (the Safe), KYC and treasury funding are done by the TEST-ONLY harness.
+// console on a local anvil chain. Governance (the Safe) and treasury funding are done by the TEST-ONLY harness.
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { allocate, revenueDistributorAbi } from "@roboshare/shared";
@@ -70,7 +70,6 @@ test.beforeAll(async () => {
   s = scenario(readState());
   const o = await s.openOffering({ slug: SLUG, title: "端到端测试车辆", unitPrice: UNIT_PRICE, minUnits: 50, perWalletMax: 100, durationSec: 86_400 });
   endTime = o.endTime;
-  await s.kyc(ROLES.alice);
   await s.mintUsdt(ROLES.alice, 100_000n * ONE);
   await s.indexed();
 });
@@ -199,7 +198,6 @@ test("investor claims the distribution in USDT", async () => {
 
 test("investor lists units for early exit and another investor buys them", async ({ browser }) => {
   const pid = projectIdOf(SLUG);
-  await s.kyc(ROLES.bob);
   await s.mintUsdt(ROLES.bob, 10_000n * ONE);
   await s.indexed();
 
@@ -215,7 +213,7 @@ test("investor lists units for early exit and another investor buys them", async
   await expect(seller.locator('[data-testid^="my-listing-"]')).toContainText("10 份");
   await axe(seller, "project market (seller)");
 
-  // Buyer: a second eligible investor buys 4 of them.
+  // Buyer: a second investor buys 4 of them.
   const buyer = await open(browser, "bob");
   await buyer.goto(`${WEB}/projects/${pid}`);
   await buyer.getByRole("button", { name: "连接钱包" }).first().click();

@@ -10,7 +10,8 @@ export interface Me {
   userId: string;
   wallet: `0x${string}`;
   wallets: `0x${string}`[];
-  eligibility: { status: string; expiresAt: string | null };
+  /** On the freeze list (there is no KYC). */
+  frozen: boolean;
   isStaff: boolean;
 }
 

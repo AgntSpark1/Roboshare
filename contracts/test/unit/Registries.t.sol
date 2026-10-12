@@ -11,94 +11,82 @@ import {ProjectState, RecordKind, RecordStatus, AuditRecord} from "../../src/int
 contract IdentityRegistryTest is BaseTest {
     address internal alice = makeAddr("alice");
 
-    function test_SetEligibility() public {
-        _makeEligible(alice);
-        assertTrue(identity.isEligible(alice));
-        assertEq(identity.classOf(alice), 1);
+    function test_UnknownWalletIsNotFrozen() public view {
+        assertFalse(identity.isFrozen(alice));
     }
 
-    /// Required test 5: expired eligibility.
-    function test_EligibilityExpires() public {
-        _makeEligible(alice);
-        vm.warp(block.timestamp + 365 days);
-        assertFalse(identity.isEligible(alice));
-    }
-
-    function test_RevertWhen_ExpiryInPast() public {
-        vm.prank(agent);
-        vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.ExpiryInPast.selector, uint64(block.timestamp)));
-        identity.setEligibility(alice, 1, 840, uint64(block.timestamp), 0);
-    }
-
-    function test_RevertWhen_InvalidClass() public {
-        vm.prank(agent);
-        vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.InvalidClass.selector, uint16(0)));
-        identity.setEligibility(alice, 0, 840, uint64(block.timestamp + 1 days), 0);
-    }
-
-    function test_FreezeBlocksEligibilityAndOnlyAdminUnfreezes() public {
-        _makeEligible(alice);
+    function test_FreezeAndOnlyAdminUnfreezes() public {
+        vm.expectEmit(true, true, false, true);
+        emit IdentityRegistry.WalletFrozen(alice, "SANCTIONS", agent);
         vm.prank(agent);
         identity.freeze(alice, "SANCTIONS");
         assertTrue(identity.isFrozen(alice));
-        assertFalse(identity.isEligible(alice));
 
-        // The agent cannot re-enable a frozen wallet, nor unfreeze it.
+        // The agent cannot unfreeze.
         vm.prank(agent);
-        vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.WalletIsFrozen.selector, alice));
-        identity.setEligibility(alice, 1, 840, uint64(block.timestamp + 1 days), 0);
-        vm.prank(agent);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, agent, bytes32(0))
+        );
         identity.unfreeze(alice);
 
+        vm.expectEmit(true, true, false, true);
+        emit IdentityRegistry.WalletUnfrozen(alice, gov);
         vm.prank(gov);
         identity.unfreeze(alice);
         assertFalse(identity.isFrozen(alice));
-        assertFalse(identity.isEligible(alice)); // must be re-verified
     }
 
-    function test_Revoke() public {
-        _makeEligible(alice);
+    function test_RevertWhen_FreezeTwice() public {
+        vm.startPrank(agent);
+        identity.freeze(alice, "X");
+        vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.WalletIsFrozen.selector, alice));
+        identity.freeze(alice, "X");
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_UnfreezeNotFrozen() public {
+        vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.WalletNotFrozen.selector, alice));
+        identity.unfreeze(alice);
+    }
+
+    function test_RevertWhen_FreezeZeroAddress() public {
         vm.prank(agent);
-        identity.revoke(alice, "EXPIRED_DOCS");
-        assertFalse(identity.isEligible(alice));
+        vm.expectRevert(IdentityRegistry.ZeroAddress.selector);
+        identity.freeze(address(0), "X");
+    }
+
+    function test_RevertWhen_ZeroAdmin() public {
+        vm.expectRevert(IdentityRegistry.ZeroAddress.selector);
+        new IdentityRegistry(address(0));
     }
 
     /// Required test 11: unauthorized administration.
-    function test_RevertWhen_NonAgentSetsEligibility() public {
+    function test_RevertWhen_NonAgentFreezes() public {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, identity.COMPLIANCE_AGENT_ROLE()
             )
         );
         vm.prank(attacker);
-        identity.setEligibility(attacker, 1, 840, uint64(block.timestamp + 1 days), 0);
-    }
-
-    function test_BatchLimits() public {
-        address[] memory w = new address[](51);
-        uint16[] memory c = new uint16[](51);
-        uint64[] memory e = new uint64[](51);
-        bytes32[] memory r = new bytes32[](51);
-        vm.prank(agent);
-        vm.expectRevert(abi.encodeWithSelector(IdentityRegistry.BatchTooLarge.selector, 51));
-        identity.batchSetEligibility(w, c, c, e, r);
+        identity.freeze(alice, "X");
     }
 
     /// Required test 12: paused behaviour.
-    function test_PausedBlocksWritesAndOnlyAdminUnpauses() public {
+    function test_PausedBlocksFreezeAndOnlyAdminUnpauses() public {
         vm.prank(pauser);
         identity.pause();
         vm.prank(agent);
         vm.expectRevert();
-        identity.setEligibility(alice, 1, 840, uint64(block.timestamp + 1 days), 0);
+        identity.freeze(alice, "X");
         vm.prank(pauser);
         vm.expectRevert();
         identity.unpause();
         vm.prank(gov);
         identity.unpause();
-        _makeEligible(alice);
-        assertTrue(identity.isEligible(alice));
+        vm.prank(agent);
+        identity.freeze(alice, "X");
+        assertTrue(identity.isFrozen(alice));
     }
 }
 
