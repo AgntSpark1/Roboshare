@@ -252,7 +252,7 @@ test("investor lists units for early exit and another investor buys them", async
   await buyer.getByRole("tab", { name: "成交记录" }).click();
   await expect(buyer.getByRole("row").filter({ hasText: "3,520.00" })).toBeVisible();
   await buyer.goto(`${WEB}/projects/${pid}`);
-  await expect(buyer.getByText("最近成交 880.00 USDT/份")).toBeVisible();
+  await expect(buyer.locator("#market").getByText("最近成交 880.00 USDT/份").first()).toBeVisible();
 
   const token = await s.tokenOf(pid);
   const units = (who: `0x${string}`) => s.pub.readContract({ address: token, abi: erc20Abi, functionName: "balanceOf", args: [who] });
