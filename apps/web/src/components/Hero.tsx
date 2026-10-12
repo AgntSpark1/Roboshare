@@ -5,6 +5,11 @@ import { countdown, formatUsdt, type ProjectListItem } from "@roboshare/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { projectCode } from "./ProjectCard";
 
+/** Renders `*text*` segments of a headline line as highlighted <em>. */
+function emphasize(line: string) {
+  return line.split("*").map((part, i) => (i % 2 ? <em key={i}>{part}</em> : part));
+}
+
 export function Hero({ featured }: { featured?: ProjectListItem }) {
   const { t } = useI18n();
   const h = t.hero;
@@ -44,11 +49,12 @@ export function Hero({ featured }: { featured?: ProjectListItem }) {
       <div className="wrap">
         <div className="eyebrow" style={{ color: "var(--lidar)" }}>{h.eyebrow}</div>
         <h1 style={{ marginTop: 14 }}>
-          {h.h1[0] && <><span className="word">{h.h1[0]}</span>{" "}</>}
-          <span className="word" style={{ animationDelay: ".12s" }}><em>Robotaxi</em>{h.h1[1] && ` ${h.h1[1]}`}</span>
-          <br />
-          {h.h1[2] && <><span className="word" style={{ animationDelay: ".24s" }}>{h.h1[2]}</span>{" "}</>}
-          <span className="word" style={{ animationDelay: ".36s" }}><em>100</em> {h.h1[3]}</span>
+          {h.h1.map((line, i) => (
+            <span key={i}>
+              {i > 0 && <br />}
+              <span className="word" style={{ animationDelay: `${i * 0.18}s` }}>{emphasize(line)}</span>
+            </span>
+          ))}
         </h1>
         <p className="lead">
           {h.lead}
