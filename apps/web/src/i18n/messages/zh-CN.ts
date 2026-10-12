@@ -5,7 +5,7 @@ export const zhCN = {
   ui: zhUiStrings,
   meta: {
     title: "RoboShare · 让 Robotaxi 替你跑单赚 USDT",
-    description: "一辆自动驾驶网约车拆成 100 份，1 份起投。车每天跑单，收益每月以 USDT 打进你的钱包，链上可查。",
+    description: "一辆自动驾驶网约车拆成 100 份，1 份起投。车每天跑单，收益按月结算分配，USDT 一键领到你的钱包，链上可查。",
   },
   layout: {
     skip: "跳到正文",
@@ -34,11 +34,11 @@ export const zhCN = {
   hero: {
     tagAuto: "自动驾驶",
     tagRide: "日夜接单",
-    tagPaid: "收益到账",
+    tagPaid: "按月分配",
     eyebrow: "ROBOTAXI 收益份额 · 1 份起投",
     /** Two headline lines; wrap highlighted words in *asterisks*. */
     h1: ["让 *Robotaxi*", "替你跑单赚 *USDT*"] as [string, string],
-    lead: "一辆自动驾驶网约车拆成 100 份，1 份起投。车每天跑单，收益每月打进你的钱包，每一笔都在链上可查。",
+    lead: "一辆自动驾驶网约车拆成 100 份，1 份起投。车每天跑单，收益按月结算分配，USDT 一键领到你的钱包，每一笔都在链上可查。",
     buyNow: (code: string) => `立即认购 ${code}`,
     viewProjects: "看看在募车辆",
     allProjects: "全部车辆",
@@ -57,11 +57,11 @@ export const zhCN = {
     steps: [
       ["连接钱包", "用你常用的钱包 App 打开本站，一键连接。"],
       ["选份数，USDT 支付", "1 份起投，几秒完成认购。"],
-      ["坐等收益到账", "车每天跑单，收益每月发到“我的资产”，一键领取。"],
+      ["按月领取收益", "车每天跑单，收益按月结算，分配后在“我的资产”一键领取。"],
     ] as [string, string][],
     trustTitle: "为什么可以放心",
     trust: [
-      ["没成团，全额退", "募集没达到最低份数，USDT 原路退回，一分不少。"],
+      ["没成团，全额退", "募集没达到最低份数，USDT 全额退还，在“我的资产”一键领回。"],
       ["每一笔都可查", "运营报告上链，收入、利润、分配金额全部公开。"],
       ["份额在你手里", "份额存在你自己的钱包，平台转不走；分配规则写进合约，不能私自更改。"],
     ] as [string, string][],
@@ -81,7 +81,7 @@ export const zhCN = {
   },
   projects: {
     title: "车辆项目",
-    intro: "每个项目对应一辆 Robotaxi，1 份起投，收益按月发放。",
+    intro: "每个项目对应一辆 Robotaxi，1 份起投，收益按月分配。",
     filterAria: "按状态筛选",
     filters: { all: "全部", OFFERING: "募集中", ACTIVE: "运营中", FUNDED: "待投运", VERIFIED: "即将开放", CANCELLED: "已取消" } as Record<string, string>,
     empty: "这个分类下暂时没有项目。",
@@ -109,7 +109,7 @@ export const zhCN = {
     offeringNote: (end: string, min: number) => `${end} 截止。满 ${min} 份即成团，没成团全额退款。`,
     statusAria: "项目状态",
     currentState: "当前状态",
-    activeNote: "车辆运营中，收益每月发放，在“我的资产”一键领取。",
+    activeNote: "车辆运营中，收益按月分配，在“我的资产”一键领取。",
     closedNote: "该项目当前不接受认购。",
     viewPortfolio: "查看我的资产",
     reports: "运营报告",
@@ -187,7 +187,7 @@ export const zhCN = {
     holdings: "持有份额",
     projectsCount: (u: number, n: number) => `份 · ${n} 个项目`,
     claimableTitle: "可领取收益",
-    noClaimable: "暂时没有可领取的收益，车辆运营后每月发放。",
+    noClaimable: "暂时没有可领取的收益，车辆运营后按月结算分配。",
     noHoldings: "你还没有份额，挑一辆车上车吧。",
     pendingUnits: (n: number) => `待发放 ${n} 份`,
     pendingNote: (n: number) => `你认购的 ${n} 份将在募集结算后发到钱包。`,
@@ -375,7 +375,7 @@ export const zhCN = {
     title: "投资须知",
     intro: "认购前花两分钟了解规则和风险，投得更明白。",
     safeguards: [
-      ["未成团全额退款", "募集期结束没达到最低份数，USDT 原路全额退回。"],
+      ["未成团全额退款", "募集期结束没达到最低份数，USDT 全额退还，在“我的资产”领回。"],
       ["份额在你自己的钱包", "平台和治理方都无法转走你的份额。"],
       ["账目公开", "每期运营报告记录在链上，审核通过后才会分配收益。"],
       ["规则不能随意改", "项目合约部署后不可升级；平台的管理操作需要多人签名（3 人中 2 人）。"],

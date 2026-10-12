@@ -84,7 +84,7 @@ export const en: Messages = {
   ui,
   meta: {
     title: "RoboShare · Let a Robotaxi earn USDT for you",
-    description: "One self-driving ride-hailing car, split into 100 units. Start with 1 unit. The car takes rides every day and your share of the income lands in your wallet monthly in USDT, all on chain.",
+    description: "One self-driving ride-hailing car, split into 100 units. Start with 1 unit. The car takes rides every day and income is settled monthly; claim your USDT share to your wallet in one tap, all on chain.",
   },
   layout: {
     skip: "Skip to content",
@@ -113,10 +113,10 @@ export const en: Messages = {
   hero: {
     tagAuto: "Self-driving",
     tagRide: "Rides day and night",
-    tagPaid: "Income paid out",
+    tagPaid: "Monthly payouts",
     eyebrow: "ROBOTAXI INCOME UNITS · FROM 1 UNIT",
     h1: ["Let a *Robotaxi*", "earn *USDT* for you"],
-    lead: "One self-driving ride-hailing car, split into 100 units. Start with 1 unit. The car takes rides every day, and your share of the income lands in your wallet every month. Every payment is on chain.",
+    lead: "One self-driving ride-hailing car, split into 100 units. Start with 1 unit. The car takes rides every day, and income is settled monthly: claim your USDT share to your wallet in one tap. Every payment is on chain.",
     buyNow: (code) => `Invest in ${code}`,
     viewProjects: "See open cars",
     allProjects: "All cars",
@@ -135,11 +135,11 @@ export const en: Messages = {
     steps: [
       ["Connect your wallet", "Open this site in the wallet app you already use and connect in one tap."],
       ["Pick units, pay in USDT", "Start with 1 unit. Done in seconds."],
-      ["Collect your income", "The car takes rides every day; income arrives in “My assets” every month, ready to claim in one tap."],
+      ["Claim monthly income", "The car takes rides every day; income is settled monthly and, once distributed, claimed in “My assets” with one tap."],
     ],
     trustTitle: "Why you can invest with confidence",
     trust: [
-      ["Full refund if not funded", "If the minimum isn't reached, every USDT goes straight back to you."],
+      ["Full refund if not funded", "If the minimum isn't reached, your USDT is refunded in full; claim it back in “My assets” with one tap."],
       ["Every payment is traceable", "Operating reports go on chain: revenue, profit and payouts are all public."],
       ["Your units, your wallet", "Units sit in your own wallet and the platform can't move them. Payout rules are written into the contract and can't be changed at will."],
     ],
@@ -159,7 +159,7 @@ export const en: Messages = {
   },
   projects: {
     title: "Vehicles",
-    intro: "Each project is one Robotaxi. Start with 1 unit; income is paid monthly.",
+    intro: "Each project is one Robotaxi. Start with 1 unit; income is distributed monthly.",
     filterAria: "Filter by status",
     filters: { all: "All", OFFERING: "Open", ACTIVE: "Operating", FUNDED: "Launching", VERIFIED: "Coming soon", CANCELLED: "Cancelled" },
     empty: "No vehicles in this category yet.",
@@ -187,7 +187,7 @@ export const en: Messages = {
     offeringNote: (end: string, min: number) => `Closes ${end}. Funded at ${min} units; full refund if not funded.`,
     statusAria: "Project status",
     currentState: "Status",
-    activeNote: "The car is on the road. Income is paid monthly; claim it in “My assets” with one tap.",
+    activeNote: "The car is on the road. Income is distributed monthly; claim it in “My assets” with one tap.",
     closedNote: "This project is not open for investment right now.",
     viewPortfolio: "View my assets",
     reports: "Operating reports",
@@ -265,7 +265,7 @@ export const en: Messages = {
     holdings: "Units held",
     projectsCount: (u, n) => `${u === 1 ? "unit" : "units"} · ${n} ${n === 1 ? "project" : "projects"}`,
     claimableTitle: "Income to claim",
-    noClaimable: "Nothing to claim yet. Income is paid monthly once the car is operating.",
+    noClaimable: "Nothing to claim yet. Once the car is operating, income is settled and distributed monthly.",
     noHoldings: "No units yet. Pick a car and get on board.",
     pendingUnits: (n) => `${n} pending`,
     pendingNote: (n) => `Your ${n} subscribed units arrive in your wallet once the offering settles.`,

@@ -84,7 +84,7 @@ export const es: Messages = {
   ui,
   meta: {
     title: "RoboShare · Que un Robotaxi gane USDT por ti",
-    description: "Un coche autónomo de transporte dividido en 100 participaciones. Empieza con 1. El coche hace viajes cada día y tus ingresos llegan a tu billetera cada mes en USDT, todo en cadena.",
+    description: "Un coche autónomo de transporte dividido en 100 participaciones. Empieza con 1. El coche hace viajes cada día y los ingresos se liquidan cada mes; cobra tus USDT en tu billetera con un toque, todo en cadena.",
   },
   layout: {
     skip: "Saltar al contenido",
@@ -113,10 +113,10 @@ export const es: Messages = {
   hero: {
     tagAuto: "Conducción autónoma",
     tagRide: "Viajes día y noche",
-    tagPaid: "Ingresos a tu billetera",
+    tagPaid: "Reparto mensual",
     eyebrow: "INGRESOS ROBOTAXI · DESDE 1 PARTICIPACIÓN",
     h1: ["Que un *Robotaxi*", "gane *USDT* por ti"],
-    lead: "Un coche autónomo de transporte dividido en 100 participaciones. Empieza con 1. El coche lleva pasajeros cada día y tus ingresos llegan a tu billetera cada mes. Cada pago se puede verificar en cadena.",
+    lead: "Un coche autónomo de transporte dividido en 100 participaciones. Empieza con 1. El coche lleva pasajeros cada día y los ingresos se liquidan cada mes; cobra tus USDT en tu billetera con un toque. Cada pago se puede verificar en cadena.",
     buyNow: (code) => `Invertir en ${code}`,
     viewProjects: "Ver coches abiertos",
     allProjects: "Todos los coches",
@@ -135,11 +135,11 @@ export const es: Messages = {
     steps: [
       ["Conecta tu billetera", "Abre esta web en la app de billetera que ya usas y conecta con un toque."],
       ["Elige participaciones, paga en USDT", "Desde 1 participación, listo en segundos."],
-      ["Recibe tus ingresos", "El coche hace viajes cada día; tus ingresos llegan a “Mis activos” cada mes, listos para cobrar con un toque."],
+      ["Cobra tus ingresos mensuales", "El coche hace viajes cada día; los ingresos se liquidan cada mes y, una vez repartidos, se cobran con un toque en “Mis activos”."],
     ],
     trustTitle: "Por qué puedes invertir con tranquilidad",
     trust: [
-      ["Reembolso total si no se financia", "Si no se alcanza el mínimo, todos tus USDT vuelven a ti."],
+      ["Reembolso total si no se financia", "Si no se alcanza el mínimo, se te reembolsan todos tus USDT; recupéralos con un toque en “Mis activos”."],
       ["Cada pago es verificable", "Los informes de operación quedan en cadena: ingresos, beneficios y repartos son públicos."],
       ["Tus participaciones, en tu billetera", "Están en tu propia billetera y la plataforma no puede moverlas. Las reglas de reparto están en el contrato y no se pueden cambiar a voluntad."],
     ],
@@ -187,7 +187,7 @@ export const es: Messages = {
     offeringNote: (end: string, min: number) => `Cierra el ${end}. Se financia con ${min} participaciones; si no, reembolso total.`,
     statusAria: "Estado del proyecto",
     currentState: "Estado actual",
-    activeNote: "El coche está operando. Los ingresos se pagan cada mes; cóbralos con un toque en “Mis activos”.",
+    activeNote: "El coche está operando. Los ingresos se reparten cada mes; cóbralos con un toque en “Mis activos”.",
     closedNote: "Este proyecto no admite inversiones ahora mismo.",
     viewPortfolio: "Ver mis activos",
     reports: "Informes de operación",
@@ -265,7 +265,7 @@ export const es: Messages = {
     holdings: "Participaciones",
     projectsCount: (_u, n) => `${n} ${n === 1 ? "proyecto" : "proyectos"}`,
     claimableTitle: "Ingresos por cobrar",
-    noClaimable: "Aún no hay nada que cobrar. Cuando el coche opere, los ingresos se pagan cada mes.",
+    noClaimable: "Aún no hay nada que cobrar. Cuando el coche opere, los ingresos se liquidan y reparten cada mes.",
     noHoldings: "Aún no tienes participaciones. Elige un coche y súbete.",
     pendingUnits: (n) => `${n} pendientes`,
     pendingNote: (n) => `Tus ${n} participaciones suscritas llegarán a tu billetera cuando se liquide la oferta.`,

@@ -84,7 +84,7 @@ export const zhTW: Messages = {
   ui,
   meta: {
     title: "RoboShare · 讓 Robotaxi 替你跑單賺 USDT",
-    description: "一輛自動駕駛網約車拆成 100 份，1 份起投。車每天跑單，收益每月以 USDT 打進你的錢包，鏈上可查。",
+    description: "一輛自動駕駛網約車拆成 100 份，1 份起投。車每天跑單，收益按月結算分配，USDT 一鍵領到你的錢包，鏈上可查。",
   },
   layout: {
     skip: "跳到正文",
@@ -113,10 +113,10 @@ export const zhTW: Messages = {
   hero: {
     tagAuto: "自動駕駛",
     tagRide: "日夜接單",
-    tagPaid: "收益到帳",
+    tagPaid: "按月分配",
     eyebrow: "ROBOTAXI 收益份額 · 1 份起投",
     h1: ["讓 *Robotaxi*", "替你跑單賺 *USDT*"],
-    lead: "一輛自動駕駛網約車拆成 100 份，1 份起投。車每天跑單，收益每月打進你的錢包，每一筆都在鏈上可查。",
+    lead: "一輛自動駕駛網約車拆成 100 份，1 份起投。車每天跑單，收益按月結算分配，USDT 一鍵領到你的錢包，每一筆都在鏈上可查。",
     buyNow: (code) => `立即認購 ${code}`,
     viewProjects: "看看募集中車輛",
     allProjects: "全部車輛",
@@ -135,11 +135,11 @@ export const zhTW: Messages = {
     steps: [
       ["連接錢包", "用你常用的錢包 App 打開本站，一鍵連接。"],
       ["選份數，USDT 支付", "1 份起投，幾秒完成認購。"],
-      ["坐等收益到帳", "車每天跑單，收益每月發到「我的資產」，一鍵領取。"],
+      ["按月領取收益", "車每天跑單，收益按月結算，分配後在「我的資產」一鍵領取。"],
     ],
     trustTitle: "為什麼可以放心",
     trust: [
-      ["沒成團，全額退", "募集沒達到最低份數，USDT 原路退回，一分不少。"],
+      ["沒成團，全額退", "募集沒達到最低份數，USDT 全額退還，在「我的資產」一鍵領回。"],
       ["每一筆都可查", "營運報告上鏈，收入、利潤、分配金額全部公開。"],
       ["份額在你手裡", "份額存在你自己的錢包，平台轉不走；分配規則寫進合約，不能私自更改。"],
     ],
@@ -159,7 +159,7 @@ export const zhTW: Messages = {
   },
   projects: {
     title: "車輛項目",
-    intro: "每個項目對應一輛 Robotaxi，1 份起投，收益按月發放。",
+    intro: "每個項目對應一輛 Robotaxi，1 份起投，收益按月分配。",
     filterAria: "按狀態篩選",
     filters: { all: "全部", OFFERING: "募集中", ACTIVE: "營運中", FUNDED: "待投運", VERIFIED: "即將開放", CANCELLED: "已取消" },
     empty: "這個分類下暫時沒有項目。",
@@ -187,7 +187,7 @@ export const zhTW: Messages = {
     offeringNote: (end: string, min: number) => `${end} 截止。滿 ${min} 份即成團，沒成團全額退款。`,
     statusAria: "項目狀態",
     currentState: "目前狀態",
-    activeNote: "車輛營運中，收益每月發放，在「我的資產」一鍵領取。",
+    activeNote: "車輛營運中，收益按月分配，在「我的資產」一鍵領取。",
     closedNote: "該項目目前不接受認購。",
     viewPortfolio: "查看我的資產",
     reports: "營運報告",
@@ -265,7 +265,7 @@ export const zhTW: Messages = {
     holdings: "持有份額",
     projectsCount: (_u, n) => `份 · ${n} 個項目`,
     claimableTitle: "可領取收益",
-    noClaimable: "暫時沒有可領取的收益，車輛營運後每月發放。",
+    noClaimable: "暫時沒有可領取的收益，車輛營運後按月結算分配。",
     noHoldings: "你還沒有份額，挑一輛車上車吧。",
     pendingUnits: (n) => `待發放 ${n} 份`,
     pendingNote: (n) => `你認購的 ${n} 份將在募集結算後發到錢包。`,
@@ -453,7 +453,7 @@ export const zhTW: Messages = {
     title: "投資須知",
     intro: "認購前花兩分鐘了解規則和風險，投得更明白。",
     safeguards: [
-      ["未成團全額退款", "募集期結束沒達到最低份數，USDT 原路全額退回。"],
+      ["未成團全額退款", "募集期結束沒達到最低份數，USDT 全額退還，在「我的資產」領回。"],
       ["份額在你自己的錢包", "平台和治理方都無法轉走你的份額。"],
       ["帳目公開", "每期營運報告記錄在鏈上，審核通過後才會分配收益。"],
       ["規則不能隨意改", "項目合約部署後不可升級；平台的管理操作需要多人簽名（3 人中 2 人）。"],

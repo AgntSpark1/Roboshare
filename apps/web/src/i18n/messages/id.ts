@@ -84,7 +84,7 @@ export const id: Messages = {
   ui,
   meta: {
     title: "RoboShare · Biarkan Robotaxi menghasilkan USDT untuk Anda",
-    description: "Satu mobil ride-hailing swakemudi dibagi menjadi 100 unit. Mulai dari 1 unit. Mobil beroperasi setiap hari dan pendapatan masuk ke dompet Anda tiap bulan dalam USDT, semuanya tercatat on-chain.",
+    description: "Satu mobil ride-hailing swakemudi dibagi menjadi 100 unit. Mulai dari 1 unit. Mobil beroperasi setiap hari dan pendapatan diselesaikan tiap bulan; klaim USDT ke dompet Anda sekali ketuk, semuanya tercatat on-chain.",
   },
   layout: {
     skip: "Langsung ke konten",
@@ -113,10 +113,10 @@ export const id: Messages = {
   hero: {
     tagAuto: "Tanpa pengemudi",
     tagRide: "Jalan siang malam",
-    tagPaid: "Pendapatan masuk",
+    tagPaid: "Dibagi tiap bulan",
     eyebrow: "UNIT PENDAPATAN ROBOTAXI · MULAI 1 UNIT",
     h1: ["Biarkan *Robotaxi*", "menghasilkan *USDT* untuk Anda"],
-    lead: "Satu mobil ride-hailing swakemudi dibagi menjadi 100 unit. Mulai dari 1 unit. Mobil mengantar penumpang setiap hari dan pendapatan masuk ke dompet Anda tiap bulan. Setiap pembayaran bisa dicek on-chain.",
+    lead: "Satu mobil ride-hailing swakemudi dibagi menjadi 100 unit. Mulai dari 1 unit. Mobil mengantar penumpang setiap hari dan pendapatan diselesaikan tiap bulan; klaim USDT ke dompet Anda sekali ketuk. Setiap pembayaran bisa dicek on-chain.",
     buyNow: (code) => `Investasi di ${code}`,
     viewProjects: "Lihat mobil yang dibuka",
     allProjects: "Semua mobil",
@@ -135,11 +135,11 @@ export const id: Messages = {
     steps: [
       ["Hubungkan dompet", "Buka situs ini di aplikasi dompet yang biasa Anda pakai, hubungkan sekali ketuk."],
       ["Pilih unit, bayar USDT", "Mulai dari 1 unit, selesai dalam hitungan detik."],
-      ["Tinggal terima pendapatan", "Mobil beroperasi setiap hari; pendapatan masuk ke “Aset saya” tiap bulan, klaim sekali ketuk."],
+      ["Klaim pendapatan bulanan", "Mobil beroperasi setiap hari; pendapatan diselesaikan tiap bulan dan, setelah dibagikan, diklaim sekali ketuk di “Aset saya”."],
     ],
     trustTitle: "Kenapa Anda bisa tenang",
     trust: [
-      ["Gagal terkumpul, uang kembali penuh", "Jika minimum tidak tercapai, seluruh USDT kembali ke Anda."],
+      ["Gagal terkumpul, uang kembali penuh", "Jika minimum tidak tercapai, USDT dikembalikan penuh; klaim kembali sekali ketuk di “Aset saya”."],
       ["Setiap pembayaran bisa dicek", "Laporan operasi tercatat on-chain: pendapatan, laba, dan jumlah pembagian semuanya terbuka."],
       ["Unit ada di tangan Anda", "Unit ada di dompet Anda sendiri dan tidak bisa dipindahkan platform. Aturan pembagian tertulis di kontrak dan tidak bisa diubah sesuka hati."],
     ],

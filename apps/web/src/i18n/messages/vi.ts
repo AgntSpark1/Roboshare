@@ -84,7 +84,7 @@ export const vi: Messages = {
   ui,
   meta: {
     title: "RoboShare · Để Robotaxi kiếm USDT thay bạn",
-    description: "Một xe gọi tự lái được chia thành 100 phần, từ 1 phần là tham gia được. Xe chạy mỗi ngày, thu nhập về ví bạn mỗi tháng bằng USDT, minh bạch trên chuỗi.",
+    description: "Một xe gọi tự lái được chia thành 100 phần, từ 1 phần là tham gia được. Xe chạy mỗi ngày, thu nhập được quyết toán hằng tháng, nhận USDT về ví bằng một chạm, minh bạch trên chuỗi.",
   },
   layout: {
     skip: "Bỏ qua đến nội dung",
@@ -113,10 +113,10 @@ export const vi: Messages = {
   hero: {
     tagAuto: "Tự lái",
     tagRide: "Chạy ngày đêm",
-    tagPaid: "Thu nhập về ví",
+    tagPaid: "Chia hằng tháng",
     eyebrow: "PHẦN THU NHẬP ROBOTAXI · TỪ 1 PHẦN",
     h1: ["Để *Robotaxi*", "kiếm *USDT* thay bạn"],
-    lead: "Một xe gọi tự lái được chia thành 100 phần, từ 1 phần là tham gia được. Xe chở khách mỗi ngày, thu nhập về ví bạn mỗi tháng. Mọi khoản chi trả đều kiểm tra được trên chuỗi.",
+    lead: "Một xe gọi tự lái được chia thành 100 phần, từ 1 phần là tham gia được. Xe chở khách mỗi ngày, thu nhập được quyết toán hằng tháng, nhận USDT về ví bằng một chạm. Mọi khoản chi trả đều kiểm tra được trên chuỗi.",
     buyNow: (code) => `Đầu tư ${code}`,
     viewProjects: "Xem xe đang mở bán",
     allProjects: "Tất cả xe",
@@ -135,11 +135,11 @@ export const vi: Messages = {
     steps: [
       ["Kết nối ví", "Mở trang này bằng ứng dụng ví bạn hay dùng, kết nối một chạm."],
       ["Chọn số phần, trả bằng USDT", "Từ 1 phần, xong trong vài giây."],
-      ["Chờ thu nhập về ví", "Xe chạy mỗi ngày, thu nhập về “Tài sản của tôi” mỗi tháng, nhận bằng một chạm."],
+      ["Nhận thu nhập hằng tháng", "Xe chạy mỗi ngày, thu nhập được quyết toán hằng tháng; sau khi chia, nhận bằng một chạm ở “Tài sản của tôi”."],
     ],
     trustTitle: "Vì sao bạn có thể yên tâm",
     trust: [
-      ["Không đủ thì hoàn toàn bộ", "Không đạt số phần tối thiểu, USDT được trả lại đầy đủ."],
+      ["Không đủ thì hoàn toàn bộ", "Không đạt số phần tối thiểu, USDT được hoàn đủ, nhận lại bằng một chạm ở “Tài sản của tôi”."],
       ["Mọi khoản đều kiểm tra được", "Báo cáo vận hành ghi trên chuỗi: doanh thu, lợi nhuận, số tiền chia đều công khai."],
       ["Phần nằm trong tay bạn", "Phần nằm trong ví của bạn, nền tảng không chuyển đi được. Quy tắc chia được viết vào hợp đồng, không thể tùy ý thay đổi."],
     ],
