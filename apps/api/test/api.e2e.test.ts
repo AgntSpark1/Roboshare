@@ -93,7 +93,7 @@ async function seed() {
       projectIdOnchain: PID, assetIdOnchain: keccak256(stringToHex("asset")), issuerId: keccak256(stringToHex("issuer")),
       rightsDocHash: keccak256(stringToHex("rights")), registrant: operator.address.toLowerCase(), state: "ACTIVE",
       tokenAddress: ADDR(0x70c), offeringAddress: ADDR(0x0ff), distributorAddress: DISTRIBUTOR.toLowerCase(),
-      fundedAtBlock: 10n, registeredBlock: 5n,
+      fundedAtBlock: 10n, registeredBlock: 5n, termDays: 360,
     },
   });
   await prisma.projectMeta.create({ data: { projectIdOnchain: PID, slug: "robotaxi-001", title: "Robotaxi 001", make: "TEST-ONLY", model: "Sample" } });

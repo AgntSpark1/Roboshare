@@ -136,6 +136,10 @@ model Project {
   distributorAddress String?
   fundedAtBlock      BigInt?
   registeredBlock    BigInt
+  /// Operating term in days (OPERATING_TERM_PROPOSAL.md); set before the offering opens, default 720.
+  termDays           Int?
+  /// Block time of the first FUNDED -> ACTIVE transition; the term ends termDays later.
+  operatingStartedAt DateTime?
 
   stateChanges ProjectStateChange[]
   offering     Offering?
@@ -404,6 +408,8 @@ model DistributionBatch {
   proposeTxHash    String
   approveTxHash    String?
   approver         String?
+  /// Fee-free return of capital (vehicle sale proceeds, reserve, insurance) at term end.
+  capitalReturn    Boolean                  @default(false)
   allocations      DistributionAllocation[]
 
   @@id([projectIdOnchain, batchIdOnchain])

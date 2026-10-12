@@ -25,7 +25,13 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
         address distributor;
         uint64 createdAt;
         uint64 fundedAtBlock;
+        uint32 termDays; // operating term, fixed before the offering opens
+        uint64 operatingStartedAt; // first FUNDED -> ACTIVE transition; 0 until then
     }
+
+    /// @notice Term applied when none was set before the offering opened.
+    uint32 public constant DEFAULT_TERM_DAYS = 720;
+    uint32 public constant MAX_TERM_DAYS = 3650;
 
     mapping(bytes32 => Project) private _projects;
     mapping(bytes32 => bytes32) public assetToProject; // never cleared
@@ -37,6 +43,8 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
     event ProjectStateChanged(
         bytes32 indexed projectId, ProjectState from, ProjectState to, bytes32 reasonHash, address indexed actor
     );
+    event OperatingTermSet(bytes32 indexed projectId, uint32 termDays);
+    event OperatingStarted(bytes32 indexed projectId, uint64 startedAt, uint64 termEndsAt);
     event ProjectContractsLinked(bytes32 indexed projectId, address token, address offering, address distributor);
 
     error ZeroValue();
@@ -49,6 +57,7 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
     error AlreadyLinked(bytes32 projectId);
     error NotLinked(bytes32 projectId);
     error PendingDistribution();
+    error InvalidTerm(uint32 termDays);
 
     constructor(address admin) {
         if (admin == address(0)) revert ZeroValue();
@@ -92,6 +101,19 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
         emit DraftUpdated(projectId, issuerId, rightsDocHash);
     }
 
+    /// @notice Sets the operating term. Only before the project's contracts are deployed, so the fee tiers
+    /// (discounted for long terms) and the term investors subscribe to are fixed together.
+    function setOperatingTerm(bytes32 projectId, uint32 termDays) external onlyRole(OPERATOR_ROLE) {
+        Project storage p = _existing(projectId);
+        if (p.state != ProjectState.DRAFT && p.state != ProjectState.VERIFIED) {
+            revert InvalidTransition(p.state, p.state);
+        }
+        if (p.token != address(0)) revert AlreadyLinked(projectId);
+        if (termDays == 0 || termDays > MAX_TERM_DAYS) revert InvalidTerm(termDays);
+        p.termDays = termDays;
+        emit OperatingTermSet(projectId, termDays);
+    }
+
     // ---------------------------------------------------------------------
     // Lifecycle (role-driven transitions)
     // ---------------------------------------------------------------------
@@ -104,6 +126,12 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
         _authorizeTransition(p, from, to);
         p.state = to;
         emit ProjectStateChanged(projectId, from, to, reasonHash, msg.sender);
+        if (from == ProjectState.FUNDED && to == ProjectState.ACTIVE) {
+            // The term clock starts once; resuming from SUSPENDED does not restart it.
+            uint64 startedAt = uint64(block.timestamp);
+            p.operatingStartedAt = startedAt;
+            emit OperatingStarted(projectId, startedAt, startedAt + uint64(p.termDays) * 1 days);
+        }
     }
 
     function _authorizeTransition(Project storage p, ProjectState from, ProjectState to) private view {
@@ -171,6 +199,11 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
 
     function markOffering(bytes32 projectId, bytes32 reasonHash) external {
         _offeringTransition(projectId, ProjectState.VERIFIED, ProjectState.OFFERING, reasonHash);
+        Project storage p = _projects[projectId];
+        if (p.termDays == 0) {
+            p.termDays = DEFAULT_TERM_DAYS;
+            emit OperatingTermSet(projectId, DEFAULT_TERM_DAYS);
+        }
     }
 
     function markFunded(bytes32 projectId, bytes32 reasonHash) external {
@@ -209,6 +242,16 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
 
     function fundedAtBlock(bytes32 projectId) external view returns (uint64) {
         return _projects[projectId].fundedAtBlock;
+    }
+
+    /// @return termDays Operating term in days (0 until set or until the offering opens).
+    /// @return startedAt When the project first became ACTIVE (0 before).
+    /// @return endsAt startedAt + termDays (0 before the project becomes ACTIVE).
+    function termOf(bytes32 projectId) external view returns (uint32 termDays, uint64 startedAt, uint64 endsAt) {
+        Project storage p = _projects[projectId];
+        termDays = p.termDays;
+        startedAt = p.operatingStartedAt;
+        if (startedAt != 0) endsAt = startedAt + uint64(termDays) * 1 days;
     }
 
     function _existing(bytes32 projectId) private view returns (Project storage p) {

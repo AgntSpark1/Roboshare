@@ -18,6 +18,16 @@ export const DEFAULT_TIERS: readonly FeeTier[] = [
   { minUnits: 50, bps: 1000 },
 ];
 
+/** Mirrors FeeTiers.sol: projects with a term of at least LONG_TERM_DAYS pay LONG_TERM_DISCOUNT_BPS less on every tier. */
+export const DEFAULT_TERM_DAYS = 720;
+export const LONG_TERM_DAYS = 720;
+export const LONG_TERM_DISCOUNT_BPS = 250;
+
+export function tiersForTerm(termDays: number | null | undefined): readonly FeeTier[] {
+  const days = termDays || DEFAULT_TERM_DAYS;
+  return days >= LONG_TERM_DAYS ? DEFAULT_TIERS.map((t) => ({ ...t, bps: t.bps - LONG_TERM_DISCOUNT_BPS })) : DEFAULT_TIERS;
+}
+
 export function tierBpsFor(units: number, tiers: readonly FeeTier[] = DEFAULT_TIERS): number {
   if (!Number.isInteger(units) || units <= 0) throw new RangeError("units must be a positive integer");
   let bps: number | undefined;
