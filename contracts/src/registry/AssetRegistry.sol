@@ -101,12 +101,14 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
         emit DraftUpdated(projectId, issuerId, rightsDocHash);
     }
 
-    /// @notice Sets the operating term. Only before the offering opens, so investors subscribe to a fixed term.
+    /// @notice Sets the operating term. Only before the project's contracts are deployed, so the fee tiers
+    /// (discounted for long terms) and the term investors subscribe to are fixed together.
     function setOperatingTerm(bytes32 projectId, uint32 termDays) external onlyRole(OPERATOR_ROLE) {
         Project storage p = _existing(projectId);
         if (p.state != ProjectState.DRAFT && p.state != ProjectState.VERIFIED) {
             revert InvalidTransition(p.state, p.state);
         }
+        if (p.token != address(0)) revert AlreadyLinked(projectId);
         if (termDays == 0 || termDays > MAX_TERM_DAYS) revert InvalidTerm(termDays);
         p.termDays = termDays;
         emit OperatingTermSet(projectId, termDays);

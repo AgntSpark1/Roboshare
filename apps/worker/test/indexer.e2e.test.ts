@@ -9,6 +9,8 @@ import {
   revenueDistributorAbi,
   rwaShareTokenAbi,
   subscriptionRouterAbi,
+  tiersForTerm,
+  DEFAULT_TERM_DAYS,
 } from "@roboshare/shared";
 import { erc20Abi, keccak256, parseAbi, stringToHex, type Address, type Hex } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -135,7 +137,7 @@ describe("indexer against a local chain", () => {
       include: { allocations: true },
     });
     expect(batch.status).toBe("CLAIMABLE");
-    const mirror = allocate(amount, 0n, [{ address: "alice", units: 50 }, { address: "bob", units: 50 }]);
+    const mirror = allocate(amount, 0n, [{ address: "alice", units: 50 }, { address: "bob", units: 50 }], tiersForTerm(DEFAULT_TERM_DAYS));
     expect(batch.totalNet.toFixed()).toBe(mirror.totalNet.toString());
     expect(batch.totalFee.toFixed()).toBe(mirror.totalFee.toString());
     expect(batch.dustOut.toFixed()).toBe(mirror.dustOut.toString());

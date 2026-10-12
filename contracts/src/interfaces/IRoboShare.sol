@@ -61,6 +61,7 @@ interface IAssetRegistry {
     function stateOf(bytes32 projectId) external view returns (ProjectState);
     function offeringOf(bytes32 projectId) external view returns (address);
     function fundedAtBlock(bytes32 projectId) external view returns (uint64);
+    function termOf(bytes32 projectId) external view returns (uint32 termDays, uint64 startedAt, uint64 endsAt);
     function markOffering(bytes32 projectId, bytes32 reasonHash) external;
     function markFunded(bytes32 projectId, bytes32 reasonHash) external;
     function markCancelled(bytes32 projectId, bytes32 reasonHash) external;

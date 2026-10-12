@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Param, Query } from "@nestjs/common";
-import { DEFAULT_TIERS, SHARE_CAP } from "@roboshare/shared";
+import { SHARE_CAP, tiersForTerm } from "@roboshare/shared";
 import { getAddress } from "viem";
 import { ApiError, notFound } from "../common/errors.js";
 import { PrismaService } from "../common/prisma.service.js";
@@ -102,7 +102,7 @@ export class PublicController {
             termsHash: p.offering.termsHash,
           }
         : null,
-      feeTiers: DEFAULT_TIERS,
+      feeTiers: tiersForTerm(p.termDays),
       stateHistory: p.stateChanges.map((s) => ({
         from: s.fromState,
         to: s.toState,

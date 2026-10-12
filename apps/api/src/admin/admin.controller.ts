@@ -9,6 +9,7 @@ import {
   financialReportSchema,
   revenueDistributorAbi,
   reportHash,
+  tiersForTerm,
   type FinancialReport,
 } from "@roboshare/shared";
 
@@ -86,15 +87,15 @@ export class AdminController {
     };
   }
 
-  /** Operating term; the contract only accepts it before the offering opens (default 720 days). */
+  /** Operating term; the contract only accepts it before the project contracts are deployed (default 720 days). */
   @Post("projects/:id/term")
   @Roles("OPERATOR")
   async setTerm(@Req() req: AuthedRequest, @Param("id") id: string, @Body(new ZodPipe(termBody)) body: z.infer<typeof termBody>) {
     const registry = this.need(this.cfg.assetRegistry, "ASSET_REGISTRY");
     const project = await this.prisma.project.findUnique({ where: { projectIdOnchain: id } });
     if (!project) throw notFound("project");
-    if (!["DRAFT", "VERIFIED"].includes(project.state)) {
-      throw new ApiError(409, "PROJECT_STATE_INVALID", "the term is fixed once the offering opens");
+    if (!["DRAFT", "VERIFIED"].includes(project.state) || project.tokenAddress) {
+      throw new ApiError(409, "PROJECT_STATE_INVALID", "set the term before deploying the project contracts");
     }
     await this.audit(req, "PROJECT_TERM_SET", "project", id, body);
     return {
@@ -293,7 +294,7 @@ export class AdminController {
       orderBy: { batchIdOnchain: "desc" },
     });
     const carriedDust = lastBatch ? BigInt(lastBatch.dustOut.toFixed()) : 0n;
-    const result = allocate(BigInt(body.amount), carriedDust, holders, body.capitalReturn ? NO_FEE_TIERS : undefined);
+    const result = allocate(BigInt(body.amount), carriedDust, holders, body.capitalReturn ? NO_FEE_TIERS : tiersForTerm(project.termDays));
     return { result: { ...result, carriedDustIn: carriedDust }, holders, distributor: getAddress(project.distributorAddress) as Address };
   }
 

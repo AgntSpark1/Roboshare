@@ -30,6 +30,7 @@ contract OperatingTermTest is BaseTest {
     }
 
     function test_DefaultTermAppliedWhenOfferingOpens() public {
+        projectTermDays = 0;
         (uint32 termDays,,) = assets.termOf(PID);
         assertEq(termDays, 0);
         _openOffering(100);
@@ -39,15 +40,40 @@ contract OperatingTermTest is BaseTest {
     }
 
     function test_CustomTermBeforeOffering() public {
+        projectTermDays = 180;
+        _openOffering(100);
+        (uint32 termDays,,) = assets.termOf(PID);
+        assertEq(termDays, 180);
+    }
+
+    function test_TermLockedOnceContractsDeployed() public {
         _deployProject();
         vm.prank(operator);
-        assets.setOperatingTerm(PID, 360);
-        vm.startPrank(gov);
-        offering.configure(_defaultConfig(100));
-        offering.open();
-        vm.stopPrank();
-        (uint32 termDays,,) = assets.termOf(PID);
-        assertEq(termDays, 360);
+        vm.expectRevert(abi.encodeWithSelector(AssetRegistry.AlreadyLinked.selector, PID));
+        assets.setOperatingTerm(PID, 720);
+    }
+
+    function test_ShortTermKeepsStandardTiers() public {
+        _deployProject();
+        assertEq(distributor.tierBpsFor(1), 2000);
+        assertEq(distributor.tierBpsFor(50), 1000);
+    }
+
+    function test_LongTermDiscountsEveryTier() public {
+        projectTermDays = 720;
+        _deployProject();
+        (, uint16[] memory bps) = distributor.tiers();
+        assertEq(bps[0], 1750);
+        assertEq(bps[1], 1500);
+        assertEq(bps[2], 1250);
+        assertEq(bps[3], 1000);
+        assertEq(bps[4], 750);
+    }
+
+    function test_UnsetTermGetsLongTermTiers() public {
+        projectTermDays = 0;
+        _deployProject();
+        assertEq(distributor.tierBpsFor(1), 1750);
     }
 
     function test_TermLockedOnceOfferingOpens() public {

@@ -81,7 +81,7 @@ mapping(bytes32 assetId => bytes32 projectId) assetToProject; // never cleared
 | `transition(projectId, newState, reasonHash)` | 见下表 | `reasonHash` 必须非零，且应存在于 AuditRegistry 中 |
 | `linkContracts(projectId, token, offering, distributor)` | FACTORY_ROLE | 仅一次，且仅在 `VERIFIED` 状态下 |
 | `markFunded(projectId)` / `markOffering` / `markCancelled` | 仅限该项目的 `OfferingManager` | 由募集结果驱动 |
-| `setOperatingTerm(projectId, termDays)` | OPERATOR | 仅在 `DRAFT` / `VERIFIED` 状态下（募集开启后不可改）；`1 ≤ termDays ≤ 3650`。未设置时募集开启自动设为 `DEFAULT_TERM_DAYS = 720` |
+| `setOperatingTerm(projectId, termDays)` | OPERATOR | 仅在 `DRAFT` / `VERIFIED` 且项目合约尚未部署时（`ProjectFactory` 按期限写定手续费档位，之后不可改）；`1 ≤ termDays ≤ 3650`。未设置时募集开启自动设为 `DEFAULT_TERM_DAYS = 720` |
 | `getProject(projectId)` / `stateOf(projectId)` | 只读 | |
 | `termOf(projectId)` | 只读 | 返回 `(termDays, startedAt, endsAt)`；运营开始前 `startedAt = endsAt = 0` |
 
@@ -295,6 +295,8 @@ USDT 不假定支持 EIP-2612 `permit`；如经核实支持，可作为后续优
 uint32[5] TIER_MIN = [1, 5, 10, 20, 50];
 uint16[5] TIER_BPS = [2000, 1750, 1500, 1250, 1000];
 ```
+
+`ProjectFactory.deployProject` 读取 `AssetRegistry.termOf`（未设置按 720 天）：运营期 ≥ 720 天时每档减 250 基点，即 `[1750, 1500, 1250, 1000, 750]`（`FeeTiers.tiersForTerm`）。
 
 在构造时校验：阈值从 1 开始严格递增，基点非递增，且每项 ≤ 10 000。变更档位意味着部署新的分配合约，且仅适用于新项目。
 
