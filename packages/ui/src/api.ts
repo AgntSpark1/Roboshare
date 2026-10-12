@@ -26,6 +26,8 @@ export interface SafeProposal {
   calls: { to: `0x${string}`; data: `0x${string}`; description: string }[];
   /** The same as a single Safe transaction (operation 1 = DELEGATECALL to MultiSendCallOnly for a batch). */
   tx: PreparedTx & { operation: 0 | 1 };
+  /** Set when the API put it on the console's Safe queue, where owners confirm and execute it. */
+  queueId?: string;
 }
 
 let base = "/api/v1";

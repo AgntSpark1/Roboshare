@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { shortAddr, type PreparedTx, type SafeProposal } from "@roboshare/ui";
 
@@ -44,8 +45,28 @@ function TxBlock({ title, tx }: { title: string; tx: PreparedTx }) {
  */
 export function ProposalView({ proposal }: { proposal: SafeProposal }) {
   const batch = proposal.calls.length > 1;
+  if (proposal.queueId) {
+    return (
+      <div className="panel stack" data-testid="proposal">
+        <p className="okmsg" role="status">已提交到“多签待签”。多签 owner 在后台确认，够人数后执行，执行后立即生效。</p>
+        <div><Link className="btn primary sm" href="/safe">去确认</Link></div>
+        <details>
+          <summary className="muted small">手动在 Safe 网页里签（备用）</summary>
+          <div className="stack" style={{ marginTop: 8 }}><ManualProposal proposal={proposal} batch={batch} /></div>
+        </details>
+      </div>
+    );
+  }
   return (
     <div className="panel stack" data-testid="proposal">
+      <ManualProposal proposal={proposal} batch={batch} />
+    </div>
+  );
+}
+
+function ManualProposal({ proposal, batch }: { proposal: SafeProposal; batch: boolean }) {
+  return (
+    <>
       <div className="warnbox">
         这是交给治理 Safe（{shortAddr(proposal.safe)}，3 人中 2 人签名）的操作，签够 2 人并执行后<b>立即生效</b>，没有等待期，请核对无误再签。
         {batch ? `在 Safe 的 Transaction Builder 里按顺序添加下面 ${proposal.calls.length} 笔调用（会合并成一笔交易）。` : "在 Safe 里新建交易，粘贴下面的地址和 calldata。"}
@@ -60,7 +81,7 @@ export function ProposalView({ proposal }: { proposal: SafeProposal }) {
           <TxBlock title={proposal.tx.description} tx={proposal.tx} />
         </details>
       )}
-    </div>
+    </>
   );
 }
 
