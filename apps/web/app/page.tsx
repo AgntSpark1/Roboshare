@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { DEFAULT_TIERS, allocate } from "@roboshare/shared";
+import { allocate, tiersForTerm } from "@roboshare/shared";
 import { formatBps, formatUsdt } from "@roboshare/ui";
 import { Hero } from "@/components/Hero";
 import { ProjectCard } from "@/components/ProjectCard";
@@ -55,7 +55,7 @@ export default function Home() {
 
       <WhitepaperBand />
 
-      <TierCalculator />
+      <TierCalculator termDays={(featured ?? items[0])?.term?.termDays} />
 
       <section style={{ paddingTop: 0 }}>
         <div className="wrap">
@@ -83,11 +83,12 @@ export default function Home() {
   );
 }
 
-function TierCalculator() {
+function TierCalculator({ termDays }: { termDays?: number }) {
   const { t } = useI18n();
+  const tiers = tiersForTerm(termDays);
   const h = t.home;
   const [units, setUnits] = useState(12);
-  const r = allocate(SAMPLE_D, 0n, [{ address: "you", units }, ...(units < 100 ? [{ address: "others", units: 100 - units }] : [])]);
+  const r = allocate(SAMPLE_D, 0n, [{ address: "you", units }, ...(units < 100 ? [{ address: "others", units: 100 - units }] : [])], tiers);
   const mine = r.allocations.find((a) => a.address === "you")!;
   const fee = mine.gross - mine.net;
   const bps = mine.feeBps;
@@ -101,8 +102,8 @@ function TierCalculator() {
         </div>
         <div className="tiers">
           <div className="tier-rows">
-            {DEFAULT_TIERS.map((tier, i) => {
-              const next = DEFAULT_TIERS[i + 1];
+            {tiers.map((tier, i) => {
+              const next = tiers[i + 1];
               const on = units >= tier.minUnits && (!next || units < next.minUnits);
               return (
                 <div key={tier.minUnits} className={`tier-row${on ? " on" : ""}`}>

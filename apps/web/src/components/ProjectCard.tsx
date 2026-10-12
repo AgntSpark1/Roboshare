@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { formatUsdt, OfferingProgress, StatePill, countdown, type ProjectListItem } from "@roboshare/ui";
 import { useI18n } from "@/i18n/I18nProvider";
+import { termLine } from "@/lib/term";
 import { CarArt } from "./CarArt";
 
 export function projectCode(p: { slug: string | null; id: string }) {
@@ -15,6 +16,7 @@ export function ProjectCard({ p }: { p: ProjectListItem }) {
   const o = p.offering;
   const now = Date.now();
   const notStarted = !!o?.startAt && now < new Date(o.startAt).getTime();
+  const term = termLine(p.term, c.term);
   return (
     <Link className={`pcard${p.state === "OFFERING" ? " hot" : ""}`} href={`/projects/${p.id}`}>
       <div className="art">
@@ -52,6 +54,7 @@ export function ProjectCard({ p }: { p: ProjectListItem }) {
             <b>{t.units.of(p.issuedUnits, p.authorizedUnits)}</b>
           </div>
         )}
+        {term && <p className="term-line" data-testid="term-line">{term}</p>}
       </div>
     </Link>
   );

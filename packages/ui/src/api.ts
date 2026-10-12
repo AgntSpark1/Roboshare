@@ -83,7 +83,26 @@ export interface ProjectListItem {
   state: string;
   issuedUnits: number;
   authorizedUnits: number;
+  /** Operating term; null when the project has none. startedAt / endsAt / remainingDays stay null until operations start. */
+  term: ProjectTerm | null;
   offering: OfferingSummary | null;
+}
+
+export interface ProjectTerm {
+  termDays: number;
+  startedAt: string | null;
+  endsAt: string | null;
+  remainingDays: number | null;
+}
+
+/** One Beijing-time day of operations; amounts are USDT base-unit strings. PENDING days are paid with the next monthly distribution. */
+export interface DailyRevenueItem {
+  day: string;
+  revenue: string;
+  expenses: string;
+  net: string;
+  rides: number | null;
+  status: "PENDING" | "SETTLED";
 }
 
 export interface ProjectDetail extends Omit<ProjectListItem, "title" | "slug" | "make" | "model"> {

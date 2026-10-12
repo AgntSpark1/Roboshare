@@ -43,6 +43,7 @@ interface MyDistribution {
   net: string;
   claimed: boolean;
   claimTxHash: string | null;
+  capitalReturn?: boolean;
 }
 interface MyTx {
   kind: string;
@@ -199,7 +200,8 @@ function Dashboard() {
 function ClaimRow({ d, name, distributor }: { d: MyDistribution; name: string; distributor: `0x${string}` | null }) {
   const { run, start } = useTxRunner();
   const refresh = useRefreshAfterTx();
-  const c = useI18n().t.portfolio;
+  const { t } = useI18n();
+  const c = t.portfolio;
   const steps: TxStep[] = distributor
     ? [{ label: c.claimStep(name, d.batchId), write: { address: distributor, abi: revenueDistributorAbi, functionName: "claim", args: [BigInt(d.batchId)] } }]
     : [];
@@ -212,6 +214,7 @@ function ClaimRow({ d, name, distributor }: { d: MyDistribution; name: string; d
     <div className="claim">
       <div>
         <b>{c.batch(name, d.batchId)}</b>
+        {d.capitalReturn && <span className="tag-s ok-t" data-testid="capital-return">{t.project.capitalReturn}</span>}
         <div className="breakdown">
           {c.breakdown(d.units, formatUsdt(d.gross), formatUsdt(d.fee), formatBps(d.feeBps))}<b>{formatUsdt(d.net)} USDT</b>
         </div>

@@ -92,6 +92,12 @@ export const zhCN = {
     timeLeft: "剩余时间",
     issued: "已发行份额",
     startsIn: "距开放认购",
+    term: {
+      days: (n: number) => `运营期 ${n} 天`,
+      remaining: (n: number) => `剩余 ${n} 天`,
+      monthly: "每月分配",
+      capitalBack: "到期卖车款按份额返还",
+    },
   },
   project: {
     loading: "正在读取项目…",
@@ -131,6 +137,16 @@ export const zhCN = {
     offeringContract: "募集合约",
     distributor: "分配合约",
     history: "状态记录",
+    capitalReturn: "本金返还",
+    daily: {
+      title: "每日运营",
+      today: "当日运营收入",
+      pending: "待结算",
+      recent: "近 7 天",
+      date: "日期",
+      income: "运营收入（USDT）",
+      rides: "单量",
+    },
   },
   subscribe: {
     aria: "认购",

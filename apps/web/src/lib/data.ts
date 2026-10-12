@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBalance, readContract } from "@wagmi/core";
 import { erc20Abi, type Address } from "viem";
 import { subscriptionRouterAbi } from "@roboshare/shared";
-import { api, contractOf, useSession, useWalletConfig, type ContractsResponse, type ProjectDetail, type ProjectListItem } from "@roboshare/ui";
+import { api, contractOf, useSession, useWalletConfig, type ContractsResponse, type DailyRevenueItem, type ProjectDetail, type ProjectListItem } from "@roboshare/ui";
 
 export function useProjects() {
   return useQuery({ queryKey: ["projects"], queryFn: () => api.get<{ items: ProjectListItem[] }>("/projects") });
@@ -37,11 +37,23 @@ export interface BatchItem {
   totalNet: string;
   totalFee: string;
   snapshotBlock: string;
+  /** Sale proceeds paid back at the end of the term, not monthly profit. */
+  capitalReturn?: boolean;
   chain: { txHash: string | null };
 }
 
 export function useProjectDistributions(id: string) {
   return useQuery({ queryKey: ["distributions", id], queryFn: () => api.get<{ items: BatchItem[] }>(`/projects/${id}/distributions`) });
+}
+
+/** Last `days` days of operations, newest first. */
+export function useDailyRevenue(id: string, days = 7) {
+  return useQuery({
+    queryKey: ["daily-revenue", id, days],
+    queryFn: () => api.get<{ items: DailyRevenueItem[] }>(`/projects/${id}/daily-revenue?days=${days}`),
+    enabled: /^0x[0-9a-fA-F]{64}$/.test(id),
+    retry: false,
+  });
 }
 
 export function useHealth() {
