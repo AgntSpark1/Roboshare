@@ -684,3 +684,56 @@ describe("console operations (Safe queue)", () => {
     expect(hist.find((i: any) => i.id === a)).toMatchObject({ status: "CANCELLED", closeReason: "duplicate" });
   });
 });
+
+describe("autopilot and daily operating data", () => {
+  it("records daily operating data, shows it publicly as pending, and locks reported days", async () => {
+    const day = new Date(Date.now() + 8 * 3600_000 - 86_400_000).toISOString().slice(0, 10);
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.reviewer!).send({ day, revenue: "1", expenses: "0" }).expect(403);
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day: "2999-01-01", revenue: "1", expenses: "0" }).expect(400);
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day, revenue: (130n * ONE).toString(), expenses: (30n * ONE).toString(), rides: 42 }).expect(200);
+    // correcting the same day replaces it
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day, revenue: (140n * ONE).toString(), expenses: (30n * ONE).toString() }).expect(200);
+    const month = await http().get(`/api/v1/admin/autopilot/daily/${PID}?month=${day.slice(0, 7)}`).set("Cookie", cookies.reviewer!).expect(200);
+    expect(month.body.items).toHaveLength(1);
+    expect(month.body.totals).toEqual({ revenue: (140n * ONE).toString(), expenses: (30n * ONE).toString(), days: 1 });
+    const pub = await http().get(`/api/v1/projects/${PID}/daily-revenue`).expect(200);
+    expect(pub.body.items[0]).toMatchObject({ day, net: (110n * ONE).toString(), status: "PENDING", rides: null });
+
+    // The report seeded for 2026-07..10 locks those days.
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day: "2026-08-15", revenue: "1", expenses: "0" }).expect(409);
+  });
+
+  it("reports the autopilot as unconfigured without its wallets", async () => {
+    const r = await http().get("/api/v1/admin/autopilot").set("Cookie", cookies.reviewer!).expect(200);
+    expect(r.body).toMatchObject({ configured: false, ready: false });
+    await http().post("/api/v1/admin/autopilot/roles").set("Cookie", cookies.reviewer!).send({ action: "grant" }).expect(503);
+  });
+
+  it("queues one Safe batch granting the minimal roles on every target", async () => {
+    cfg.autopilotSubmitter = ADDR(0xa51);
+    cfg.autopilotApprover = ADDR(0xa52);
+    try {
+      const r = await http().post("/api/v1/admin/autopilot/roles").set("Cookie", cookies.reviewer!).send({ action: "grant" }).expect(201);
+      const calls = r.body.proposal.calls as { to: string; data: string }[];
+      expect(r.body.proposal.queueId).toBeDefined();
+      // AuditRegistry plus each project distributor, two grants each
+      const targets = new Set(calls.map((c) => c.to.toLowerCase()));
+      expect(targets.has(AUDIT_REGISTRY.toLowerCase())).toBe(true);
+      expect(targets.has(DISTRIBUTOR.toLowerCase())).toBe(true);
+      expect(calls.length).toBe(targets.size * 2);
+      for (const c of calls) {
+        const d = decodeFunctionData({ abi: revenueDistributorAbi, data: c.data as `0x${string}` });
+        expect(d.functionName).toBe("grantRole");
+        expect([OPERATOR_ROLE, REVIEWER_ROLE]).toContain(d.args![0]);
+        expect([ADDR(0xa51), ADDR(0xa52)]).toContain((d.args![1] as string).toLowerCase());
+        // never the admin role
+        expect(d.args![0]).not.toBe(`0x${"0".repeat(64)}`);
+      }
+      const s = await http().get("/api/v1/admin/autopilot").set("Cookie", cookies.reviewer!).expect(200);
+      expect(s.body).toMatchObject({ configured: true, ready: false });
+    } finally {
+      cfg.autopilotSubmitter = undefined;
+      cfg.autopilotApprover = undefined;
+    }
+  });
+});
