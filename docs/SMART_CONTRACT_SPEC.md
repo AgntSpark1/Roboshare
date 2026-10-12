@@ -34,7 +34,7 @@
 | 角色 | 持有者（目标） | 可以 | 不可以 |
 |---|---|---|---|
 | `DEFAULT_ADMIN_ROLE` | 治理 Safe（2-of-3） | 授予/撤销角色、解除暂停、在开放前配置募集、取消募集、执行标记为 GOV 的生命周期状态转换、设置费用接收方/金库（经治理 Safe） | 直接铸造、将托管或分配资金转给自己、编辑记录 |
-| `OPERATOR_ROLE` | 运营方 Safe 或运维 EOA | 注册项目、提交文档/报告、提议批次、调用 `settle`、`claimFor` | 批准自己提交的内容、铸造、变更角色 |
+| `OPERATOR_ROLE` | 运营方 Safe 或运维 EOA | 注册项目、提交文档/报告、提议批次、`claimFor` | 批准自己提交的内容、铸造、变更角色 |
 | `REVIEWER_ROLE` | 财务/审核 Safe | 验证项目、批准/驳回报告与批次 | 批准任何由其自身提交的内容（通过 `msg.sender != submitter` 强制执行） |
 | `COMPLIANCE_AGENT_ROLE` | 合规中继器（热密钥，链下限速） | 设置/续期/撤销投资资格、冻结/解冻 | `IdentityRegistry` 之外的任何操作 |
 | `PAUSER_ROLE` | 守护者（Guardian）Safe | 对代币、募集、认购入口、分配合约、身份写入执行 `pause()`；`suspend` 项目 | 解除暂停、转账、变更配置 |
@@ -249,7 +249,7 @@ uint32 unitsSold;
 | `quote(units) → cost` | 只读 | `units × unitPrice` |
 | `subscribeFor(investor, units, cost)` | 仅 `SubscriptionRouter`（构造时不可变绑定） | 状态为 OFFERING，`startTime ≤ now < endTime`，`units > 0`，`unitsSold + units ≤ maxUnits`，`unitsOf + units ≤ perWalletMax`，`investor` 具备投资资格且类别被允许，未暂停，nonReentrant。`cost == quote(units)`，并核验本合约 USDT 余额比已记账托管总额正好多出 `cost`（拒绝转账收费型代币或少转）。任一检查失败则整笔交易回滚，USDT 转账一并撤销。 |
 | `excludeSubscriber(wallet, reasonHash)` | GOV | 结算之前；标记为 `REFUNDABLE`，减少 `unitsSold`（针对已失去投资资格的认购人） |
-| `settle()` | OPERATOR | `unitsSold ≥ minUnits` 且（`now ≥ endTime` 或 `unitsSold == maxUnits`）；每个 `ESCROWED` 认购人必须仍具备投资资格，否则以 `SubscriberIneligible(wallet)` 回滚（需先由 GOV 排除）；为每位认购人铸造；将募集款转入 `treasury`；注册表 → FUNDED |
+| `settle()` | 任何人（2026-10-11 起，满额后可立即结算） | `unitsSold ≥ minUnits` 且（`now ≥ endTime` 或 `unitsSold == maxUnits`）；每个 `ESCROWED` 认购人必须仍具备投资资格，否则以 `SubscriberIneligible(wallet)` 回滚（需先由 GOV 排除）；为每位认购人铸造；将募集款转入 `treasury`；注册表 → FUNDED |
 | `finalizeFailed()` | 任何人 | `now ≥ endTime` 且 `unitsSold < minUnits`；所有 `ESCROWED` → `REFUNDABLE`；注册表 → CANCELLED |
 | `cancel(reasonHash)` | GOV | 结算之前；全部 → `REFUNDABLE`；注册表 → CANCELLED |
 | `claimRefund()` | 认购人 | `REFUNDABLE → REFUNDED`，先更新状态再转账，nonReentrant，暂停期间被阻止（D-21） |

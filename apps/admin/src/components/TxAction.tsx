@@ -1,5 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
+import type { Hash } from "viem";
 import { TxProgress, useTxRunner, type PreparedTx, type TxStep } from "@roboshare/ui";
 import { explorer } from "@/env";
 import { errorText } from "@/lib/admin";
@@ -18,7 +19,8 @@ export function TxAction({
 }: {
   label: ReactNode;
   prepare: () => Promise<TxStep[] | PreparedTx | PreparedTx[]>;
-  onDone?: () => void;
+  /** Called after every step succeeded, with the transaction hashes in order. */
+  onDone?: (hashes: Hash[]) => void | Promise<void>;
   className?: string;
   disabled?: boolean;
   confirm?: string;
@@ -38,7 +40,8 @@ export function TxAction({
       const list = Array.isArray(r) ? r : [r];
       const s: TxStep[] = list.map((x) => ("label" in x ? x : { label: x.description, prepared: x }));
       setSteps(s);
-      if (await start(s)) onDone?.();
+      const hashes: Hash[] = [];
+      if (await start(s, (h, i) => (hashes[i] = h))) await onDone?.(hashes);
     } catch (e) {
       setErr(errorText(e));
     } finally {

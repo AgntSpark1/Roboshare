@@ -6,10 +6,12 @@ import { readAaveMarkets, saveAaveSnapshot } from "./aave.js";
 import { loadConfig } from "./config.js";
 import { Indexer } from "./indexer.js";
 import { reconcile } from "./reconcile.js";
+import { autoSettle, settleSender } from "./settler.js";
 
 const POLL_MS = Number(process.env.INDEXER_POLL_MS ?? 3000);
 const RECONCILE_EVERY = Number(process.env.RECONCILE_EVERY_TICKS ?? 100);
 const LOCK_KEY = "roboshare:indexer:leader";
+const SETTLE_EVERY_MS = Number(process.env.SETTLE_POLL_MS ?? 15_000);
 const AAVE_EVERY_MS = Number(process.env.AAVE_POLL_MS ?? 300_000);
 
 /** Optional: read-only Aave V3 market data from BSC mainnet (AAVE_RPC_URL), independent of CHAIN_ID. */
@@ -41,6 +43,13 @@ async function main() {
   await indexer.init();
   startAaveReader(prisma);
 
+  // Optional: a gas-only wallet with no role that settles sold-out offerings (settle() is permissionless).
+  const settlerKey = process.env.SETTLER_PRIVATE_KEY as `0x${string}` | undefined;
+  const settler = settlerKey ? settleSender(client, cfg.rpcUrl, settlerKey) : undefined;
+  if (settler) console.log(JSON.stringify({ msg: "auto-settle enabled", account: settler.account }));
+  let settling = false;
+  let lastSettle = 0;
+
   let ticks = 0;
   for (;;) {
     // Only one active indexer: hold a short Redis lease and renew it every loop.
@@ -48,6 +57,14 @@ async function main() {
     const mine = got === "OK" || (await redis.get(LOCK_KEY)) === id;
     if (mine) {
       await redis.pexpire(LOCK_KEY, POLL_MS * 5);
+      if (settler && !settling && Date.now() - lastSettle >= SETTLE_EVERY_MS) {
+        // Runs beside the indexer so waiting for a receipt never stalls indexing.
+        settling = true;
+        lastSettle = Date.now();
+        void autoSettle(prisma, client, settler.send)
+          .catch((err) => console.error(JSON.stringify({ msg: "auto-settle error", error: String(err) })))
+          .finally(() => { settling = false; });
+      }
       try {
         const r = await indexer.tick();
         if (r) console.log(JSON.stringify({ msg: "indexed", ...r, fromBlock: `${r.fromBlock}`, toBlock: `${r.toBlock}`, reorgedTo: r.reorgedTo?.toString() }));

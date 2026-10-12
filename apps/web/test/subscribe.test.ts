@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockReason } from "@/components/SubscribePanel";
+import { blockReason, settleReady } from "@/components/SubscribePanel";
 
 const ok = { connected: true, signedIn: true, open: true, eligible: true, remaining: 40, units: 3, balance: 10_000n, cost: 1_500n, acknowledged: true };
 
@@ -26,5 +26,20 @@ describe("subscribe gating", () => {
 
   it("does not block while eligibility or balance are still loading", () => {
     expect(blockReason({ ...ok, eligible: undefined, balance: undefined })).toBeNull();
+  });
+});
+
+describe("settleReady", () => {
+  const o = { status: "OPEN", unitsSold: 100, minUnits: 10, maxUnits: 100, endAt: "2026-11-26T00:00:00Z" };
+  const before = new Date("2026-11-01T00:00:00Z").getTime();
+  const after = new Date("2026-11-27T00:00:00Z").getTime();
+  it("is ready as soon as the offering is sold out", () => expect(settleReady(o, before)).toBe(true));
+  it("waits for the deadline when not sold out", () => {
+    expect(settleReady({ ...o, unitsSold: 50 }, before)).toBe(false);
+    expect(settleReady({ ...o, unitsSold: 50 }, after)).toBe(true);
+  });
+  it("never settles below the minimum or twice", () => {
+    expect(settleReady({ ...o, unitsSold: 5 }, after)).toBe(false);
+    expect(settleReady({ ...o, status: "SETTLED" }, after)).toBe(false);
   });
 });

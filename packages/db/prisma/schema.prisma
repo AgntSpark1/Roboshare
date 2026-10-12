@@ -571,6 +571,33 @@ model PendingTx {
   @@schema("app")
 }
 
+/// A governance Safe transaction waiting for owner confirmations. Owners confirm on-chain (approveHash) and the
+/// last one executes from the console; the Safe nonce is fixed at the first confirmation so the hash stays stable.
+model SafeTx {
+  id          String    @id @default(uuid()) @db.Uuid
+  chainId     Int
+  safe        String
+  to          String
+  data        String
+  operation   Int
+  description String
+  /// The individual calls, for display: [{ to, data, description }]
+  calls       Json
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  /// PENDING | EXECUTED | CANCELLED
+  status      String    @default("PENDING")
+  safeNonce   Int?
+  execTxHash  String?
+  closedAt    DateTime?
+  closedBy    String?
+  closeReason String?
+
+  @@index([status, createdAt])
+  @@map("safe_tx")
+  @@schema("app")
+}
+
 model AdminAction {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @db.Uuid

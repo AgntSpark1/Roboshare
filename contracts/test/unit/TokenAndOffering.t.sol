@@ -255,6 +255,19 @@ contract OfferingTest is BaseTest {
         assertEq(uint8(assets.stateOf(PID)), uint8(ProjectState.FUNDED));
     }
 
+    function test_AnyoneSettlesOnceSoldOut() public {
+        _subscribe(alice, 60);
+        vm.prank(alice);
+        vm.expectRevert(OfferingManager.SettlementConditionsNotMet.selector);
+        offering.settle();
+        _subscribe(bob, 40);
+        vm.prank(bob); // no role, before the deadline
+        offering.settle();
+        assertEq(token.balanceOf(alice), 60);
+        assertEq(token.balanceOf(bob), 40);
+        assertEq(uint8(assets.stateOf(PID)), uint8(ProjectState.FUNDED));
+    }
+
     function test_RevertWhen_SettleBelowMinimum() public {
         _subscribe(alice, 10);
         vm.warp(block.timestamp + 31 days);

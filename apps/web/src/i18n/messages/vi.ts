@@ -235,6 +235,9 @@ export const vi: Messages = {
     stepApproveUnlimited: "Cấp quyền USDT (không giới hạn)",
     stepApprove: (amt) => `Cấp quyền ${amt} USDT`,
     stepBuy: (n) => `Mua ${n} phần`,
+    settleNote: "Đã đủ số lượng. Phần sở hữu đang được phát hành tự động.",
+    settleButton: "Hoàn tất đợt gọi vốn và phát hành",
+    settleDone: "Đã phát hành phần sở hữu",
     block: {
       notStarted: (when: string) => `Mở đăng ký lúc ${when}`,
       gas: "Ví cần một ít BNB để trả phí mạng",
