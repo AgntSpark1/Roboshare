@@ -57,6 +57,7 @@ export const api = {
   get: <T>(path: string) => call<T>("GET", path),
   post: <T>(path: string, body: unknown = {}, opts: { idempotencyKey?: string } = {}) =>
     call<T>("POST", path, body, opts.idempotencyKey ? { "idempotency-key": opts.idempotencyKey } : {}),
+  put: <T>(path: string, body: unknown = {}) => call<T>("PUT", path, body),
 };
 
 // ------------------------------------------------------------------ response shapes used by both sites

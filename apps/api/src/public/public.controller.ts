@@ -52,6 +52,29 @@ export class PublicController {
     });
   }
 
+  /**
+   * Daily operating revenue for the website. Days not yet in an approved monthly report are pending: they are paid
+   * out with the next monthly distribution.
+   */
+  @Get("projects/:id/daily-revenue")
+  async dailyRevenue(@Param("id") id: string, @Query("days") days?: string) {
+    if (!PROJECT_ID.test(id)) throw notFound("project");
+    const n = Math.min(Math.max(Number(days) || 30, 1), 366);
+    const rows = await this.prisma.dailyOperating.findMany({ where: { projectIdOnchain: id }, orderBy: { day: "desc" }, take: n });
+    const approved = await this.prisma.financialReport.findMany({ where: { projectIdOnchain: id, status: "APPROVED" }, select: { periodStart: true, periodEnd: true } });
+    const settled = (d: Date) => approved.some((r) => r.periodStart <= d && d < r.periodEnd);
+    return plain({
+      items: rows.map((r) => ({
+        day: r.day.toISOString().slice(0, 10),
+        revenue: r.revenue,
+        expenses: r.expenses,
+        net: (BigInt(r.revenue.toFixed()) - BigInt(r.expenses.toFixed())).toString(),
+        rides: r.rides,
+        status: settled(r.day) ? "SETTLED" : "PENDING",
+      })),
+    });
+  }
+
   @Get("projects/:id")
   async project(@Param("id") id: string) {
     if (!PROJECT_ID.test(id)) throw notFound("project");

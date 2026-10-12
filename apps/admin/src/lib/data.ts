@@ -1,6 +1,6 @@
 "use client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type ProjectDetail, type ProjectListItem } from "@roboshare/ui";
+import { api, formatUsdt, type ProjectDetail, type ProjectListItem } from "@roboshare/ui";
 
 export interface ReportRow {
   id: string;
@@ -25,6 +25,58 @@ export const useProject = (id: string | undefined) =>
   useQuery({ queryKey: ["project", id], enabled: !!id, queryFn: () => api.get<ProjectDetail>(`/projects/${id}`) });
 export const useReports = (status?: string) =>
   useQuery({ queryKey: ["admin", "reports", status ?? "all"], queryFn: () => api.get<{ items: ReportRow[] }>(`/admin/reports${status ? `?status=${status}` : ""}`) });
+export interface AutomationEvent {
+  id: string;
+  projectIdOnchain: string;
+  kind: string;
+  message: string;
+  txHash: string | null;
+  createdAt: string;
+}
+
+export interface AutopilotStatus {
+  configured: boolean;
+  submitter: string | null;
+  approver: string | null;
+  ready: boolean;
+  contracts: { kind: string; label: string; address: string; submitterOk: boolean; approverOk: boolean }[];
+  events: AutomationEvent[];
+  issues: AutomationEvent[];
+}
+
+export const useAutopilot = () =>
+  useQuery({ queryKey: ["admin", "autopilot"], refetchInterval: 30_000, queryFn: () => api.get<AutopilotStatus>("/admin/autopilot") });
+
+/** Chinese line for an autopilot event (the worker logs short English messages with base-unit amounts). */
+export function eventText(e: Pick<AutomationEvent, "kind" | "message">): string {
+  const n = (v: string | undefined) => (v ? `${formatUsdt(v)} USDT` : "");
+  let m: RegExpMatchArray | null;
+  switch (e.kind) {
+    case "REPORT_SUBMITTED":
+      m = e.message.match(/^(\d{4}-\d{2}) report: revenue (\d+), expenses (\d+)/);
+      return m ? `${m[1]} 运营报告已上链：收入 ${n(m[2])}，支出 ${n(m[3])}` : "运营报告已上链";
+    case "REPORT_APPROVED":
+      m = e.message.match(/^(\d{4}-\d{2})/);
+      return `${m ? `${m[1]} ` : ""}运营报告已自动审核`;
+    case "BATCH_PROPOSED":
+      m = e.message.match(/^(\d{4}-\d{2}): (\d+) to (\d+)/);
+      return m ? `${m[1]} 收益分配已生成：${n(m[2])}，${m[3]} 位持有人` : "收益分配已生成";
+    case "BATCH_APPROVED":
+      return "收益已开放领取";
+    case "TREASURY_SHORT":
+      m = e.message.match(/needs (\d+)/);
+      return `资金账户余额或授权不足${m ? `，需要 ${n(m[1])}` : ""}，补足后自动发放`;
+    case "OVER_CAP":
+      return "本月金额超过自动分配上限，请在“分配批次”里人工发起";
+    case "LOSS_MONTH":
+      return "本月支出大于收入，没有可分配收益";
+    case "RECONCILIATION_BLOCKED":
+      return "对账发现差异，分配暂停，处理后自动继续";
+    default:
+      return `自动分配出错：${e.message}`;
+  }
+}
+
 export const useHealth = () =>
   useQuery({ queryKey: ["health"], refetchInterval: 10_000, queryFn: () => api.get<{ indexer: { lastBlock: string; updatedAt: string } | null }>("/health") });
 
