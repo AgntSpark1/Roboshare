@@ -82,7 +82,7 @@ const ui: UiStrings = {
 export const id: Messages = {
   ui,
   meta: {
-    title: "RoboShare · Biarkan Robotaxi menghasilkan USDT untuk Anda",
+    title: "RoboShare · Peluang era mobil swakemudi, mulai 1 unit",
     description: "Satu mobil ride-hailing swakemudi dibagi menjadi 100 unit. Mulai dari 1 unit. Mobil beroperasi setiap hari dan pendapatan diselesaikan tiap bulan; klaim USDT ke dompet Anda sekali ketuk, semuanya tercatat on-chain.",
   },
   layout: {
@@ -116,8 +116,8 @@ export const id: Messages = {
     tagRide: "Jalan siang malam",
     tagPaid: "Dibagi tiap bulan",
     eyebrow: "UNIT PENDAPATAN ROBOTAXI · MULAI 1 UNIT",
-    h1: ["Biarkan *Robotaxi*", "menghasilkan *USDT* untuk Anda"],
-    lead: "Satu mobil ride-hailing swakemudi dibagi menjadi 100 unit. Mulai dari 1 unit. Mobil mengantar penumpang setiap hari dan pendapatan diselesaikan tiap bulan; klaim USDT ke dompet Anda sekali ketuk. Setiap pembayaran bisa dicek on-chain.",
+    h1: ["Peluang era swakemudi", "ikut mulai *1 unit*"],
+    lead: "Satu Robotaxi dibagi menjadi 100 unit, jadi siapa pun bisa ikut dalam bisnis baru ini. Mobil beroperasi setiap hari; pendapatan diselesaikan tiap bulan dan Anda klaim USDT ke dompet sekali ketuk. Setiap pembayaran bisa dicek on-chain.",
     buyNow: (code) => `Investasi di ${code}`,
     viewProjects: "Lihat mobil yang dibuka",
     allProjects: "Semua mobil",
@@ -323,7 +323,7 @@ export const id: Messages = {
     copy: "Salin tautan",
     copied: "Disalin",
     share: "Bagikan",
-    shareText: "Biarkan Robotaxi menghasilkan USDT untuk Anda. Mulai 1 unit, ayo ikut bersama",
+    shareText: "Peluang era swakemudi, ikut mulai 1 unit. Yuk investasi Robotaxi bersama di RoboShare",
     saveQr: "Simpan kode QR",
     qrAlt: "Kode QR referal",
     earningsTitle: "Penghasilan referal",

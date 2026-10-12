@@ -4,7 +4,7 @@ import { zhUiStrings } from "@roboshare/ui";
 export const zhCN = {
   ui: zhUiStrings,
   meta: {
-    title: "RoboShare · 让 Robotaxi 替你跑单赚 USDT",
+    title: "RoboShare · 无人驾驶的红利，1 份就能上车",
     description: "一辆自动驾驶网约车拆成 100 份，1 份起投。车每天跑单，收益按月结算分配，USDT 一键领到你的钱包，链上可查。",
   },
   layout: {
@@ -39,8 +39,8 @@ export const zhCN = {
     tagPaid: "按月分配",
     eyebrow: "ROBOTAXI 收益份额 · 1 份起投",
     /** Two headline lines; wrap highlighted words in *asterisks*. */
-    h1: ["让 *Robotaxi*", "替你跑单赚 *USDT*"] as [string, string],
-    lead: "一辆自动驾驶网约车拆成 100 份，1 份起投。车每天跑单，收益按月结算分配，USDT 一键领到你的钱包，每一笔都在链上可查。",
+    h1: ["无人驾驶的红利", "*1 份*就能上车"] as [string, string],
+    lead: "一辆 Robotaxi 拆成 100 份，人人都能参与这门新生意。车每天跑单，收益按月结算分配，USDT 一键领到你的钱包，每一笔都在链上可查。",
     buyNow: (code: string) => `立即认购 ${code}`,
     viewProjects: "看看在募车辆",
     allProjects: "全部车辆",
@@ -246,7 +246,7 @@ export const zhCN = {
     copy: "复制链接",
     copied: "已复制",
     share: "分享",
-    shareText: "让 Robotaxi 替你跑单赚 USDT，1 份起投，一起上车",
+    shareText: "无人驾驶的红利，1 份就能上车。来 RoboShare 一起投 Robotaxi",
     saveQr: "保存二维码",
     qrAlt: "推广二维码",
     earningsTitle: "推广收益",

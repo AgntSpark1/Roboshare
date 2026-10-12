@@ -82,7 +82,7 @@ const ui: UiStrings = {
 export const zhTW: Messages = {
   ui,
   meta: {
-    title: "RoboShare · 讓 Robotaxi 替你跑單賺 USDT",
+    title: "RoboShare · 無人駕駛的紅利，1 份就能上車",
     description: "一輛自動駕駛網約車拆成 100 份，1 份起投。車每天跑單，收益按月結算分配，USDT 一鍵領到你的錢包，鏈上可查。",
   },
   layout: {
@@ -116,8 +116,8 @@ export const zhTW: Messages = {
     tagRide: "日夜接單",
     tagPaid: "按月分配",
     eyebrow: "ROBOTAXI 收益份額 · 1 份起投",
-    h1: ["讓 *Robotaxi*", "替你跑單賺 *USDT*"],
-    lead: "一輛自動駕駛網約車拆成 100 份，1 份起投。車每天跑單，收益按月結算分配，USDT 一鍵領到你的錢包，每一筆都在鏈上可查。",
+    h1: ["無人駕駛的紅利", "*1 份*就能上車"],
+    lead: "一輛 Robotaxi 拆成 100 份，人人都能參與這門新生意。車每天跑單，收益按月結算分配，USDT 一鍵領到你的錢包，每一筆都在鏈上可查。",
     buyNow: (code) => `立即認購 ${code}`,
     viewProjects: "看看募集中車輛",
     allProjects: "全部車輛",
@@ -323,7 +323,7 @@ export const zhTW: Messages = {
     copy: "複製連結",
     copied: "已複製",
     share: "分享",
-    shareText: "讓 Robotaxi 替你跑單賺 USDT，1 份起投，一起上車",
+    shareText: "無人駕駛的紅利，1 份就能上車。來 RoboShare 一起投 Robotaxi",
     saveQr: "儲存 QR 碼",
     qrAlt: "推廣 QR 碼",
     earningsTitle: "推廣收益",

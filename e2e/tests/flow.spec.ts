@@ -81,7 +81,7 @@ test.afterAll(async () => {
 test("investor browses and subscribes with a one-time USDT approval", async ({ browser }) => {
   const page = await open(browser, "alice");
   await page.goto(WEB);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Robotaxi");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("无人驾驶的红利");
   await axe(page, "home");
   await page.getByRole("link", { name: "车辆项目" }).first().click();
   await expect(page.getByRole("link", { name: /端到端测试车辆/ })).toBeVisible();
