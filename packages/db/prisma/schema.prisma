@@ -136,6 +136,10 @@ model Project {
   distributorAddress String?
   fundedAtBlock      BigInt?
   registeredBlock    BigInt
+  /// Operating term in days (OPERATING_TERM_PROPOSAL.md); set before the offering opens, default 720.
+  termDays           Int?
+  /// Block time of the first FUNDED -> ACTIVE transition; the term ends termDays later.
+  operatingStartedAt DateTime?
 
   stateChanges ProjectStateChange[]
   offering     Offering?
@@ -404,6 +408,8 @@ model DistributionBatch {
   proposeTxHash    String
   approveTxHash    String?
   approver         String?
+  /// Fee-free return of capital (vehicle sale proceeds, reserve, insurance) at term end.
+  capitalReturn    Boolean                  @default(false)
   allocations      DistributionAllocation[]
 
   @@id([projectIdOnchain, batchIdOnchain])
@@ -589,6 +595,40 @@ model SafeTx {
 
   @@index([status, createdAt])
   @@map("safe_tx")
+  @@schema("app")
+}
+
+/// One day of a vehicle's operation, entered by an operator in the console. The website shows it as pending revenue,
+/// and the autopilot sums a calendar month of it into the monthly report. Amounts are USDT base units (18 decimals).
+model DailyOperating {
+  projectIdOnchain String
+  /// Beijing calendar date
+  day              DateTime @db.Date
+  revenue          Decimal  @db.Decimal(78, 0)
+  expenses         Decimal  @db.Decimal(78, 0)
+  rides            Int?
+  note             String?
+  enteredBy        String
+  updatedAt        DateTime @updatedAt
+
+  @@id([projectIdOnchain, day])
+  @@map("daily_operating")
+  @@schema("app")
+}
+
+/// What the monthly distribution autopilot did or is waiting on (apps/worker/src/autopilot.ts), shown in the console.
+model AutomationEvent {
+  id               String   @id @default(uuid()) @db.Uuid
+  chainId          Int
+  projectIdOnchain String
+  /// REPORT_SUBMITTED | REPORT_APPROVED | BATCH_PROPOSED | BATCH_APPROVED | TREASURY_SHORT | OVER_CAP | LOSS_MONTH | RECONCILIATION_BLOCKED | ERROR
+  kind             String
+  message          String
+  txHash           String?
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("automation_event")
   @@schema("app")
 }
 

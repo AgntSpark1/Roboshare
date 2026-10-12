@@ -31,6 +31,9 @@ export const configSchema = z.object({
   paymentToken: optionalAddress,
   /** The 2/3 governance Safe; it holds admin on every contract directly (no timelock). */
   safe: optionalAddress,
+  /** Public addresses of the monthly distribution autopilot wallets (keys live only in the worker). */
+  autopilotSubmitter: optionalAddress,
+  autopilotApprover: optionalAddress,
 }).refine((c) => c.nodeEnv !== "production" || !!c.totpEncKey, { message: "TOTP_ENC_KEY is required in production", path: ["totpEncKey"] });
 
 export type AppConfig = z.infer<typeof configSchema>;
@@ -55,5 +58,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     assetRegistry: env.ASSET_REGISTRY,
     auditRegistry: env.AUDIT_REGISTRY,
     paymentToken: env.PAYMENT_TOKEN,
+    autopilotSubmitter: env.AUTOPILOT_SUBMITTER,
+    autopilotApprover: env.AUTOPILOT_APPROVER,
   });
 }

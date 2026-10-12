@@ -1,10 +1,24 @@
 import { Controller, Get, Inject, Param, Query } from "@nestjs/common";
-import { DEFAULT_TIERS, SHARE_CAP } from "@roboshare/shared";
+import { SHARE_CAP, tiersForTerm } from "@roboshare/shared";
 import { getAddress } from "viem";
 import { ApiError, notFound } from "../common/errors.js";
 import { PrismaService } from "../common/prisma.service.js";
 import { plain } from "../common/serialize.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
+
+const DAY_MS = 86_400_000;
+
+/** Operating term as investors see it. endsAt / remainingDays stay null until the vehicle starts operating. */
+function term(p: { termDays: number | null; operatingStartedAt: Date | null }, now = Date.now()) {
+  if (p.termDays == null) return null;
+  const endsAt = p.operatingStartedAt ? new Date(p.operatingStartedAt.getTime() + p.termDays * DAY_MS) : null;
+  return {
+    termDays: p.termDays,
+    startedAt: p.operatingStartedAt,
+    endsAt,
+    remainingDays: endsAt ? Math.max(0, Math.ceil((endsAt.getTime() - now) / DAY_MS)) : null,
+  };
+}
 
 const PROJECT_ID = /^0x[0-9a-fA-F]{64}$/;
 const HASH = /^0x[0-9a-fA-F]{64}$/;
@@ -45,9 +59,33 @@ export class PublicController {
         state: p.state,
         issuedUnits: supply.get(p.projectIdOnchain) ?? 0,
         authorizedUnits: SHARE_CAP,
+        term: term(p),
         offering: p.offering
           ? { status: p.offering.status, unitsSold: p.offering.unitsSold, minUnits: p.offering.minUnits, maxUnits: p.offering.maxUnits, unitPrice: p.offering.unitPrice, startAt: p.offering.startAt, endAt: p.offering.endAt }
           : null,
+      })),
+    });
+  }
+
+  /**
+   * Daily operating revenue for the website. Days not yet in an approved monthly report are pending: they are paid
+   * out with the next monthly distribution.
+   */
+  @Get("projects/:id/daily-revenue")
+  async dailyRevenue(@Param("id") id: string, @Query("days") days?: string) {
+    if (!PROJECT_ID.test(id)) throw notFound("project");
+    const n = Math.min(Math.max(Number(days) || 30, 1), 366);
+    const rows = await this.prisma.dailyOperating.findMany({ where: { projectIdOnchain: id }, orderBy: { day: "desc" }, take: n });
+    const approved = await this.prisma.financialReport.findMany({ where: { projectIdOnchain: id, status: "APPROVED" }, select: { periodStart: true, periodEnd: true } });
+    const settled = (d: Date) => approved.some((r) => r.periodStart <= d && d < r.periodEnd);
+    return plain({
+      items: rows.map((r) => ({
+        day: r.day.toISOString().slice(0, 10),
+        revenue: r.revenue,
+        expenses: r.expenses,
+        net: (BigInt(r.revenue.toFixed()) - BigInt(r.expenses.toFixed())).toString(),
+        rides: r.rides,
+        status: settled(r.day) ? "SETTLED" : "PENDING",
       })),
     });
   }
@@ -73,6 +111,7 @@ export class PublicController {
       authorizedUnits: SHARE_CAP,
       contracts: { token: p.tokenAddress, offering: p.offeringAddress, distributor: p.distributorAddress },
       fundedAtBlock: p.fundedAtBlock,
+      term: term(p),
       offering: p.offering
         ? {
             status: p.offering.status,
@@ -86,7 +125,7 @@ export class PublicController {
             termsHash: p.offering.termsHash,
           }
         : null,
-      feeTiers: DEFAULT_TIERS,
+      feeTiers: tiersForTerm(p.termDays),
       stateHistory: p.stateChanges.map((s) => ({
         from: s.fromState,
         to: s.toState,
@@ -143,6 +182,7 @@ export class PublicController {
         totalNet: b.totalNet,
         totalFee: b.totalFee,
         dust: b.dustOut,
+        capitalReturn: b.capitalReturn,
         snapshotBlock: b.snapshotBlock,
         chain: { chainId: this.cfg.chainId, txHash: b.approveTxHash, confirmed: true },
       })),

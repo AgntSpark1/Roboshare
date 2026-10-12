@@ -81,6 +81,9 @@ contract ProjectFactory is AccessControl {
         address distributor;
     }
 
+    /// @dev Same as AssetRegistry.DEFAULT_TERM_DAYS, applied when the offering opens without a term.
+    uint32 private constant DEFAULT_TERM_DAYS = 720;
+
     IAssetRegistry public immutable assetRegistry;
     IAuditRegistry public immutable auditRegistry;
     IIdentityRegistry public immutable identityRegistry;
@@ -146,7 +149,11 @@ contract ProjectFactory is AccessControl {
             p.projectId, assetRegistry, identityRegistry, IRwaShareToken(d.token), address(router), r.admin, r.operator, r.pauser
         );
 
-        (uint32[] memory minUnits, uint16[] memory bps) = FeeTiers.defaultTiers();
+        // The term is locked once contracts are linked (AssetRegistry.setOperatingTerm), so the fee tiers
+        // fixed here always match it. Unset means the default term applied when the offering opens.
+        (uint32 termDays,,) = assetRegistry.termOf(p.projectId);
+        if (termDays == 0) termDays = DEFAULT_TERM_DAYS;
+        (uint32[] memory minUnits, uint16[] memory bps) = FeeTiers.tiersForTerm(termDays);
         d.distributor = distributorDeployer.deploy(
             RevenueDistributor.Params({
                 projectId: p.projectId,

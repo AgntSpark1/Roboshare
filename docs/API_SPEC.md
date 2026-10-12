@@ -39,6 +39,7 @@
 | GET | `/projects` | 列表：id、标题、状态、品牌/型号、已发行/授权供应量、募集状态 |
 | GET | `/projects/:id` | 详情：法律权益摘要、发行人名称、状态历史、供应量、募集条款摘要、费率档位、风险因素、带哈希的公开文档列表 |
 | GET | `/projects/:id/financials` | 仅限已批准的报告摘要：期间、收入、支出、储备、可分配金额、鉴证级别、报告哈希、记录交易 |
+| GET | `/projects/:id/daily-revenue?days=` | 每日运营收入（北京日期）：收入、支出、净额、订单数、状态（PENDING = 待结算，SETTLED = 已进入批准的月报） |
 | GET | `/projects/:id/distributions` | 批次汇总：期间、资金池、净额合计、费用合计、尾差（dust）、快照区块、交易哈希 |
 | GET | `/projects/:id/documents/:docId/versions/:v/verify?hash=` | 将哈希与已锚定的记录进行比对 |
 | GET | `/contracts` | 各链上已部署合约地址、区块浏览器验证状态、角色持有者 |
@@ -80,6 +81,10 @@
 | POST | `/admin/distributions/:id/approve` | REVIEWER | 准备 `approveBatch`（Safe 提案） |
 | GET | `/admin/compliance/wallets` | COMPLIANCE | 钱包状态列表（仅代码） |
 | POST | `/admin/compliance/wallets/:addr/freeze` | COMPLIANCE | 将中继交易加入队列 |
+| GET / POST | `/admin/safe-txs`、`/admin/safe-txs/:id/{nonce,executed,cancel,renumber}` | 任意管理员 | 多签待签队列：治理提案自动入队，owner 在后台 approveHash / execTransaction |
+| GET / PUT | `/admin/autopilot/daily/:projectId` | 读：任意管理员；写：OPERATOR | 每日运营数据录入（已进入月报的日期锁定） |
+| GET | `/admin/autopilot` | 任意管理员 | 每月自动分配：两个专用钱包的权限状态、执行记录、待处理问题 |
+| POST | `/admin/autopilot/roles` | GOV_VIEW / OPERATOR | 生成授予或撤销自动分配钱包最小权限的 Safe 批量交易 |
 | GET | `/admin/roles` | 任意管理员 | 各合约的链上角色持有者 |
 | GET | `/admin/audit-log` | 任意管理员 | `admin_action` + 链上事件 |
 | POST | `/admin/pause` | （Guardian） | 准备 Safe 提案；绝不由服务器发送 |
@@ -87,7 +92,7 @@
 | POST | `/admin/reconciliation/run` | OPERATOR | 触发对账运行 |
 | GET | `/admin/exports/:kind?projectId=&format=csv` | 任意管理员 | 项目、持仓、分配、报告 |
 
-"准备"是指 API 返回未签名的 calldata（供员工钱包使用）或创建 Safe 交易提案；它不会使用服务器私钥签名。唯一的服务器端签名者是受限流的合规中继器。
+"准备"是指 API 返回未签名的 calldata（供员工钱包使用）或创建 Safe 交易提案；它不会使用服务器私钥签名。服务器端签名者只有：只付 gas、无权限的结算钱包（`SETTLER_PRIVATE_KEY`），以及每月自动分配的两个最小权限钱包（worker，`AUTOPILOT_*_KEY`，见 ADMIN_AUTOMATION_PLAN.md）。
 
 ## 7. Webhooks
 

@@ -91,7 +91,7 @@ describe("referral centre", () => {
     expect(screen.getByTestId("referral-off")).toHaveTextContent(/测试网预览/);
     expect(screen.getByTestId("invite-link").textContent).toContain(`?ref=${ME}`);
     expect(screen.getByRole("img", { name: "推广二维码" })).toBeInTheDocument();
-    expect(screen.getByText("还没有下级成员。把链接或二维码分享给好友吧。")).toBeInTheDocument();
+    expect(screen.getByText("还没有成员，把链接或二维码分享给好友吧。")).toBeInTheDocument();
   });
 
   it("asks visitors to sign in first", () => {
@@ -112,7 +112,7 @@ describe("referral centre", () => {
     expect(screen.getByText(/由 0x.*邀请/)).toBeInTheDocument();
     expect(screen.getByText(/星港 01 号 第 3 期 · 平台手续费 40.00 · 你得 2.00 USDT/)).toBeInTheDocument();
     expect(screen.getByText(/最多两层/)).toBeInTheDocument();
-    expect(screen.getByText(/好友再邀请的人认购，你也能拿到平台手续费的 5%/)).toBeInTheDocument();
+    expect(screen.getByText(/好友再邀请的人认购，你还能拿平台手续费的 5%/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "领取 16.00 USDT" })).toBeEnabled();
   });
 });
