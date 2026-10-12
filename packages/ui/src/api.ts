@@ -83,8 +83,8 @@ export interface ProjectListItem {
   state: string;
   issuedUnits: number;
   authorizedUnits: number;
-  /** Operating term; null when the project has none. startedAt / endsAt / remainingDays stay null until operations start. */
-  term: ProjectTerm | null;
+  /** Operating term; null until the indexer has seen OperatingTermSet. startedAt / endsAt / remainingDays stay null until operations start. */
+  term?: ProjectTerm | null;
   offering: OfferingSummary | null;
 }
 

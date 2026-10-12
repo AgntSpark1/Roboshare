@@ -24,7 +24,7 @@ export default function Distributions() {
   const active = (projects.data?.items ?? []).filter((p) => ["ACTIVE", "EXIT_PENDING", "TERMINATED"].includes(p.state));
   return (
     <>
-      {can("OPERATOR") && <ProposeBatch projects={active.map((p) => ({ id: p.id, name: projectName(p) }))} />}
+      {can("OPERATOR") && <ProposeBatch projects={active.map((p) => ({ id: p.id, name: projectName(p), state: p.state }))} />}
       <section className="panel" aria-labelledby="pend">
         <h2 id="pend">待批准的分配批次</h2>
         {active.length === 0 && <p className="empty">没有运营中的项目。</p>}
@@ -34,9 +34,13 @@ export default function Distributions() {
   );
 }
 
-function ProposeBatch({ projects }: { projects: { id: string; name: string }[] }) {
+function ProposeBatch({ projects }: { projects: { id: string; name: string; state: string }[] }) {
   const [pid, setPid] = useState("");
   const project = pid || projects[0]?.id || "";
+  // Fee-free return of capital (vehicle sale proceeds etc.) is only allowed once the term has ended.
+  const canReturn = ["EXIT_PENDING", "TERMINATED"].includes(projects.find((p) => p.id === project)?.state ?? "");
+  const [capital, setCapital] = useState(false);
+  const capitalReturn = canReturn && capital;
   const approved = useReports("APPROVED");
   const health = useHealth();
   const reports = (approved.data?.items ?? []).filter((r) => r.projectIdOnchain === project && r.recordIdOnchain);
@@ -55,6 +59,7 @@ function ProposeBatch({ projects }: { projects: { id: string; name: string }[] }
       reportRecordId: report!.recordIdOnchain,
       amount: (amount ? parseUsdt(amount) : BigInt(report!.distributableAmount)).toString(),
       snapshotBlock: snap || health.data?.indexer?.lastBlock,
+      ...(capitalReturn ? { capitalReturn: true } : {}),
     };
   }
   async function doPreview() {
@@ -85,6 +90,12 @@ function ProposeBatch({ projects }: { projects: { id: string; name: string }[] }
           <label className="field"><span>本批金额（USDT，默认报告全额）</span><input value={amount} inputMode="decimal" placeholder={report ? formatUsdt(report.distributableAmount).replace(/,/g, "") : ""} onChange={(e) => { setAmount(e.target.value); setPreview(null); }} /></label>
           <label className="field"><span>快照区块（默认最新已索引区块）</span><input value={snap} inputMode="numeric" placeholder={health.data?.indexer?.lastBlock ?? ""} onChange={(e) => { setSnap(e.target.value); setPreview(null); }} /></label>
         </div>
+        {canReturn && (
+          <label className="row" style={{ gap: 8 }}>
+            <input type="checkbox" checked={capital} onChange={(e) => { setCapital(e.target.checked); setPreview(null); }} />
+            <span>到期返还本金（车辆出售款、储备金等，不收手续费）</span>
+          </label>
+        )}
         <div className="row">
           <button type="button" className="btn sm" disabled={!report} onClick={doPreview}>预览分配</button>
         </div>
@@ -111,7 +122,7 @@ function ProposeBatch({ projects }: { projects: { id: string; name: string }[] }
             </div>
             <p className="muted small">合计净额 {formatUsdt(preview.totalNet)} · 运营方分成 {formatUsdt(preview.totalFee)} · 结转尾差 {preview.dustOut} wei。预览仅供核对，以合约计算为准。</p>
             <TxAction
-              label="提议批次（运营钱包签名）"
+              label={capitalReturn ? "提议本金返还批次（运营钱包签名）" : "提议批次（运营钱包签名）"}
               prepare={async () => (await api.post<{ tx: PreparedTx }>("/admin/distributions", body())).tx}
               onDone={() => { setPreview(null); setProposed(true); refresh(); }}
             />
@@ -139,7 +150,7 @@ function PendingBatch({ id, name }: { id: string; name: string }) {
       const pending = (await readContract(config, { address: d, abi: revenueDistributorAbi, functionName: "pendingBatchId" })) as bigint;
       if (pending === 0n) return null;
       const b = (await readContract(config, { address: d, abi: revenueDistributorAbi, functionName: "getBatch", args: [pending] })) as {
-        amount: bigint; pool: bigint; totalNet: bigint; totalFee: bigint; snapshotBlock: bigint; proposer: Address;
+        amount: bigint; pool: bigint; totalNet: bigint; totalFee: bigint; snapshotBlock: bigint; proposer: Address; capitalReturn?: boolean;
       };
       const [token, treasury] = await Promise.all([
         readContract(config, { address: d, abi: revenueDistributorAbi, functionName: "paymentToken" }) as Promise<Address>,
@@ -157,7 +168,7 @@ function PendingBatch({ id, name }: { id: string; name: string }) {
     <div className="q" data-testid={`batch-${id}`}>
       <span className="ic" aria-hidden="true">#{q.data.id.toString()}</span>
       <div>
-        <h3 className="h4">{name} · 第 {q.data.id.toString()} 批 · {formatUsdt(b.amount)} USDT</h3>
+        <h3 className="h4">{name} · 第 {q.data.id.toString()} 批{b.capitalReturn ? "（本金返还，免手续费）" : ""} · {formatUsdt(b.amount)} USDT</h3>
         <small>投资者净额 {formatUsdt(b.totalNet)} · 运营方分成 {formatUsdt(b.totalFee)} · 快照区块 {b.snapshotBlock.toString()} · 提议人 {shortAddr(b.proposer)}</small>
         <small className={q.data.funded ? "c-good" : "c-warn"}>
           资金账户 {shortAddr(q.data.treasury)} {q.data.funded ? "已备足并授权" : "余额或授权不足，批准会失败"}
