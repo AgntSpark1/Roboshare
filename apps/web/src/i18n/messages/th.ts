@@ -169,6 +169,12 @@ export const th: Messages = {
     timeLeft: "เวลาที่เหลือ",
     issued: "หน่วยที่ออกแล้ว",
     startsIn: "เปิดจองใน",
+    term: {
+      days: (n) => `ระยะเวลาดำเนินงาน ${n} วัน`,
+      remaining: (n) => `เหลือ ${n} วัน`,
+      monthly: "จ่ายผลตอบแทนทุกเดือน",
+      capitalBack: "ครบกำหนด คืนเงินขายรถตามสัดส่วนหน่วย",
+    },
   },
   project: {
     loading: "กำลังโหลดโครงการ…",
@@ -208,6 +214,16 @@ export const th: Messages = {
     offeringContract: "สัญญาระดมทุน",
     distributor: "สัญญาแบ่งรายได้",
     history: "ประวัติสถานะ",
+    capitalReturn: "คืนเงินต้น",
+    daily: {
+      title: "การดำเนินงานรายวัน",
+      today: "รายได้จากการดำเนินงานของวัน",
+      pending: "รอชำระบัญชี",
+      recent: "7 วันล่าสุด",
+      date: "วันที่",
+      income: "รายได้จากการดำเนินงาน (USDT)",
+      rides: "จำนวนเที่ยว",
+    },
   },
   subscribe: {
     startsIn: "เปิดจองใน",

@@ -169,6 +169,12 @@ export const zhTW: Messages = {
     timeLeft: "剩餘時間",
     issued: "已發行份額",
     startsIn: "距開放認購",
+    term: {
+      days: (n) => `營運期 ${n} 天`,
+      remaining: (n) => `剩餘 ${n} 天`,
+      monthly: "每月分配",
+      capitalBack: "到期賣車款按份額返還",
+    },
   },
   project: {
     loading: "正在讀取項目…",
@@ -208,6 +214,16 @@ export const zhTW: Messages = {
     offeringContract: "募集合約",
     distributor: "分配合約",
     history: "狀態記錄",
+    capitalReturn: "本金返還",
+    daily: {
+      title: "每日營運",
+      today: "當日營運收入",
+      pending: "待結算",
+      recent: "近 7 天",
+      date: "日期",
+      income: "營運收入（USDT）",
+      rides: "單量",
+    },
   },
   subscribe: {
     startsIn: "距開放認購",

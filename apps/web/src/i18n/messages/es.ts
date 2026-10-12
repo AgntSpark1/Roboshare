@@ -169,6 +169,12 @@ export const es: Messages = {
     timeLeft: "Tiempo restante",
     issued: "Participaciones emitidas",
     startsIn: "Abre en",
+    term: {
+      days: (n) => `Plazo de ${n} días`,
+      remaining: (n) => `Quedan ${n} días`,
+      monthly: "Reparto mensual",
+      capitalBack: "Al vencer, el importe de la venta del coche se devuelve según tus unidades",
+    },
   },
   project: {
     loading: "Cargando proyecto…",
@@ -208,6 +214,16 @@ export const es: Messages = {
     offeringContract: "Contrato de oferta",
     distributor: "Contrato de reparto",
     history: "Historial de estados",
+    capitalReturn: "Devolución de capital",
+    daily: {
+      title: "Operación diaria",
+      today: "Ingresos operativos del día",
+      pending: "Pendiente",
+      recent: "Últimos 7 días",
+      date: "Fecha",
+      income: "Ingresos operativos (USDT)",
+      rides: "Viajes",
+    },
   },
   subscribe: {
     startsIn: "Abre en",

@@ -169,6 +169,12 @@ export const id: Messages = {
     timeLeft: "Sisa waktu",
     issued: "Unit diterbitkan",
     startsIn: "Dibuka dalam",
+    term: {
+      days: (n) => `Masa operasi ${n} hari`,
+      remaining: (n) => `Sisa ${n} hari`,
+      monthly: "Dibagikan tiap bulan",
+      capitalBack: "Hasil penjualan mobil dikembalikan sesuai porsi di akhir masa",
+    },
   },
   project: {
     loading: "Memuat proyek…",
@@ -208,6 +214,16 @@ export const id: Messages = {
     offeringContract: "Kontrak penggalangan",
     distributor: "Kontrak pembagian",
     history: "Riwayat status",
+    capitalReturn: "Pengembalian modal",
+    daily: {
+      title: "Operasional harian",
+      today: "Pendapatan operasional hari itu",
+      pending: "Menunggu penyelesaian",
+      recent: "7 hari terakhir",
+      date: "Tanggal",
+      income: "Pendapatan operasional (USDT)",
+      rides: "Perjalanan",
+    },
   },
   subscribe: {
     startsIn: "Dibuka dalam",

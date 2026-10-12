@@ -115,7 +115,7 @@ export class MeController {
   async distributions(@Req() req: AuthedRequest) {
     const rows = await this.prisma.distributionAllocation.findMany({
       where: { wallet: req.session!.wallet, batch: { status: "CLAIMABLE" } },
-      include: { batch: { select: { snapshotBlock: true, reportId: true } } },
+      include: { batch: { select: { snapshotBlock: true, reportId: true, capitalReturn: true } } },
       orderBy: [{ projectIdOnchain: "asc" }, { batchIdOnchain: "asc" }],
     });
     return plain({
@@ -132,6 +132,7 @@ export class MeController {
         net: a.net,
         claimed: a.claimed,
         claimTxHash: a.claimTxHash,
+        capitalReturn: a.batch.capitalReturn,
       })),
     });
   }

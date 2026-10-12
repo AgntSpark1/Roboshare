@@ -169,6 +169,12 @@ export const vi: Messages = {
     timeLeft: "Thời gian còn lại",
     issued: "Số phần đã phát hành",
     startsIn: "Mở bán sau",
+    term: {
+      days: (n) => `Kỳ hạn ${n} ngày`,
+      remaining: (n) => `Còn ${n} ngày`,
+      monthly: "Chia lợi nhuận hằng tháng",
+      capitalBack: "Hết kỳ hạn, tiền bán xe được hoàn theo tỷ lệ phần",
+    },
   },
   project: {
     loading: "Đang tải dự án…",
@@ -208,6 +214,16 @@ export const vi: Messages = {
     offeringContract: "Hợp đồng huy động",
     distributor: "Hợp đồng phân phối",
     history: "Lịch sử trạng thái",
+    capitalReturn: "Hoàn vốn",
+    daily: {
+      title: "Vận hành hằng ngày",
+      today: "Thu nhập vận hành trong ngày",
+      pending: "Chờ quyết toán",
+      recent: "7 ngày gần nhất",
+      date: "Ngày",
+      income: "Thu nhập vận hành (USDT)",
+      rides: "Số chuyến",
+    },
   },
   subscribe: {
     startsIn: "Mở bán sau",

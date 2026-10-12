@@ -169,6 +169,12 @@ export const ja: Messages = {
     timeLeft: "残り時間",
     issued: "発行済み口数",
     startsIn: "申込開始まで",
+    term: {
+      days: (n) => `運用期間 ${n} 日`,
+      remaining: (n) => `残り ${n} 日`,
+      monthly: "毎月分配",
+      capitalBack: "満期時に車両売却代金を持分に応じて返還",
+    },
   },
   project: {
     loading: "プロジェクトを読み込み中…",
@@ -208,6 +214,16 @@ export const ja: Messages = {
     offeringContract: "募集コントラクト",
     distributor: "分配コントラクト",
     history: "状態の履歴",
+    capitalReturn: "元本返還",
+    daily: {
+      title: "日次の運行",
+      today: "当日の運行収入",
+      pending: "精算待ち",
+      recent: "直近 7 日",
+      date: "日付",
+      income: "運行収入（USDT）",
+      rides: "乗車数",
+    },
   },
   subscribe: {
     startsIn: "申込開始まで",

@@ -20,6 +20,7 @@ const base: ProjectListItem = {
   state: "OFFERING",
   issuedUnits: 0,
   authorizedUnits: 100,
+  term: null,
   offering: { status: "OPEN", unitsSold: 63, minUnits: 60, maxUnits: 100, unitPrice: (520n * ONE).toString(), endAt: new Date(Date.now() + 86_400_000).toISOString() },
 };
 
@@ -37,6 +38,13 @@ describe("project card", () => {
     render(<ProjectCard p={{ ...base, state: "ACTIVE", issuedUnits: 80, offering: { ...base.offering!, status: "SETTLED" } }} />);
     expect(screen.getByText("80 / 100 份")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("shows the operating term only when the project has one", () => {
+    const { rerender } = render(<ProjectCard p={base} />);
+    expect(screen.queryByTestId("term-line")).not.toBeInTheDocument();
+    rerender(<ProjectCard p={{ ...base, state: "ACTIVE", term: { termDays: 720, startedAt: "2026-09-01T00:00:00.000Z", endsAt: "2028-08-21T00:00:00.000Z", remainingDays: 679 } }} />);
+    expect(screen.getByTestId("term-line")).toHaveTextContent("运营期 720 天 · 剩余 679 天 · 每月分配 · 到期卖车款按份额返还");
   });
 });
 

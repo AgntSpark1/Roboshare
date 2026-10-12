@@ -169,6 +169,12 @@ export const en: Messages = {
     timeLeft: "Time left",
     issued: "Units issued",
     startsIn: "Opens in",
+    term: {
+      days: (n) => `${n}-day term`,
+      remaining: (n) => `${n} days left`,
+      monthly: "Paid monthly",
+      capitalBack: "Car sale proceeds returned pro rata at term end",
+    },
   },
   project: {
     loading: "Loading project…",
@@ -208,6 +214,16 @@ export const en: Messages = {
     offeringContract: "Offering contract",
     distributor: "Payout contract",
     history: "Status history",
+    capitalReturn: "Capital return",
+    daily: {
+      title: "Daily operations",
+      today: "Operating income for the day",
+      pending: "Pending",
+      recent: "Last 7 days",
+      date: "Date",
+      income: "Operating income (USDT)",
+      rides: "Rides",
+    },
   },
   subscribe: {
     startsIn: "Opens in",

@@ -169,6 +169,12 @@ export const ko: Messages = {
     timeLeft: "남은 시간",
     issued: "발행 좌수",
     startsIn: "청약 시작까지",
+    term: {
+      days: (n) => `운영 기간 ${n}일`,
+      remaining: (n) => `${n}일 남음`,
+      monthly: "매월 분배",
+      capitalBack: "만기 시 차량 매각 대금을 지분대로 반환",
+    },
   },
   project: {
     loading: "프로젝트를 불러오는 중…",
@@ -208,6 +214,16 @@ export const ko: Messages = {
     offeringContract: "모집 컨트랙트",
     distributor: "분배 컨트랙트",
     history: "상태 기록",
+    capitalReturn: "원금 반환",
+    daily: {
+      title: "일별 운영",
+      today: "당일 운영 수익",
+      pending: "정산 대기",
+      recent: "최근 7일",
+      date: "날짜",
+      income: "운영 수익(USDT)",
+      rides: "운행 건수",
+    },
   },
   subscribe: {
     startsIn: "청약 시작까지",
