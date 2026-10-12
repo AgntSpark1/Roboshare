@@ -5,7 +5,7 @@ import { offeringManagerAbi } from "@roboshare/shared";
 
 /**
  * Settles offerings that are ready: sold out, or ended at or above the minimum. `settle()` needs no role,
- * so the sender is a gas-only wallet with no contract permissions (SETTLER_PRIVATE_KEY). A revert (e.g. an ineligible subscriber that governance must exclude) is logged and left for people.
+ * so the sender is a gas-only wallet with no contract permissions (SETTLER_PRIVATE_KEY). A revert (e.g. a frozen subscriber that governance must exclude) is logged and left for people.
  */
 export async function autoSettle(
   prisma: PrismaClient,

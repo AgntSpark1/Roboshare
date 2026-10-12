@@ -3,7 +3,6 @@ import {
   allocate,
   assetRegistryAbi,
   auditRegistryAbi,
-  identityRegistryAbi,
   offeringManagerAbi,
   projectFactoryAbi,
   revenueDistributorAbi,
@@ -72,7 +71,7 @@ describe("indexer against a local chain", () => {
     await asSafe(c, async (tl) => {
       await send(c, tl, {
         address: c.addr.ProjectFactory!, abi: projectFactoryAbi, functionName: "deployProject",
-        args: [{ projectId: PID, name: "RoboShare Vehicle 1", symbol: "RSV1", allowedClassesMask: 2n, treasury: A.treasury }],
+        args: [{ projectId: PID, name: "RoboShare Vehicle 1", symbol: "RSV1", treasury: A.treasury }],
       });
     });
     const p = await c.pub.readContract({ address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "offeringOf", args: [PID] });
@@ -87,7 +86,6 @@ describe("indexer against a local chain", () => {
     });
     const usdt = c.addr.MockUSDT!;
     for (const [who, units] of [[A.alice!, 60], [A.bob!, 40]] as const) {
-      await send(c, A.agent!, { address: c.addr.IdentityRegistry!, abi: identityRegistryAbi, functionName: "setEligibility", args: [who, 1, 840, now + 365n * 86_400n, bytes32("kyc")] });
       await send(c, who, { address: usdt, abi: mintAbi, functionName: "mint", args: [who, BigInt(units) * UNIT_PRICE] });
       await send(c, who, { address: usdt, abi: erc20Abi, functionName: "approve", args: [c.addr.SubscriptionRouter!, 2n ** 256n - 1n] });
       await send(c, who, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "subscribe", args: [PID, units, BigInt(units) * UNIT_PRICE] });

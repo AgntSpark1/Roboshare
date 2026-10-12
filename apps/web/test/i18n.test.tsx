@@ -54,7 +54,7 @@ describe("translations", () => {
   });
 
   it("translate the buy-button reasons", () => {
-    const ok = { connected: true, signedIn: true, open: true, eligible: true, remaining: 40, units: 2, balance: 10n ** 30n, cost: 1n, acknowledged: true };
+    const ok = { connected: true, signedIn: true, open: true, frozen: false, remaining: 40, units: 2, balance: 10n ** 30n, cost: 1n, acknowledged: true };
     expect(blockReason({ ...ok, units: 41 }, MESSAGES.en.subscribe.block)).toBe("You can buy 1–40 units");
     expect(blockReason({ ...ok, connected: false }, MESSAGES.ja.subscribe.block)).toBe("先にウォレットを接続してください");
   });

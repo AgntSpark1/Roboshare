@@ -88,15 +88,16 @@ export function useUsdtState(owner: Address | undefined) {
   });
 }
 
-export interface Eligibility {
-  status: string;
+/** There is no KYC: any wallet may invest unless it is on the on-chain freeze list. */
+export interface FreezeStatus {
+  wallet: string;
+  frozen: boolean;
   eligibleNow: boolean;
-  expiresAt: string | null;
 }
 
-export function useEligibility() {
+export function useFreezeStatus() {
   const { me } = useSession();
-  return useQuery({ queryKey: ["me", "eligibility", me?.wallet], enabled: !!me, queryFn: () => api.get<Eligibility>("/me/eligibility") });
+  return useQuery({ queryKey: ["me", "eligibility", me?.wallet], enabled: !!me, queryFn: () => api.get<FreezeStatus>("/me/eligibility") });
 }
 
 export interface MySubscription {

@@ -89,12 +89,11 @@ export class GovernanceController {
     if (offering.unitsSold < offering.minUnits) {
       throw new ApiError(409, "OFFERING_CLOSED", `only ${offering.unitsSold} of the minimum ${offering.minUnits} units sold`);
     }
-    // settle() reverts if any escrowed subscriber is no longer eligible; check first so staff can exclude them.
+    // settle() reverts if any escrowed subscriber is frozen; check first so staff can exclude them.
     const escrowed = offering.subscriptions.filter((s) => s.status === "ESCROWED");
-    const elig = await this.prisma.eligibility.findMany({ where: { wallet: { in: escrowed.map((s) => s.wallet) } } });
-    const ok = new Set(elig.filter((e) => e.status === "ELIGIBLE" && (!e.expiresAt || e.expiresAt.getTime() > Date.now())).map((e) => e.wallet));
-    const blocked = escrowed.filter((s) => !ok.has(s.wallet)).map((s) => getAddress(s.wallet));
-    if (blocked.length) throw new ApiError(409, "NOT_ELIGIBLE", "some subscribers are no longer eligible; exclude them first", { wallets: blocked });
+    const frozen = await this.prisma.eligibility.findMany({ where: { wallet: { in: escrowed.map((s) => s.wallet) }, status: "FROZEN" } });
+    const blocked = frozen.map((e) => getAddress(e.wallet));
+    if (blocked.length) throw new ApiError(409, "SUBSCRIBER_FROZEN", "some subscribers are frozen; exclude them first", { wallets: blocked });
     await this.audit(req, "OFFERING_SETTLE_PREPARE", "project", id, {});
     return { tx: prepare(this.cfg.chainId, getAddress(p.offeringAddress!), offeringManagerAbi, "settle", [], "Settle the offering (any wallet)") };
   }
@@ -136,7 +135,7 @@ export class GovernanceController {
       const identity = (await this.prisma.contractDeployment.findFirst({ where: { chainId: this.cfg.chainId, kind: "IDENTITY_REGISTRY" } }))?.address;
       if (!router || !identity) throw new ApiError(503, "CHAIN_UNAVAILABLE", "contracts not indexed yet");
       txs.push(prepare(this.cfg.chainId, getAddress(router), subscriptionRouterAbi, "pause", [], "Pause all new subscriptions"));
-      txs.push(prepare(this.cfg.chainId, getAddress(identity), identityRegistryAbi, "pause", [], "Pause eligibility changes"));
+      txs.push(prepare(this.cfg.chainId, getAddress(identity), identityRegistryAbi, "pause", [], "Pause the freeze list"));
     } else {
       if (!body.projectId) throw new ApiError(400, "VALIDATION_FAILED", "projectId is required for scope=project");
       const p = await this.project(body.projectId);

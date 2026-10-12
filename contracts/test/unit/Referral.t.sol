@@ -17,9 +17,6 @@ contract ReferralBindingTest is BaseTest {
     function setUp() public override {
         super.setUp();
         _openOffering(1);
-        _makeEligible(alice);
-        _makeEligible(bob);
-        _makeEligible(carol);
         _subscribe(alice, 1); // alice is an existing investor and can refer
     }
 
@@ -85,7 +82,6 @@ contract ReferralBindingTest is BaseTest {
         assertEq(router.referrerOf(carol), address(0));
 
         address dave = makeAddr("dave");
-        _makeEligible(dave);
         _subscribeRef(dave, 1, attacker); // attacker never subscribed
         assertEq(router.referrerOf(dave), address(0));
     }
@@ -100,11 +96,12 @@ contract ReferralBindingTest is BaseTest {
 
     function test_FailedSubscriptionDoesNotBind() public {
         _enable();
+        _freeze(attacker);
         usdt.mint(attacker, UNIT_PRICE);
         vm.startPrank(attacker);
         usdt.approve(address(router), type(uint256).max);
         vm.expectRevert();
-        router.subscribeWithReferrer(PID, 1, UNIT_PRICE, alice); // attacker is not eligible
+        router.subscribeWithReferrer(PID, 1, UNIT_PRICE, alice); // attacker is frozen
         vm.stopPrank();
         assertFalse(router.hasSubscribed(attacker));
         assertEq(router.referrerOf(attacker), address(0));

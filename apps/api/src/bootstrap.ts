@@ -7,7 +7,6 @@ import type { AppConfig } from "./config.js";
 
 export async function createApp(cfg: AppConfig) {
   const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(cfg), {
-    rawBody: true, // webhook HMAC is computed over the exact bytes received
     logger: cfg.nodeEnv === "test" ? false : ["error", "warn", "log"],
   });
   app.setGlobalPrefix("api/v1");

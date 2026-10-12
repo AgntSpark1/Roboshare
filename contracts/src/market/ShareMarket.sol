@@ -10,13 +10,13 @@ import {AssetRegistry} from "../registry/AssetRegistry.sol";
 
 /// @title ShareMarket
 /// @notice Peer-to-peer resale of project units for USDT (EARLY_EXIT_DESIGN.md). A holder who wants
-/// their money back early lists units at a price; any eligible wallet buys them, and USDT and units
-/// swap in one transaction. The platform may buy listings from its own eligible wallet like any other
+/// their money back early lists units at a price; any wallet that is not frozen buys them, and USDT and units
+/// swap in one transaction. The platform may buy listings from its own wallet like any other
 /// buyer; it has no special path and no obligation to buy.
 /// @dev Non-custodial: units stay in the seller's wallet until sold (the seller approves this contract
 /// on the share token) and USDT goes straight from buyer to seller. The contract never holds funds or
-/// units and takes no fee. Every restriction of the share token (receiver eligibility and class,
-/// frozen sender, project state FUNDED/ACTIVE, token pause) is enforced by the token itself during the
+/// units and takes no fee. Every restriction of the share token (frozen sender or receiver,
+/// project state FUNDED/ACTIVE, token pause) is enforced by the token itself during the
 /// swap. Only tokens linked to a project in the AssetRegistry can be listed.
 contract ShareMarket is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -138,7 +138,7 @@ contract ShareMarket is AccessControl, Pausable, ReentrancyGuard {
         l.units -= units;
 
         usdt.safeTransferFrom(msg.sender, seller, cost);
-        // The share token enforces eligibility, class, freeze, project state and pause.
+        // The share token enforces the freeze list, project state and pause.
         IERC20(tokenOf(l.projectId)).safeTransferFrom(seller, msg.sender, units);
         emit Purchased(listingId, l.projectId, msg.sender, seller, units, price, cost);
     }
@@ -152,7 +152,7 @@ contract ShareMarket is AccessControl, Pausable, ReentrancyGuard {
     }
 
     /// @notice Units a buyer could take right now, given expiry and the seller's balance and allowance.
-    /// Does not check the buyer's eligibility or the project state; use the token's `canTransfer`.
+    /// Does not check the freeze list or the project state; use the token's `canTransfer`.
     function fillable(uint256 listingId) external view returns (uint32) {
         Listing storage l = _listings[listingId];
         if (l.units == 0 || block.timestamp >= l.expiresAt) return 0;

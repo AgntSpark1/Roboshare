@@ -22,8 +22,7 @@ import {
   type TxStep,
 } from "@roboshare/ui";
 import { explorer } from "@/env";
-import { useEligibility, useMySubscriptions, useRefreshAfterTx, useUsdtState } from "@/lib/data";
-import { EligibilityHelp } from "@/components/Help";
+import { useFreezeStatus, useMySubscriptions, useRefreshAfterTx, useUsdtState } from "@/lib/data";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface Holding {
@@ -78,7 +77,7 @@ function Dashboard() {
   const dists = useQuery({ queryKey: ["me", "distributions", wallet], queryFn: () => api.get<{ items: MyDistribution[] }>("/me/distributions") });
   const subs = useMySubscriptions();
   const txs = useQuery({ queryKey: ["me", "transactions", wallet], queryFn: () => api.get<{ items: MyTx[]; pending: { hash: string; purpose: string }[] }>("/me/transactions") });
-  const elig = useEligibility();
+  const freeze = useFreezeStatus();
   // Balances are read from this site's chain, so they are right even while the wallet sits on another network.
   const usdt = useUsdtState(wallet as `0x${string}`);
   const { chainId } = useAccount();
@@ -105,11 +104,11 @@ function Dashboard() {
         <div className="sec-h">
           <h1 className="h2">{c.title}</h1>
           <p>
-            {c.wallet} <span className="mono">{shortAddr(wallet)}</span> · {c.eligibility}
-            {elig.data ? (elig.data.eligibleNow ? <span className="ok-t"> {c.eligible}</span> : <span className="warn-t"> {c.notEligible}</span>) : " —"}
+            {c.wallet} <span className="mono">{shortAddr(wallet)}</span>
+            {/* There is no KYC; the only status worth showing is a freeze. */}
+            {freeze.data?.frozen && <span className="warn-t">{" · "}{t.subscribe.block.frozen}</span>}
           </p>
         </div>
-        {elig.data && !elig.data.eligibleNow && <EligibilityHelp wallet={wallet} />}
         {wrongChain && (
           <div className="helpbox" role="alert" data-testid="wrong-chain">
             <p>{c.wrongChain(chainName)}</p>
