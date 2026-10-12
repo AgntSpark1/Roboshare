@@ -100,6 +100,8 @@ export const en: Messages = {
     tabProjects: "Vehicles",
     tabPortfolio: "Assets",
     referral: "Referrals",
+    market: "Market",
+    tabMarket: "Market",
     tabReferral: "Refer",
     homeAria: "RoboShare home",
     main: "Main navigation",

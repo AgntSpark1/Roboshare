@@ -7,11 +7,19 @@ import { isTestChain, walletEnv } from "@/env";
 import { useI18n } from "@/i18n/I18nProvider";
 import { LOCALES } from "@/i18n/locales";
 import type { Messages } from "@/i18n/messages";
+import { useProjects } from "@/lib/data";
 import { useShowReferrals } from "@/lib/referral";
 
 const NAV = [
   { href: "/", label: (t: Messages) => t.nav.home, tab: (t: Messages) => t.nav.home, icon: "M4 11l8-7 8 7v9h-5v-6H9v6H4z" },
   { href: "/projects", label: (t: Messages) => t.nav.projects, tab: (t: Messages) => t.nav.tabProjects, icon: "M5 16l1.5-5.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 16v3H5z" },
+  {
+    href: "/market",
+    label: (t: Messages) => t.nav.market,
+    tab: (t: Messages) => t.nav.tabMarket,
+    icon: "M4 8h13l-3-3M20 16H7l3 3",
+    market: true,
+  },
   { href: "/portfolio", label: (t: Messages) => t.nav.portfolio, tab: (t: Messages) => t.nav.tabPortfolio, icon: "M3 9h18v10H3zM16 13.5h2M3 6h18" },
   {
     href: "/referral",
@@ -22,10 +30,16 @@ const NAV = [
   },
 ];
 
-/** Navigation items; the referral entry is a preview on test chains and follows the programme switch on mainnet. */
+/** The market tab appears once any offering has succeeded, since only then are there units to trade. */
+export function hasTradableProject(items: { offering: { status: string } | null }[] | undefined) {
+  return (items ?? []).some((p) => p.offering?.status === "SETTLED");
+}
+
+/** Navigation items, at most five: the referral entry is a preview on test chains and follows the programme switch on mainnet. */
 function useNav() {
   const showReferrals = useShowReferrals(isTestChain);
-  return NAV.filter((n) => !("referral" in n) || showReferrals);
+  const showMarket = hasTradableProject(useProjects().data?.items);
+  return NAV.filter((n) => (!("referral" in n) || showReferrals) && (!("market" in n) || showMarket));
 }
 
 function active(path: string, href: string) {

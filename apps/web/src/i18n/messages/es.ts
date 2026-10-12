@@ -100,6 +100,8 @@ export const es: Messages = {
     tabProjects: "Vehículos",
     tabPortfolio: "Activos",
     referral: "Referidos",
+    market: "Mercado",
+    tabMarket: "Mercado",
     tabReferral: "Referidos",
     homeAria: "Inicio de RoboShare",
     main: "Navegación principal",

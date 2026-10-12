@@ -100,6 +100,8 @@ export const ja: Messages = {
     tabProjects: "車両",
     tabPortfolio: "資産",
     referral: "紹介センター",
+    market: "譲渡マーケット",
+    tabMarket: "市場",
     tabReferral: "紹介",
     homeAria: "RoboShare ホーム",
     main: "メインナビゲーション",

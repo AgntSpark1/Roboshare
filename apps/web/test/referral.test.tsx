@@ -28,7 +28,7 @@ describe("invite links", () => {
   });
 });
 
-const refState = vi.hoisted(() => ({ enabled: true, data: undefined as unknown, test: true, signedIn: true }));
+const refState = vi.hoisted(() => ({ enabled: true, data: undefined as unknown, test: true, signedIn: true, settled: false }));
 vi.mock("@/env", async (orig) => ({
   ...(await orig<typeof import("@/env")>()),
   get isTestChain() {
@@ -41,7 +41,10 @@ vi.mock("@/lib/referral", async (orig) => ({
   useShowReferrals: (test: boolean) => test || refState.enabled,
   useMyReferrals: () => ({ data: refState.data }),
 }));
-vi.mock("@/lib/data", () => ({ useRefreshAfterTx: () => () => undefined }));
+vi.mock("@/lib/data", () => ({
+  useRefreshAfterTx: () => () => undefined,
+  useProjects: () => ({ data: { items: [{ offering: { status: refState.settled ? "SETTLED" : "OPEN" } }] } }),
+}));
 vi.mock("next/navigation", () => ({ usePathname: () => "/referral" }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
 vi.mock("@roboshare/ui", async (orig) => ({
@@ -124,6 +127,14 @@ describe("bottom tabs", () => {
     const links = screen.getAllByRole("link");
     expect(links.map((l) => l.textContent)).toEqual(["首页", "项目", "资产", "推广"]);
     expect(screen.getByRole("link", { name: "推广" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("adds the market tab once an offering has succeeded, five tabs at most", () => {
+    Object.assign(refState, { test: true, enabled: false, settled: true });
+    render(<Tabs />);
+    expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual(["首页", "项目", "市场", "资产", "推广"]);
+    expect(screen.getByRole("link", { name: "市场" })).toHaveAttribute("href", "/market");
+    refState.settled = false;
   });
 
   it("hides it on mainnet until the programme is switched on", () => {

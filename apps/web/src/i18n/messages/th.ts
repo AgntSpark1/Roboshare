@@ -100,6 +100,8 @@ export const th: Messages = {
     tabProjects: "โครงการ",
     tabPortfolio: "สินทรัพย์",
     referral: "ศูนย์แนะนำ",
+    market: "ตลาดโอนสิทธิ์",
+    tabMarket: "ตลาด",
     tabReferral: "แนะนำ",
     homeAria: "หน้าแรก RoboShare",
     main: "เมนูหลัก",
