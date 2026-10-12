@@ -7,11 +7,13 @@ import { loadConfig } from "./config.js";
 import { Indexer } from "./indexer.js";
 import { reconcile } from "./reconcile.js";
 import { autoSettle, settleSender } from "./settler.js";
+import { Autopilot, dailyOperatingTotals, loadAutopilotConfig } from "./autopilot.js";
 
 const POLL_MS = Number(process.env.INDEXER_POLL_MS ?? 3000);
 const RECONCILE_EVERY = Number(process.env.RECONCILE_EVERY_TICKS ?? 100);
 const LOCK_KEY = "roboshare:indexer:leader";
 const SETTLE_EVERY_MS = Number(process.env.SETTLE_POLL_MS ?? 15_000);
+const AUTOPILOT_EVERY_MS = Number(process.env.AUTOPILOT_EVERY_MS ?? 60_000);
 const AAVE_EVERY_MS = Number(process.env.AAVE_POLL_MS ?? 300_000);
 
 /** Optional: read-only Aave V3 market data from BSC mainnet (AAVE_RPC_URL), independent of CHAIN_ID. */
@@ -50,6 +52,13 @@ async function main() {
   let settling = false;
   let lastSettle = 0;
 
+  // Optional: monthly profit distribution without a person (autopilot.ts). Two minimal-role keys, granted by the Safe.
+  const apCfg = loadAutopilotConfig();
+  const autopilot = apCfg ? new Autopilot(prisma, client, apCfg, dailyOperatingTotals(prisma)) : undefined;
+  if (autopilot) console.log(JSON.stringify({ msg: "autopilot enabled", submitter: autopilot.submitter.address, approver: autopilot.approver.address }));
+  let piloting = false;
+  let lastPilot = 0;
+
   let ticks = 0;
   for (;;) {
     // Only one active indexer: hold a short Redis lease and renew it every loop.
@@ -64,6 +73,15 @@ async function main() {
         void autoSettle(prisma, client, settler.send)
           .catch((err) => console.error(JSON.stringify({ msg: "auto-settle error", error: String(err) })))
           .finally(() => { settling = false; });
+      }
+      if (autopilot && !piloting && Date.now() - lastPilot >= AUTOPILOT_EVERY_MS) {
+        piloting = true;
+        lastPilot = Date.now();
+        void autopilot
+          .tick()
+          .then((ev) => ev.forEach((e) => console.log(JSON.stringify({ msg: "autopilot", ...e }))))
+          .catch((err) => console.error(JSON.stringify({ msg: "autopilot error", error: String(err) })))
+          .finally(() => { piloting = false; });
       }
       try {
         const r = await indexer.tick();

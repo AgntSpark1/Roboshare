@@ -100,8 +100,15 @@ abstract contract BaseTest is Test {
         assets.transition(PID, ProjectState.VERIFIED, REASON);
     }
 
+    /// @dev 360 days keeps the standard fee tiers of the TOKENOMICS examples; 0 leaves the term unset (default 720).
+    uint32 internal projectTermDays = 360;
+
     function _deployProject() internal {
         _registerAndVerify();
+        if (projectTermDays != 0) {
+            vm.prank(operator);
+            assets.setOperatingTerm(PID, projectTermDays);
+        }
         vm.prank(gov);
         ProjectFactory.Deployment memory d = factory.deployProject(
             ProjectFactory.ProjectParams({

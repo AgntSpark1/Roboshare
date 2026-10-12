@@ -26,6 +26,8 @@ export interface SafeProposal {
   calls: { to: `0x${string}`; data: `0x${string}`; description: string }[];
   /** The same as a single Safe transaction (operation 1 = DELEGATECALL to MultiSendCallOnly for a batch). */
   tx: PreparedTx & { operation: 0 | 1 };
+  /** Set when the API put it on the console's Safe queue, where owners confirm and execute it. */
+  queueId?: string;
 }
 
 let base = "/api/v1";
@@ -55,6 +57,7 @@ export const api = {
   get: <T>(path: string) => call<T>("GET", path),
   post: <T>(path: string, body: unknown = {}, opts: { idempotencyKey?: string } = {}) =>
     call<T>("POST", path, body, opts.idempotencyKey ? { "idempotency-key": opts.idempotencyKey } : {}),
+  put: <T>(path: string, body: unknown = {}) => call<T>("PUT", path, body),
 };
 
 // ------------------------------------------------------------------ response shapes used by both sites

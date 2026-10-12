@@ -782,6 +782,19 @@ export const assetRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "DEFAULT_TERM_DAYS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "FACTORY_ROLE",
     "inputs": [],
     "outputs": [
@@ -789,6 +802,19 @@ export const assetRegistryAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_TERM_DAYS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ],
     "stateMutability": "view"
@@ -933,6 +959,16 @@ export const assetRegistryAbi = [
           },
           {
             "name": "fundedAtBlock",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "termDays",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "operatingStartedAt",
             "type": "uint64",
             "internalType": "uint64"
           }
@@ -1169,6 +1205,24 @@ export const assetRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "setOperatingTerm",
+    "inputs": [
+      {
+        "name": "projectId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "termDays",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "stateOf",
     "inputs": [
       {
@@ -1201,6 +1255,35 @@ export const assetRegistryAbi = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "termOf",
+    "inputs": [
+      {
+        "name": "projectId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "termDays",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "startedAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "endsAt",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -1272,6 +1355,50 @@ export const assetRegistryAbi = [
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OperatingStarted",
+    "inputs": [
+      {
+        "name": "projectId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "startedAt",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "termEndsAt",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OperatingTermSet",
+    "inputs": [
+      {
+        "name": "projectId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "termDays",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
       }
     ],
     "anonymous": false
@@ -1496,6 +1623,17 @@ export const assetRegistryAbi = [
         "name": "assetId",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidTerm",
+    "inputs": [
+      {
+        "name": "termDays",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ]
   },
@@ -6479,6 +6617,11 @@ export const revenueDistributorAbi = [
             "name": "status",
             "type": "uint8",
             "internalType": "enum RevenueDistributor.BatchStatus"
+          },
+          {
+            "name": "capitalReturn",
+            "type": "bool",
+            "internalType": "bool"
           }
         ]
       }
@@ -6647,6 +6790,40 @@ export const revenueDistributorAbi = [
   {
     "type": "function",
     "name": "proposeBatch",
+    "inputs": [
+      {
+        "name": "reportId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "snapshotBlock",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "holders",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "batchId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "proposeCapitalReturnBatch",
     "inputs": [
       {
         "name": "reportId",
@@ -6985,6 +7162,19 @@ export const revenueDistributorAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CapitalReturnProposed",
+    "inputs": [
+      {
+        "name": "batchId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

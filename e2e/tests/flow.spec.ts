@@ -2,7 +2,7 @@
 // console on a local anvil chain. Governance (the Safe), KYC and treasury funding are done by the TEST-ONLY harness.
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { allocate, revenueDistributorAbi } from "@roboshare/shared";
+import { allocate, DEFAULT_TERM_DAYS, revenueDistributorAbi, tiersForTerm } from "@roboshare/shared";
 import { erc20Abi } from "viem";
 import { base32Decode, hotp } from "../../apps/api/src/common/totp.ts";
 import { PORTS, ROLES } from "../src/accounts.ts";
@@ -183,13 +183,13 @@ test("investor claims the distribution in USDT", async () => {
   const usdt = readState().addr.MockUSDT!;
   const before = await s.pub.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [ROLES.alice] });
   await page.getByRole("link", { name: "我的资产" }).first().click();
-  // Sole holder of 60 units: gross 9,000, tier 50+ = 10% operator share, net 8,100.
-  const expected = allocate(9_000n * ONE, 0n, [{ address: ROLES.alice, units: UNITS }]).allocations[0]!.net;
-  expect(expected).toBe(8_100n * ONE);
-  await expect(page.getByTestId("claimable-total")).toHaveText("8,100.00");
+  // Sole holder of 60 units: gross 9,000; default 720-day term, tier 50+ = 7.5% operator share, net 8,325.
+  const expected = allocate(9_000n * ONE, 0n, [{ address: ROLES.alice, units: UNITS }], tiersForTerm(DEFAULT_TERM_DAYS)).allocations[0]!.net;
+  expect(expected).toBe(8_325n * ONE);
+  await expect(page.getByTestId("claimable-total")).toHaveText("8,325.00");
   await axe(page, "portfolio");
   const balance = () => s.pub.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [ROLES.alice] });
-  await runTx(page, page.getByRole("button", { name: /领取 8,100.00 USDT/ }), async () => {
+  await runTx(page, page.getByRole("button", { name: /领取 8,325.00 USDT/ }), async () => {
     await expect.poll(async () => (await balance()) - before, { timeout: 30_000 }).toBe(expected);
   });
   await s.indexed();

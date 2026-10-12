@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { type Hash } from "viem";
+import { formatUnits, type Hash } from "viem";
 import { offeringManagerAbi, revenueDistributorAbi } from "@roboshare/shared";
 import {
   api,
@@ -13,13 +13,16 @@ import {
   useAccount,
   useChainNow,
   useSession,
+  useSwitchChain,
+  useTargetChain,
   useTxRunner,
+  useUiStrings,
   WalletButton,
   type ProjectDetail,
   type TxStep,
 } from "@roboshare/ui";
 import { explorer } from "@/env";
-import { useEligibility, useMySubscriptions, useRefreshAfterTx } from "@/lib/data";
+import { useEligibility, useMySubscriptions, useRefreshAfterTx, useUsdtState } from "@/lib/data";
 import { EligibilityHelp } from "@/components/Help";
 import { useI18n } from "@/i18n/I18nProvider";
 
@@ -76,6 +79,14 @@ function Dashboard() {
   const subs = useMySubscriptions();
   const txs = useQuery({ queryKey: ["me", "transactions", wallet], queryFn: () => api.get<{ items: MyTx[]; pending: { hash: string; purpose: string }[] }>("/me/transactions") });
   const elig = useEligibility();
+  // Balances are read from this site's chain, so they are right even while the wallet sits on another network.
+  const usdt = useUsdtState(wallet as `0x${string}`);
+  const { chainId } = useAccount();
+  const target = useTargetChain();
+  const switcher = useSwitchChain();
+  const ui = useUiStrings();
+  const wrongChain = chainId !== undefined && chainId !== target.id;
+  const chainName = ui.chainNames[target.id] ?? target.name;
   const ids = [...new Set([...(holdings.data?.items ?? []).map((h) => h.projectId), ...(subs.data?.items ?? []).map((s) => s.projectId), ...(dists.data?.items ?? []).map((d) => d.projectId)])];
   const details = useQueries({ queries: ids.map((id) => ({ queryKey: ["project", id], queryFn: () => api.get<ProjectDetail>(`/projects/${id}`) })) });
   const project = (id: string) => details.find((d) => d.data?.id === id)?.data;
@@ -99,7 +110,20 @@ function Dashboard() {
           </p>
         </div>
         {elig.data && !elig.data.eligibleNow && <EligibilityHelp wallet={wallet} />}
-        <div className="tiles">
+        {wrongChain && (
+          <div className="helpbox" role="alert" data-testid="wrong-chain">
+            <p>{c.wrongChain(chainName)}</p>
+            <button type="button" className="btn ghost sm" disabled={switcher.pending} onClick={() => void switcher.switchChain()}>
+              {ui.switchTo(chainName)}
+            </button>
+          </div>
+        )}
+        <div className="tiles four">
+          <div className="tile">
+            <span className="eyebrow">{c.walletBalance}</span>
+            <span className="num" data-testid="wallet-usdt">{usdt.data ? formatUsdt(usdt.data.balance) : "—"}</span>
+            <small className="muted">USDT{usdt.data && ` · ${c.gasBalance(Number(formatUnits(usdt.data.native, 18)).toFixed(4))}`}</small>
+          </div>
           <div className="tile hl"><span className="eyebrow">{c.claimable}</span><span className="num" data-testid="claimable-total">{formatUsdt(totalClaimable)}</span><small className="muted">USDT</small></div>
           <div className="tile"><span className="eyebrow">{c.claimed}</span><span className="num">{formatUsdt(totalClaimed)}</span><small className="muted">USDT</small></div>
           <div className="tile"><span className="eyebrow">{c.holdings}</span><span className="num">{totalUnits}</span><small className="muted">{c.projectsCount(totalUnits, holdings.data?.items.length ?? 0)}{pendingUnits > 0 && ` · ${c.pendingUnits(pendingUnits)}`}</small></div>

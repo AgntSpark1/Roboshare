@@ -93,7 +93,7 @@ async function seed() {
       projectIdOnchain: PID, assetIdOnchain: keccak256(stringToHex("asset")), issuerId: keccak256(stringToHex("issuer")),
       rightsDocHash: keccak256(stringToHex("rights")), registrant: operator.address.toLowerCase(), state: "ACTIVE",
       tokenAddress: ADDR(0x70c), offeringAddress: ADDR(0x0ff), distributorAddress: DISTRIBUTOR.toLowerCase(),
-      fundedAtBlock: 10n, registeredBlock: 5n,
+      fundedAtBlock: 10n, registeredBlock: 5n, termDays: 360,
     },
   });
   await prisma.projectMeta.create({ data: { projectIdOnchain: PID, slug: "robotaxi-001", title: "Robotaxi 001", make: "TEST-ONLY", model: "Sample" } });
@@ -678,6 +678,97 @@ describe("rate limiting", () => {
       expect(r.body.error?.code).toBe("RATE_LIMITED");
     } finally {
       await strict.close();
+    }
+  });
+});
+
+describe("console operations (Safe queue)", () => {
+  it("queues governance proposals so owners confirm them in the console", async () => {
+    const r = await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "queue test" }).expect(201);
+    const id = r.body.proposal.queueId;
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    const list = await http().get("/api/v1/admin/safe-txs").set("Cookie", cookies.operator!).expect(200);
+    const row = list.body.items.find((i: any) => i.id === id);
+    expect(row).toMatchObject({ status: "PENDING", safeNonce: null, safe: SAFE.toLowerCase(), to: ADDR(0xa55e).toLowerCase(), operation: 0 });
+    expect(row.calls).toHaveLength(1);
+  });
+
+  it("fixes each nonce once and never gives two pending transactions the same one", async () => {
+    const mk = async () => (await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "nonce test" }).expect(201)).body.proposal.queueId as string;
+    const a = await mk();
+    const b = await mk();
+    await http().post(`/api/v1/admin/safe-txs/${a}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(200);
+    // idempotent for the same value, refused for another
+    await http().post(`/api/v1/admin/safe-txs/${a}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(200);
+    expect((await http().post(`/api/v1/admin/safe-txs/${a}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 8 }).expect(409)).body.error.code).toBe("CONFLICT");
+    await http().post(`/api/v1/admin/safe-txs/${b}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(409);
+    await http().post(`/api/v1/admin/safe-txs/${b}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 8 }).expect(200);
+
+    // Cancelling a numbered transaction frees the later nonces so the queue never has a gap.
+    await http().post(`/api/v1/admin/safe-txs/${a}/cancel`).set("Cookie", cookies.reviewer!).send({ reason: "duplicate" }).expect(200);
+    const after = (await http().get("/api/v1/admin/safe-txs").set("Cookie", cookies.reviewer!).expect(200)).body.items;
+    expect(after.find((i: any) => i.id === a)).toBeUndefined();
+    expect(after.find((i: any) => i.id === b).safeNonce).toBeNull();
+
+    await http().post(`/api/v1/admin/safe-txs/${b}/executed`).set("Cookie", cookies.reviewer!).send({ txHash: `0x${"ee".repeat(32)}` }).expect(409);
+    await http().post(`/api/v1/admin/safe-txs/${b}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(200);
+    await http().post(`/api/v1/admin/safe-txs/${b}/executed`).set("Cookie", cookies.reviewer!).send({ txHash: `0x${"ee".repeat(32)}` }).expect(200);
+    await http().post(`/api/v1/admin/safe-txs/${b}/cancel`).set("Cookie", cookies.reviewer!).send({ reason: "too late" }).expect(409);
+    const hist = (await http().get("/api/v1/admin/safe-txs?status=all").set("Cookie", cookies.reviewer!).expect(200)).body.items;
+    expect(hist.find((i: any) => i.id === b)).toMatchObject({ status: "EXECUTED", execTxHash: `0x${"ee".repeat(32)}`, safeNonce: 7 });
+    expect(hist.find((i: any) => i.id === a)).toMatchObject({ status: "CANCELLED", closeReason: "duplicate" });
+  });
+});
+
+describe("autopilot and daily operating data", () => {
+  it("records daily operating data, shows it publicly as pending, and locks reported days", async () => {
+    const day = new Date(Date.now() + 8 * 3600_000 - 86_400_000).toISOString().slice(0, 10);
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.reviewer!).send({ day, revenue: "1", expenses: "0" }).expect(403);
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day: "2999-01-01", revenue: "1", expenses: "0" }).expect(400);
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day, revenue: (130n * ONE).toString(), expenses: (30n * ONE).toString(), rides: 42 }).expect(200);
+    // correcting the same day replaces it
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day, revenue: (140n * ONE).toString(), expenses: (30n * ONE).toString() }).expect(200);
+    const month = await http().get(`/api/v1/admin/autopilot/daily/${PID}?month=${day.slice(0, 7)}`).set("Cookie", cookies.reviewer!).expect(200);
+    expect(month.body.items).toHaveLength(1);
+    expect(month.body.totals).toEqual({ revenue: (140n * ONE).toString(), expenses: (30n * ONE).toString(), days: 1 });
+    const pub = await http().get(`/api/v1/projects/${PID}/daily-revenue`).expect(200);
+    expect(pub.body.items[0]).toMatchObject({ day, net: (110n * ONE).toString(), status: "PENDING", rides: null });
+
+    // The report seeded for 2026-07..10 locks those days.
+    await http().put(`/api/v1/admin/autopilot/daily/${PID}`).set("Cookie", cookies.operator!).send({ day: "2026-08-15", revenue: "1", expenses: "0" }).expect(409);
+  });
+
+  it("reports the autopilot as unconfigured without its wallets", async () => {
+    const r = await http().get("/api/v1/admin/autopilot").set("Cookie", cookies.reviewer!).expect(200);
+    expect(r.body).toMatchObject({ configured: false, ready: false });
+    await http().post("/api/v1/admin/autopilot/roles").set("Cookie", cookies.reviewer!).send({ action: "grant" }).expect(503);
+  });
+
+  it("queues one Safe batch granting the minimal roles on every target", async () => {
+    cfg.autopilotSubmitter = ADDR(0xa51);
+    cfg.autopilotApprover = ADDR(0xa52);
+    try {
+      const r = await http().post("/api/v1/admin/autopilot/roles").set("Cookie", cookies.reviewer!).send({ action: "grant" }).expect(201);
+      const calls = r.body.proposal.calls as { to: string; data: string }[];
+      expect(r.body.proposal.queueId).toBeDefined();
+      // AuditRegistry plus each project distributor, two grants each
+      const targets = new Set(calls.map((c) => c.to.toLowerCase()));
+      expect(targets.has(AUDIT_REGISTRY.toLowerCase())).toBe(true);
+      expect(targets.has(DISTRIBUTOR.toLowerCase())).toBe(true);
+      expect(calls.length).toBe(targets.size * 2);
+      for (const c of calls) {
+        const d = decodeFunctionData({ abi: revenueDistributorAbi, data: c.data as `0x${string}` });
+        expect(d.functionName).toBe("grantRole");
+        expect([OPERATOR_ROLE, REVIEWER_ROLE]).toContain(d.args![0]);
+        expect([ADDR(0xa51), ADDR(0xa52)]).toContain((d.args![1] as string).toLowerCase());
+        // never the admin role
+        expect(d.args![0]).not.toBe(`0x${"0".repeat(64)}`);
+      }
+      const s = await http().get("/api/v1/admin/autopilot").set("Cookie", cookies.reviewer!).expect(200);
+      expect(s.body).toMatchObject({ configured: true, ready: false });
+    } finally {
+      cfg.autopilotSubmitter = undefined;
+      cfg.autopilotApprover = undefined;
     }
   });
 });

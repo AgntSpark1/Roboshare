@@ -12,6 +12,8 @@ import {
   referralRewardsAbi,
   revenueDistributorAbi,
   subscriptionRouterAbi,
+  tiersForTerm,
+  DEFAULT_TERM_DAYS,
 } from "@roboshare/shared";
 import { erc20Abi, keccak256, parseAbi, stringToHex, type Address, type Hex } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -139,7 +141,7 @@ describe("referral rewards against a local chain", () => {
       { address: "bob", units: 30 },
       { address: "carol", units: 20 },
       { address: "dave", units: 10 },
-    ]).allocations;
+    ], tiersForTerm(DEFAULT_TERM_DAYS)).allocations;
     const feeOf = (who: string) => fees.find((f) => f.address === who)!.fee;
     // carol's binding lapsed, so neither bob nor alice earns on her; no third level exists.
     const expected = [
