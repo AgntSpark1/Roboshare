@@ -60,17 +60,12 @@ export class MeController {
     return plain({ version: row.version, acceptedAt: row.acceptedAt });
   }
 
+  /** There is no KYC (owner decision, 2026-10-11): any wallet may invest unless it is on the freeze list. */
   @Get("eligibility")
   async eligibility(@Req() req: AuthedRequest) {
     const e = await this.prisma.eligibility.findUnique({ where: { wallet: req.session!.wallet } });
-    const expired = !!e?.expiresAt && e.expiresAt.getTime() <= Date.now();
-    return plain({
-      wallet: req.session!.wallet,
-      status: e?.status ?? "NONE",
-      investorClass: e?.investorClass ?? null,
-      expiresAt: e?.expiresAt ?? null,
-      eligibleNow: e?.status === "ELIGIBLE" && !expired,
-    });
+    const frozen = e?.status === "FROZEN";
+    return plain({ wallet: req.session!.wallet, frozen, eligibleNow: !frozen });
   }
 
   @Get("portfolio")

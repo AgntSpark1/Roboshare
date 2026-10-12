@@ -1,7 +1,7 @@
 // TEST-ONLY chain steps the browser suite does not drive through a UI: governance (the 2/3 Safe,
-// impersonated here), the compliance agent's eligibility updates, test USDT minting and the treasury's funding.
+// impersonated here), test USDT minting and the treasury's funding.
 import { PrismaClient } from "@roboshare/db";
-import { assetRegistryAbi, identityRegistryAbi, offeringManagerAbi, projectFactoryAbi } from "@roboshare/shared";
+import { assetRegistryAbi, offeringManagerAbi, projectFactoryAbi } from "@roboshare/shared";
 import { erc20Abi, keccak256, parseAbi, stringToHex, type Abi, type Address, type Hex } from "viem";
 import { foundry } from "viem/chains";
 import { PORTS, ROLES } from "./accounts.ts";
@@ -67,7 +67,7 @@ export function scenario(state: StackState) {
           address: A.ProjectFactory!,
           abi: projectFactoryAbi as Abi,
           functionName: "deployProject",
-          args: [{ projectId: pid, name: `RoboShare ${o.slug}`, symbol: o.slug.replace(/[^A-Z0-9]/gi, "").slice(0, 8).toUpperCase(), allowedClassesMask: 2n, treasury: ROLES.treasury }],
+          args: [{ projectId: pid, name: `RoboShare ${o.slug}`, symbol: o.slug.replace(/[^A-Z0-9]/gi, "").slice(0, 8).toUpperCase(), treasury: ROLES.treasury }],
         }),
       );
       const offering = (await pub.readContract({ address: A.AssetRegistry!, abi: assetRegistryAbi, functionName: "offeringOf", args: [pid] })) as Address;
@@ -82,12 +82,6 @@ export function scenario(state: StackState) {
         await send(tl, { address: offering, abi: offeringManagerAbi as Abi, functionName: "open" });
       });
       return { pid, offering, endTime: now + BigInt(o.durationSec) };
-    },
-
-    /** Compliance agent marks a wallet eligible (interim manual KYC; no real KYC provider yet). */
-    async kyc(who: Address) {
-      const now = (await pub.getBlock()).timestamp;
-      await send(ROLES.agent, { address: A.IdentityRegistry!, abi: identityRegistryAbi as Abi, functionName: "setEligibility", args: [who, 1, 840, now + 365n * 86_400n, bytes32("manual-test")] });
     },
 
     async mintUsdt(to: Address, amount: bigint) {

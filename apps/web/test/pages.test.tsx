@@ -7,7 +7,6 @@ import Guide from "../app/guide/page";
 import Faq from "../app/faq/page";
 import WhitepaperPage from "../app/whitepaper/page";
 import manifest from "@/lib/whitepaper.json";
-import { EligibilityHelp } from "@/components/Help";
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...p }: { href: string; children: React.ReactNode }) => <a href={href} {...p}>{children}</a> }));
 
@@ -55,17 +54,17 @@ describe("investor notes", () => {
     expect(screen.getByRole("heading", { level: 1, name: "投资须知" })).toBeInTheDocument();
     expect(screen.getByText("投资可能亏损，收益不作保证。")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "未成团全额退款" })).toBeInTheDocument();
-    expect(screen.getByText(/尚未接入第三方 KYC\/AML/)).toBeInTheDocument();
+    expect(screen.getByText(/目前不做 KYC\/AML 身份认证/)).toBeInTheDocument();
     expect(screen.getByText(/不提供任何找回功能/)).toBeInTheDocument();
     expect(screen.getAllByRole("group").length).toBeGreaterThanOrEqual(10);
   });
 });
 
 describe("beginner help", () => {
-  it("walks through wallet, BEP20 USDT, BNB fees and eligibility with linkable steps", () => {
+  it("walks through wallet, BEP20 USDT, BNB fees and signing in with linkable steps", () => {
     const { container } = render(<Guide />);
     expect(screen.getByRole("heading", { level: 1, name: "新手指南" })).toBeInTheDocument();
-    for (const id of ["wallet", "usdt", "bnb", "eligibility", "subscribe"]) expect(container.querySelector(`#${id}`)).not.toBeNull();
+    for (const id of ["wallet", "usdt", "bnb", "signin", "subscribe"]) expect(container.querySelector(`#${id}`)).not.toBeNull();
     expect(screen.getByText(/BEP20）。选错网络/)).toBeInTheDocument();
   });
 
@@ -73,12 +72,6 @@ describe("beginner help", () => {
     render(<Faq />);
     expect(screen.getByRole("heading", { level: 1, name: "常见问题" })).toBeInTheDocument();
     expect(screen.getByText(/平台不承诺回购/)).toBeInTheDocument();
-  });
-
-  it("tells an ineligible investor what to do next", () => {
-    render(<EligibilityHelp wallet="0x06cD41Dd6E7a59fC057954FA6a81Abe76522f820" />);
-    expect(screen.getByRole("button", { name: "复制我的钱包地址" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "新手指南" })).toHaveAttribute("href", "/guide#eligibility");
   });
 });
 

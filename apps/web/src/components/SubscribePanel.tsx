@@ -19,9 +19,8 @@ import {
   type ProjectDetail,
   type TxStep,
 } from "@roboshare/ui";
-import { EligibilityHelp } from "@/components/Help";
 import { explorer, RISK_VERSION } from "@/env";
-import { useEligibility, useMySubscriptions, usePaymentSetup, useRefreshAfterTx, useUsdtState } from "@/lib/data";
+import { useFreezeStatus, useMySubscriptions, usePaymentSetup, useRefreshAfterTx, useUsdtState } from "@/lib/data";
 import { useI18n } from "@/i18n/I18nProvider";
 import { zhCN, type Messages } from "@/i18n/messages/zh-CN";
 import { storedReferrer, useReferralsEnabled } from "@/lib/referral";
@@ -38,7 +37,7 @@ export function blockReason(input: {
   open: boolean;
   /** Start of the offering window when it has not begun yet (already formatted for display). */
   opensAt?: string | null;
-  eligible: boolean | undefined;
+  frozen: boolean | undefined;
   remaining: number;
   units: number;
   balance: bigint | undefined;
@@ -50,7 +49,7 @@ export function blockReason(input: {
   if (!input.open) return input.opensAt ? m.notStarted(input.opensAt) : m.closed;
   if (!input.connected) return m.connect;
   if (!input.signedIn) return m.signIn;
-  if (input.eligible === false) return m.ineligible;
+  if (input.frozen) return m.frozen;
   if (input.remaining <= 0) return m.limit;
   if (input.units < 1 || input.units > input.remaining) return m.range(input.remaining);
   if (input.balance !== undefined && input.balance < input.cost) return m.balance;
@@ -112,7 +111,7 @@ function BuyPanel({ p, now }: { p: ProjectDetail; now: number }) {
   const c = t.subscribe;
   const { address, isConnected } = useAccount();
   const { me } = useSession();
-  const elig = useEligibility();
+  const freeze = useFreezeStatus();
   const subs = useMySubscriptions();
   const pay = usePaymentSetup();
   const usdt = useUsdtState(address);
@@ -142,7 +141,7 @@ function BuyPanel({ p, now }: { p: ProjectDetail; now: number }) {
     signedIn: !!me,
     open,
     opensAt: notStarted ? formatDate(startMs) : null,
-    eligible: elig.data?.eligibleNow,
+    frozen: freeze.data?.frozen,
     remaining,
     units,
     balance: usdt.data?.balance,
@@ -256,7 +255,6 @@ function BuyPanel({ p, now }: { p: ProjectDetail; now: number }) {
           {reason === c.block.gas && <> · <Link className="hintlink" href="/guide#bnb">{t.help.howBnb}</Link></>}
         </p>
       )}
-      {reason === c.block.ineligible && address && <EligibilityHelp wallet={address} />}
       {ackError && <p className="err" role="alert">{ackError}</p>}
       {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
       {done && (

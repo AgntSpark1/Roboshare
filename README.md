@@ -2,7 +2,7 @@
 
 RoboShare 是一个在 BNB Smart Chain（BSC）上把单个 Robotaxi 车辆项目做成链上投资份额（RWA）的平台：投资者用 USDT（BEP20）认购某个车辆项目的份额，项目运营产生的经审核利润按份额在链上分配。
 
-> **当前状态：BSC 测试网试运行。** 合约、后端、投资者网站和运营后台都已实现并部署在 BSC 测试网，只使用测试币（tUSDT）。**尚未部署主网，尚未经过第三方审计和法律审阅，也还没有接入真实的 KYC/AML。** 本仓库中的任何内容均不构成证券要约或投资建议。
+> **当前状态：BSC 测试网试运行。** 合约、后端、投资者网站和运营后台都已实现并部署在 BSC 测试网，只使用测试币（tUSDT）。**尚未部署主网，尚未经过第三方审计和法律审阅，也不做 KYC/AML（项目负责人决定）。** 本仓库中的任何内容均不构成证券要约或投资建议。
 
 - 投资者试用站点：<https://web-production-eb5dab.up.railway.app>
 - 测试网合约地址：[`deployments/bsc-testnet.json`](deployments/bsc-testnet.json)（测试网正在重新部署，地址以该文件为准）
@@ -14,7 +14,7 @@ RoboShare 是一个在 BNB Smart Chain（BSC）上把单个 Robotaxi 车辆项�
 | 合约 | 作用 |
 |---|---|
 | `AssetRegistry` / `AuditRegistry` | 登记车辆项目（资产 ID、文件哈希、生命周期）；财务报告上链存证，提交人与审核人必须是不同的人 |
-| `IdentityRegistry` | 投资者资格名单（目前由运营人工设置） |
+| `IdentityRegistry` | 冻结名单（不做 KYC；只用于拦截被盗或受制裁的钱包） |
 | `RwaShareToken` | 每个项目一个限制转让的 ERC-20 份额代币，decimals 为 0，只能在合格钱包之间转让 |
 | `OfferingManager` / `SubscriptionRouter` | USDT 募集：用户授权一次后按份数购买；允许部分募集（每个项目设最低成交份数，没卖出的份额不发行）；募集失败可退款。默认不设单个钱包上限 |
 | `RevenueDistributor` / `FeeTiers` | 按已发行份额分配经审核的利润，投资者主动领取；平台只收分档手续费，没有额外管理费 |
@@ -85,7 +85,7 @@ DATABASE_URL=<以 _test 结尾的数据库> pnpm test
 
 1. 第三方智能合约审计（需告知审计方：治理没有时间锁）。
 2. 法律审阅：份额的法律性质、募集合规、二手转让市场、推荐奖励、风险披露和各语言译文。
-3. 接入真实的 KYC/AML 服务商。
+3. 律师评估不做 KYC/AML 的合规风险。项目负责人 2026-10-11 决定不做 KYC（“都不要KYC验证了”“kyc 验证这个功能都去掉”），KYC/投资资格功能已完全移除，链上只保留冻结名单。
 4. 主网多签签名人使用硬件钱包。
 5. 项目方书面批准主网部署。
 
@@ -103,4 +103,4 @@ DATABASE_URL=<以 _test 结尾的数据库> pnpm test
 
 RoboShare tokenizes individual Robotaxi vehicle projects as restricted-transfer shares on BNB Smart Chain. Investors subscribe with USDT (BEP20) and claim pro-rata audited profit on-chain. The repo contains Foundry contracts (registries, share token, USDT offering router, revenue distributor, a peer-to-peer share market with no buyback promise, and a single-level referral program that is off by default), a NestJS API, a chain indexer, a 9-language investor site that follows the device language, and an admin console. Governance is a 2-of-3 Safe multisig that acts immediately (no timelock).
 
-**Status: BSC testnet trial only, using test USDT.** Not deployed to mainnet, not audited, no legal review yet, and no real KYC/AML. Nothing here is an offer of securities. Testnet addresses: [`deployments/bsc-testnet.json`](deployments/bsc-testnet.json). Trial site: <https://web-production-eb5dab.up.railway.app>. See the local development section above for build and test commands.
+**Status: BSC testnet trial only, using test USDT.** Not deployed to mainnet, not audited, no legal review yet, and no KYC/AML: by the owner's decision of 2026-10-11 the KYC/eligibility feature was removed entirely and only a freeze list remains (to block stolen or sanctioned wallets). Counsel must assess the no-KYC/AML compliance risk before mainnet. Nothing here is an offer of securities. Testnet addresses: [`deployments/bsc-testnet.json`](deployments/bsc-testnet.json). Trial site: <https://web-production-eb5dab.up.railway.app>. See the local development section above for build and test commands.

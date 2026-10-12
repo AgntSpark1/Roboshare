@@ -4,7 +4,7 @@ import { ContactLinks } from "@/components/Help";
 import { isTestChain, support } from "@/env";
 import { useI18n } from "@/i18n/I18nProvider";
 
-/** Beginner guide: wallet, USDT on BSC, BNB for fees, eligibility, subscribing. Anchors are linked from hints elsewhere. */
+/** Beginner guide: wallet, USDT on BSC, BNB for fees, signing in, subscribing. Anchors are linked from hints elsewhere. */
 export default function Guide() {
   const { t } = useI18n();
   const h = t.help;

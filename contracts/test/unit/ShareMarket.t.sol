@@ -13,7 +13,7 @@ import {DeployShareMarket} from "../../script/DeployShareMarket.s.sol";
 contract ShareMarketTest is BaseTest {
     address internal alice = makeAddr("alice"); // seller
     address internal bob = makeAddr("bob"); // buyer
-    address internal platform = makeAddr("platformBuyer"); // platform's own eligible wallet
+    address internal platform = makeAddr("platformBuyer"); // platform's own wallet
 
     uint256 internal constant PRICE = 900 * ONE; // seller accepts a discount to exit early
 
@@ -27,8 +27,6 @@ contract ShareMarketTest is BaseTest {
         u[0] = 20;
         _fundAndActivate(h, u);
         market = new ShareMarket(IERC20(address(usdt)), assets, gov, pauser);
-        _makeEligible(bob);
-        _makeEligible(platform);
         vm.prank(alice);
         token.approve(address(market), type(uint256).max);
     }
@@ -77,11 +75,12 @@ contract ShareMarketTest is BaseTest {
         market.buy(id, 1, PRICE);
     }
 
-    function test_RevertWhen_BuyerNotEligible() public {
+    function test_RevertWhen_BuyerFrozen() public {
         uint256 id = _list(5);
         _fundBuyer(attacker, PRICE);
+        _freeze(attacker);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.NotEligible.selector, attacker));
+        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.ReceiverFrozen.selector, attacker));
         market.buy(id, 1, PRICE);
         // Nothing moved.
         assertEq(usdt.balanceOf(attacker), PRICE);
@@ -156,7 +155,6 @@ contract ShareMarketTest is BaseTest {
 
     function test_RevertWhen_SelfPurchase() public {
         uint256 id = _list(3);
-        _makeEligible(alice);
         _fundBuyer(alice, PRICE);
         vm.prank(alice);
         vm.expectRevert(ShareMarket.SelfPurchase.selector);

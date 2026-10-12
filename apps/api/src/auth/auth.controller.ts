@@ -104,7 +104,7 @@ export class AuthController {
   @UseGuards(InvestorGuard)
   async me(@Req() req: AuthedRequest) {
     const { userId, wallet } = req.session!;
-    const [wallets, eligibility, staff] = await Promise.all([
+    const [wallets, freeze, staff] = await Promise.all([
       this.prisma.wallet.findMany({ where: { userId } }),
       this.prisma.eligibility.findUnique({ where: { wallet } }),
       this.prisma.staffAccount.findUnique({ where: { userId } }),
@@ -113,7 +113,7 @@ export class AuthController {
       userId,
       wallet: getAddress(wallet),
       wallets: wallets.map((w) => getAddress(w.address)),
-      eligibility: eligibility ? { status: eligibility.status, expiresAt: eligibility.expiresAt } : { status: "NONE", expiresAt: null },
+      frozen: freeze?.status === "FROZEN",
       isStaff: !!staff && !staff.disabledAt,
     });
   }

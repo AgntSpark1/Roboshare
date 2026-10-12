@@ -7,7 +7,6 @@ import { STATE_LABEL } from "./format";
  * the investor site passes the visitor's language through <UiStringsProvider>.
  */
 export interface ContractErrorStrings {
-  ineligible: string;
   frozen: string;
   walletLimit: string;
   soldOut: string;
@@ -106,7 +105,6 @@ export const zhUiStrings: UiStrings = {
   noGas: "钱包里的 BNB 不够付网络手续费，请先转入少量 BNB",
   notCharged: (r) => `${r}。资金没有变动。`,
   contractErrors: {
-    ineligible: "你的钱包还未开通认购资格",
     frozen: "这个钱包已被暂停，请联系平台",
     walletLimit: "超过了每个钱包的认购上限",
     soldOut: "剩余份额不够了，请减少份数",

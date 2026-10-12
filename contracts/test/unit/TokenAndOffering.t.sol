@@ -54,30 +54,30 @@ contract RwaShareTokenTest is BaseTest {
         token.mint(alice, 41);
     }
 
-    function test_TransferBetweenEligible() public {
-        _makeEligible(bob);
+    function test_TransferBetweenUnfrozenWallets() public {
         vm.prank(alice);
         token.transfer(bob, 10);
         assertEq(token.balanceOf(bob), 10);
     }
 
     /// Required test 4: unauthorized transfers.
-    function test_RevertWhen_TransferToIneligible() public {
+    function test_RevertWhen_TransferToFrozen() public {
+        _freeze(bob);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.NotEligible.selector, bob));
+        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.ReceiverFrozen.selector, bob));
         token.transfer(bob, 1);
     }
 
-    function test_RevertWhen_TransferFromViaAllowanceToIneligible() public {
+    function test_RevertWhen_TransferFromViaAllowanceToFrozen() public {
+        _freeze(attacker);
         vm.prank(alice);
         token.approve(attacker, 10);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.NotEligible.selector, attacker));
+        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.ReceiverFrozen.selector, attacker));
         token.transferFrom(alice, attacker, 10);
     }
 
     function test_RevertWhen_SenderFrozen() public {
-        _makeEligible(bob);
         vm.prank(agent);
         identity.freeze(alice, "SANCTIONS");
         vm.prank(alice);
@@ -85,25 +85,7 @@ contract RwaShareTokenTest is BaseTest {
         token.transfer(bob, 1);
     }
 
-    function test_RevertWhen_ClassNotAllowed() public {
-        vm.prank(agent);
-        identity.setEligibility(bob, 2, 840, uint64(block.timestamp + 1 days), 0);
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.ClassNotAllowed.selector, bob, uint16(2)));
-        token.transfer(bob, 1);
-    }
-
-    /// Required test 5: expired eligibility blocks receiving.
-    function test_RevertWhen_ReceiverEligibilityExpired() public {
-        _makeEligible(bob);
-        vm.warp(block.timestamp + 366 days);
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(RwaShareToken.NotEligible.selector, bob));
-        token.transfer(bob, 1);
-    }
-
     function test_RevertWhen_TransferInSuspendedState() public {
-        _makeEligible(bob);
         vm.prank(pauser);
         assets.transition(PID, ProjectState.SUSPENDED, REASON);
         vm.prank(alice);
@@ -114,7 +96,6 @@ contract RwaShareTokenTest is BaseTest {
     }
 
     function test_RevertWhen_ZeroOrBurn() public {
-        _makeEligible(bob);
         vm.startPrank(alice);
         vm.expectRevert(RwaShareToken.ZeroAmount.selector);
         token.transfer(bob, 0);
@@ -125,7 +106,6 @@ contract RwaShareTokenTest is BaseTest {
 
     /// Required test 12: paused token.
     function test_PausedTokenBlocksTransfers() public {
-        _makeEligible(bob);
         vm.prank(pauser);
         token.pause();
         vm.prank(alice);
@@ -142,16 +122,16 @@ contract RwaShareTokenTest is BaseTest {
 
     function test_CanTransferExplainsReason() public {
         (bool ok, bytes32 reason) = token.canTransfer(alice, bob, 1);
-        assertFalse(ok);
-        assertEq(reason, token.REASON_RECEIVER_NOT_ELIGIBLE());
-        _makeEligible(bob);
-        (ok, reason) = token.canTransfer(alice, bob, 1);
         assertTrue(ok);
+        assertEq(reason, token.REASON_OK());
+        _freeze(bob);
+        (ok, reason) = token.canTransfer(alice, bob, 1);
+        assertFalse(ok);
+        assertEq(reason, token.REASON_RECEIVER_FROZEN());
     }
 
     function test_Checkpoints() public {
         uint256 b0 = vm.getBlockNumber(); // cheatcode: block.number is cached across vm.roll under via-IR coverage builds
-        _makeEligible(bob);
         vm.prank(alice);
         token.transfer(bob, 20);
         vm.roll(b0 + 5);
@@ -171,8 +151,6 @@ contract OfferingTest is BaseTest {
     function setUp() public override {
         super.setUp();
         _openOffering(50);
-        _makeEligible(alice);
-        _makeEligible(bob);
     }
 
     function test_SubscribeThroughRouterWithOneApproval() public {
@@ -188,11 +166,12 @@ contract OfferingTest is BaseTest {
         assertEq(usdt.balanceOf(address(router)), 0);
     }
 
-    function test_RevertWhen_IneligibleSubscribes() public {
+    function test_RevertWhen_FrozenSubscribes() public {
+        _freeze(attacker);
         usdt.mint(attacker, UNIT_PRICE);
         vm.startPrank(attacker);
         usdt.approve(address(router), type(uint256).max);
-        vm.expectRevert(abi.encodeWithSelector(OfferingManager.NotEligible.selector, attacker));
+        vm.expectRevert(abi.encodeWithSelector(OfferingManager.InvestorFrozen.selector, attacker));
         router.subscribe(PID, 1, UNIT_PRICE);
         vm.stopPrank();
         assertEq(usdt.balanceOf(attacker), UNIT_PRICE); // transfer rolled back
@@ -204,7 +183,6 @@ contract OfferingTest is BaseTest {
         vm.prank(alice);
         usdt.approve(address(router), type(uint256).max);
         // The attacker has no USDT, so the router cannot pull anything on their behalf.
-        _makeEligible(attacker);
         vm.prank(attacker);
         vm.expectRevert();
         router.subscribe(PID, 1, UNIT_PRICE);
@@ -289,14 +267,13 @@ contract OfferingTest is BaseTest {
         offering.claimRefund();
     }
 
-    function test_SettleRevertsOnIneligibleSubscriberUntilExcluded() public {
+    function test_SettleRevertsOnFrozenSubscriberUntilExcluded() public {
         _subscribe(alice, 50);
         _subscribe(bob, 30);
-        vm.prank(agent);
-        identity.revoke(bob, "LAPSED");
+        _freeze(bob);
         vm.warp(block.timestamp + 31 days);
         vm.prank(operator);
-        vm.expectRevert(abi.encodeWithSelector(OfferingManager.SubscriberIneligible.selector, bob));
+        vm.expectRevert(abi.encodeWithSelector(OfferingManager.SubscriberFrozen.selector, bob));
         offering.settle();
 
         vm.prank(gov);
@@ -382,7 +359,7 @@ contract OfferingTest is BaseTest {
 
     function _params(bytes32 pid) internal view returns (ProjectFactory.ProjectParams memory) {
         return ProjectFactory.ProjectParams({
-            projectId: pid, name: "V2", symbol: "RSV2", allowedClassesMask: CLASS_MASK, treasury: treasury
+            projectId: pid, name: "V2", symbol: "RSV2", treasury: treasury
         });
     }
 }
@@ -400,7 +377,6 @@ contract FeeOnTransferPaymentTest is BaseTest {
         _openOffering(1);
 
         address alice = makeAddr("alice");
-        _makeEligible(alice);
         fot.mint(alice, UNIT_PRICE);
         vm.startPrank(alice);
         fot.approve(address(router), type(uint256).max);
