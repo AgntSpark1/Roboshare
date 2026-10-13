@@ -253,8 +253,7 @@ export const es: Messages = {
     stepApprove: (amt) => `Autorizar ${amt} USDT`,
     stepBuy: (n) => `Comprar ${n} ${n === 1 ? "participación" : "participaciones"}`,
     settleNote: "Cupo completo. Las participaciones se emiten automáticamente.",
-    settleButton: "Completar la oferta y emitir participaciones",
-    settleDone: "Participaciones emitidas",
+    settleEta: "Suelen llegar en menos de un minuto. No tienes que hacer nada.",
     block: {
       notStarted: (when: string) => `Abre la suscripción el ${when}`,
       gas: "Necesitas un poco de BNB en tu billetera para las comisiones de red",

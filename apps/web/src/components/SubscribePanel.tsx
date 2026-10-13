@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { maxUint256, erc20Abi, type Hash } from "viem";
-import { offeringManagerAbi, subscriptionRouterAbi } from "@roboshare/shared";
+import { subscriptionRouterAbi } from "@roboshare/shared";
 import {
   api,
   ApiError,
@@ -58,50 +59,34 @@ export function blockReason(input: {
   return null;
 }
 
-/** Sold out, or ended at or above the minimum, and not settled yet: anyone may call settle(). Exported for tests. */
+/** Sold out, or ended at or above the minimum, and not settled yet: the worker is about to settle. Exported for tests. */
 export function settleReady(o: { status: string; unitsSold: number; minUnits: number; maxUnits: number; endAt: string }, now: number) {
   return o.status === "OPEN" && o.unitsSold >= o.minUnits && (o.unitsSold >= o.maxUnits || now >= new Date(o.endAt).getTime());
 }
 
-/** Backup for the worker's automatic settlement: any connected wallet can issue the units. */
-function SettlePanel({ p }: { p: ProjectDetail }) {
+/** The worker settles a ready offering on its own, issuing everyone's units in one transaction; investors only wait.
+ *  Refetch while waiting so the page flips to the operating view as soon as the settlement is indexed. */
+function IssuingPanel({ p }: { p: ProjectDetail }) {
   const { t } = useI18n();
   const c = t.subscribe;
-  const { isConnected } = useAccount();
-  const refresh = useRefreshAfterTx();
-  const { run, start, reset } = useTxRunner();
-  const [done, setDone] = useState(false);
-  const steps = useMemo<TxStep[]>(
-    () => (p.contracts.offering ? [{ label: c.settleButton, write: { address: p.contracts.offering, abi: offeringManagerAbi, functionName: "settle", args: [] } }] : []),
-    [p.contracts.offering, c],
-  );
-  async function settle() {
-    reset();
-    if (await start(steps)) {
-      setDone(true);
-      refresh();
-    }
-  }
+  const qc = useQueryClient();
+  useEffect(() => {
+    const id = setInterval(() => void qc.invalidateQueries(), 5000);
+    return () => clearInterval(id);
+  }, [qc, p.id]);
   return (
     <aside className="buy" aria-label={c.aria}>
-      <p className="muted" style={{ fontSize: ".84rem" }}>{c.settleNote}</p>
-      {!isConnected ? (
-        <WalletButton />
-      ) : (
-        <button type="button" className="btn primary" disabled={run.running || done || steps.length === 0} onClick={settle}>
-          {run.running ? <span className="spin" aria-hidden="true" /> : null}
-          {c.settleButton}
-        </button>
-      )}
-      {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
-      {done && <p className="okmsg" role="status">{c.settleDone}</p>}
+      <p role="status">
+        <span className="spin" aria-hidden="true" /> {c.settleNote}
+      </p>
+      <p className="muted" style={{ fontSize: ".84rem" }}>{c.settleEta}</p>
     </aside>
   );
 }
 
 export function SubscribePanel({ p }: { p: ProjectDetail }) {
   const now = useChainNow();
-  if (p.offering && p.state === "OFFERING" && settleReady(p.offering, now)) return <SettlePanel p={p} />;
+  if (p.offering && p.state === "OFFERING" && settleReady(p.offering, now)) return <IssuingPanel p={p} />;
   return <BuyPanel p={p} now={now} />;
 }
 

@@ -253,8 +253,7 @@ export const id: Messages = {
     stepApprove: (amt) => `Setujui ${amt} USDT`,
     stepBuy: (n) => `Beli ${n} unit`,
     settleNote: "Kuota terpenuhi. Unit sedang diterbitkan otomatis.",
-    settleButton: "Selesaikan penawaran dan terbitkan unit",
-    settleDone: "Unit telah diterbitkan",
+    settleEta: "Biasanya masuk dalam satu menit. Tidak perlu melakukan apa pun.",
     block: {
       notStarted: (when: string) => `Dibuka untuk langganan pada ${when}`,
       gas: "Dompet perlu sedikit BNB untuk biaya jaringan",

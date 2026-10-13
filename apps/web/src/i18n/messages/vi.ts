@@ -253,8 +253,7 @@ export const vi: Messages = {
     stepApprove: (amt) => `Cấp quyền ${amt} USDT`,
     stepBuy: (n) => `Mua ${n} phần`,
     settleNote: "Đã đủ số lượng. Phần sở hữu đang được phát hành tự động.",
-    settleButton: "Hoàn tất đợt gọi vốn và phát hành",
-    settleDone: "Đã phát hành phần sở hữu",
+    settleEta: "Thường đến trong vòng một phút. Bạn không cần làm gì.",
     block: {
       notStarted: (when: string) => `Mở đăng ký lúc ${when}`,
       gas: "Ví cần một ít BNB để trả phí mạng",

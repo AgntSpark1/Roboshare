@@ -253,8 +253,7 @@ export const th: Messages = {
     stepApprove: (amt) => `อนุมัติ ${amt} USDT`,
     stepBuy: (n) => `ซื้อ ${n} หน่วย`,
     settleNote: "ครบจำนวนแล้ว ระบบกำลังออกหน่วยให้โดยอัตโนมัติ",
-    settleButton: "ปิดการระดมทุนและออกหน่วย",
-    settleDone: "ออกหน่วยแล้ว",
+    settleEta: "โดยปกติจะได้รับภายใน 1 นาที ไม่ต้องทำอะไรเพิ่ม",
     block: {
       notStarted: (when: string) => `เปิดจองซื้อ ${when}`,
       gas: "ต้องมี BNB เล็กน้อยในกระเป๋าเพื่อจ่ายค่าธรรมเนียมเครือข่าย",
