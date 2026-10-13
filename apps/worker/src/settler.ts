@@ -24,7 +24,12 @@ export async function autoSettle(
       if (Number(done) !== 0) continue; // already finalized on chain; the indexer will catch up
       const hash = await sendSettle(address);
       const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
-      if (receipt.status !== "success") throw new Error(`settle reverted in ${hash}`);
+      if (receipt.status !== "success") {
+        // Someone else's settle() can land first (settle is permissionless); that is not a failure.
+        const after = await pub.readContract({ address, abi: offeringManagerAbi, functionName: "outcome" });
+        if (Number(after) !== 0) continue;
+        throw new Error(`settle reverted in ${hash}`);
+      }
       settled.push(address);
       console.log(JSON.stringify({ msg: "auto-settled", offering: address, hash }));
     } catch (err) {

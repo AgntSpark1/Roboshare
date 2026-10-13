@@ -253,8 +253,7 @@ export const en: Messages = {
     stepApprove: (amt) => `Approve ${amt} USDT`,
     stepBuy: (n) => `Buy ${n} ${n === 1 ? "unit" : "units"}`,
     settleNote: "Fully subscribed. Units are being issued automatically.",
-    settleButton: "Complete offering and issue units",
-    settleDone: "Units issued",
+    settleEta: "They usually arrive within a minute. No action needed.",
     block: {
       notStarted: (when: string) => `Opens for subscription on ${when}`,
       gas: "You need a little BNB in your wallet for network fees",

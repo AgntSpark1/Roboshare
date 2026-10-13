@@ -253,8 +253,7 @@ export const ja: Messages = {
     stepApprove: (amt) => `${amt} USDT を承認`,
     stepBuy: (n) => `${n} 口を申込`,
     settleNote: "募集が満了しました。持分は自動で発行されます。",
-    settleButton: "募集を完了し持分を発行",
-    settleDone: "持分を発行しました",
+    settleEta: "通常1分以内に届きます。操作は不要です。",
     block: {
       notStarted: (when: string) => `${when} に申込開始`,
       gas: "ネットワーク手数料として少額の BNB が必要です",

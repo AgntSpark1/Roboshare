@@ -176,8 +176,7 @@ export const zhCN = {
     stepApprove: (amt: string) => `授权 ${amt} USDT`,
     stepBuy: (n: number) => `认购 ${n} 份`,
     settleNote: "名额已满，份额正在自动发放。",
-    settleButton: "完成募集，发放份额",
-    settleDone: "份额已发放",
+    settleEta: "通常 1 分钟内到账，无需任何操作。",
     block: {
       closed: "当前不在募集期",
       notStarted: (when: string) => `${when} 开放认购`,

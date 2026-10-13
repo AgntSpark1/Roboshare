@@ -253,8 +253,7 @@ export const ko: Messages = {
     stepApprove: (amt) => `${amt} USDT 승인`,
     stepBuy: (n) => `${n}좌 청약`,
     settleNote: "모집이 완료되었습니다. 지분이 자동으로 발행됩니다.",
-    settleButton: "모집 완료 및 지분 발행",
-    settleDone: "지분이 발행되었습니다",
+    settleEta: "보통 1분 이내에 도착합니다. 따로 하실 일은 없습니다.",
     block: {
       notStarted: (when: string) => `${when} 청약 시작`,
       gas: "네트워크 수수료로 소량의 BNB가 필요합니다",
