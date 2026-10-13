@@ -80,7 +80,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   .tabs a svg{width:22px;height:22px}
   .tabs a.on{color:var(--amber)}
   .tabs a.on::before{content:"";position:absolute;top:-6px;width:28px;height:2px;border-radius:2px;background:var(--amber)}
-  main{padding-bottom:84px}
+  main{padding-bottom:8px}
   .top .wrap{height:56px}
 }
 
@@ -378,6 +378,8 @@ img.wl{object-fit:contain;background:#fff;padding:3px}
 .ribbon{background:repeating-linear-gradient(-45deg,#1E1808 0 12px,#171205 12px 24px)}
 footer{border-top:1px solid var(--line);padding-block:28px;color:var(--dim);font-size:.78rem}
 footer .wrap{display:grid;gap:8px}
+/* phone: the footer comes after <main>, so it is what must clear the fixed bottom tabs and the iOS home indicator */
+@media (max-width:820px){footer{padding-bottom:calc(28px + 72px + env(safe-area-inset-bottom,0px))}}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
