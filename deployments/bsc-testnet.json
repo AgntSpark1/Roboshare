@@ -2,54 +2,54 @@
   "network": "BSC testnet",
   "chainId": 97,
   "WARNING": "TESTNET ONLY. MockUSDT is a TEST-ONLY token anyone can mint; it has no value.",
-  "deployedAt": "2026-10-11",
-  "note": "Redeployed without a timelock (D-16 revised 2026-10-11): the 2/3 Safe is admin directly. The 2026-10-10 deployment (timelock admin) is retired.",
-  "startBlock": 136247172,
-  "lastBlock": 136247364,
+  "deployedAt": "2026-10-12",
+  "note": "Unified redeploy of main on 2026-10-12 (no-KYC identity, operating term, capital returns, auto-settle and monthly autopilot). The 2/3 Safe is admin directly; no timelock. Earlier deployments are retired.",
+  "startBlock": 136343141,
+  "lastBlock": 136343342,
   "contracts": {
     "MockUSDT": {
-      "address": "0x7FB94e72F1FaD6c34869FF84384FF6931361d79a",
-      "tx": "0x7914da4647ec867e7a19c27b3b622319acbd76df7cd45bba117d98a13b2d7efc"
+      "address": "0x416b9b4fF2f862e3128B60996e7CD7c3cf87942B",
+      "tx": "0x8b0bd58ad0a6b0a18404692ae0ac7a5f79b51a1f2dbd95eb67907c4d05d0c3e3"
     },
     "IdentityRegistry": {
-      "address": "0x2FbE4014D886D91B4709C99192481Ac08bFE6765",
-      "tx": "0x31e7481080774f88daef3ba478310efa4f996a61dba57d1c2b8995d235033b7e"
+      "address": "0xa9021298572b16DCD5465a025B3CdAEE90066FCF",
+      "tx": "0x14c70a1991008e89e03a46d6529dc293fa5d1ee879802ffad718e8cb7c613b5a"
     },
     "AssetRegistry": {
-      "address": "0x3B50b80d15FE2d663A8C48bb306356a633e30fBC",
-      "tx": "0x2c0582742d89afcaa461d2f7f71eaddd020511ee290fc58c29229e233a1f002f"
+      "address": "0x80A01dD4CD334AD2B71823c5CF2B3d741A18b0AB",
+      "tx": "0xe8525efed888e68244206e7c5ebab159be34ec32e47553260d051081b6afb6a4"
     },
     "AuditRegistry": {
-      "address": "0x3B7080B8fD422ed675E2B9E55991259F30862c67",
-      "tx": "0x4e914d22c088617bfcaa7610ff83db897b1b4915b87df78c8838af46b81c670e"
+      "address": "0xc7d306902C16A8C84a1104312e121aC63903c1Ae",
+      "tx": "0x6e32687fe806600e13a67097ce2e925cafa48bbf91e7c46b3e06d0114b2d97b9"
     },
     "SubscriptionRouter": {
-      "address": "0x21db64C402dE99Db01B47D77Da23Ec289c35C2e3",
-      "tx": "0x711107b858191659273498869fe49c1b1bbd5e3c417faaec78b503207cfb365a"
+      "address": "0x7DD7B1475F6A6CAb4d3B977B59a7aA8A5aB37416",
+      "tx": "0x5eb916c207f5913344fe207ab5d332b3ba8b826069fbdd19212a79b98e51e764"
     },
     "ReferralRewards": {
-      "address": "0xBC2A7213249444B0d23b8Cf7b13431C94f3ae8D3",
-      "tx": "0xa930703a6adc8880aa6a78868d2cf89fac4dd9f808bf8ace7429bbc8dbad2d91"
+      "address": "0x966Cd32F336E7E5588956aeb472bdf8d289E8997",
+      "tx": "0xa9e16a6210d0209dee4fd7f065e20e9b10cae0774043a3470fff75bf6da709a6"
     },
     "ShareMarket": {
-      "address": "0x9d3315e274371B2920C0866979b39585be3E4D8E",
-      "tx": "0x5e61b1db83bc41fa86772aefd232d3aae790eeac0d646b608f8e64bd35c62da9"
+      "address": "0xEf730dfd9f5Ab38B79d2E65Df34Bd4BfAf02DFCA",
+      "tx": "0x1e52b869d2c36d7621908c7848fd290b0b6a4eb6b5d1523830b98f51169bdbdb"
     },
     "TokenDeployer": {
-      "address": "0xc63644dF85bF5a76dD0f42C5A7CeDe04Cd49909a",
-      "tx": "0xbed04a0883342f710eeec76f13610b6855f7ada61b50eeb2a663817055afa84e"
+      "address": "0xdab6285AFcf5e36613eb24D91b80Df03Ba6B1B56",
+      "tx": "0xac82062374ec88e81f277cd4b840ddf7733307c5e8e8dc7a3cfa39047331aa7d"
     },
     "OfferingDeployer": {
-      "address": "0x542b757fb447D71cfB53d00e76e4E53136b65962",
-      "tx": "0x36dc8963c1215fe9c9f3e43d7fdfb444c71dc6e0703ece22429c6e90da01fb67"
+      "address": "0x78ad995d2A8e635072a00Ed3e09F41A086774849",
+      "tx": "0xc388919fdd7bb42c5927a2acb70c4eff4c7b581e45752dcd057b226b5e86fd16"
     },
     "DistributorDeployer": {
-      "address": "0xE1335b97fE6b8bAd9c257435963308eC176428Ed",
-      "tx": "0x85210f49c6da096f0ceefbeac1e1699790f55abf9b97d2d859b764384906e0c6"
+      "address": "0x51BD5e22b5a5BB494217FcebbEd437108f8BEED7",
+      "tx": "0x465e37d475a315802a15213b94afb1ad6baa4739743b43a2187739e4f35cf188"
     },
     "ProjectFactory": {
-      "address": "0x7F347ae6f6C8bcE8D2f0b7Cc5541c0C874aef564",
-      "tx": "0x60a88cb3c4e11c662671efd0e2f0b7cf43142bbacfa5ea94791b8c35e9be07c7"
+      "address": "0x32E3879324A16B05eF9768687754C65D5D40Fa4A",
+      "tx": "0x57f6926a2de6139d51e733819f35081f7501539718c7ce5382f66a4efad8c2fe"
     }
   },
   "governance": {
@@ -70,7 +70,10 @@
     "reviewer": "0x0178dd84b2f418da075c932F7030bDb969f87E0D",
     "pauser": "0x93B27a3A63AC6F145BcB5fe8E52CD43882E1cFE1",
     "complianceAgent": "0x46E5871144fcb4BD84b75D9582c8F474bf1eb916",
-    "feeRecipient": "0x42EA4D5FC64C3A02512ba12A2AE33066040726A1"
+    "feeRecipient": "0x42EA4D5FC64C3A02512ba12A2AE33066040726A1",
+    "settler": "0x43DAf13690424D0e40EDe889444f2987e7D751dE",
+    "autopilotSubmitter": "0xdAb257aE4F3E7c9584E60F202Bf137AcA8f90B56",
+    "autopilotApprover": "0x4DDb888BEB3aE46f847E8E7C7C99e5Cc1Ef2190e"
   },
   "verification": "pending (needs Etherscan v2 API key)"
 }
