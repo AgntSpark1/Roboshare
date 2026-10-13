@@ -255,6 +255,7 @@ export const ja: Messages = {
     settleNote: "募集が満了しました。持分は自動で発行されます。",
     settleButton: "募集を完了し持分を発行",
     settleDone: "持分を発行しました",
+    settleSlow: "自動発行がいつもより遅れています。下のボタンから手動で完了することもできます。",
     block: {
       notStarted: (when: string) => `${when} に申込開始`,
       gas: "ネットワーク手数料として少額の BNB が必要です",

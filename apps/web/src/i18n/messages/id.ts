@@ -255,6 +255,7 @@ export const id: Messages = {
     settleNote: "Kuota terpenuhi. Unit sedang diterbitkan otomatis.",
     settleButton: "Selesaikan penawaran dan terbitkan unit",
     settleDone: "Unit telah diterbitkan",
+    settleSlow: "Penerbitan otomatis lebih lambat dari biasanya. Anda juga bisa menyelesaikannya dengan tombol di bawah.",
     block: {
       notStarted: (when: string) => `Dibuka untuk langganan pada ${when}`,
       gas: "Dompet perlu sedikit BNB untuk biaya jaringan",

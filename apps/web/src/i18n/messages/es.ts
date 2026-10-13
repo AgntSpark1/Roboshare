@@ -255,6 +255,7 @@ export const es: Messages = {
     settleNote: "Cupo completo. Las participaciones se emiten automáticamente.",
     settleButton: "Completar la oferta y emitir participaciones",
     settleDone: "Participaciones emitidas",
+    settleSlow: "La emisión automática está tardando más de lo normal. También puedes completarla con el botón de abajo.",
     block: {
       notStarted: (when: string) => `Abre la suscripción el ${when}`,
       gas: "Necesitas un poco de BNB en tu billetera para las comisiones de red",

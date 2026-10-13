@@ -255,6 +255,7 @@ export const zhTW: Messages = {
     settleNote: "名額已滿，份額正在自動發放。",
     settleButton: "完成募集，發放份額",
     settleDone: "份額已發放",
+    settleSlow: "自動發放比平時慢，你也可以點下面的按鈕手動完成。",
     block: {
       notStarted: (when: string) => `${when} 開放認購`,
       gas: "錢包裡需要少量 BNB 支付網路手續費",

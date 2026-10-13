@@ -255,6 +255,7 @@ export const en: Messages = {
     settleNote: "Fully subscribed. Units are being issued automatically.",
     settleButton: "Complete offering and issue units",
     settleDone: "Units issued",
+    settleSlow: "Automatic issuing is taking longer than usual. You can also finish it with the button below.",
     block: {
       notStarted: (when: string) => `Opens for subscription on ${when}`,
       gas: "You need a little BNB in your wallet for network fees",

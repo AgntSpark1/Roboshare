@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { maxUint256, erc20Abi, type Hash } from "viem";
 import { offeringManagerAbi, subscriptionRouterAbi } from "@roboshare/shared";
 import {
@@ -63,7 +64,13 @@ export function settleReady(o: { status: string; unitsSold: number; minUnits: nu
   return o.status === "OPEN" && o.unitsSold >= o.minUnits && (o.unitsSold >= o.maxUnits || now >= new Date(o.endAt).getTime());
 }
 
-/** Backup for the worker's automatic settlement: any connected wallet can issue the units. */
+/** How long the page waits for the worker's automatic settlement before offering the manual backup. */
+export const SETTLE_BACKUP_AFTER_MS = 3 * 60_000;
+
+/**
+ * Sold out (or ended above the minimum): the worker issues the units on its own within seconds. The page shows that
+ * and polls; only if it is still unsettled after SETTLE_BACKUP_AFTER_MS does a backup button appear (anyone may call settle()).
+ */
 function SettlePanel({ p }: { p: ProjectDetail }) {
   const { t } = useI18n();
   const c = t.subscribe;
@@ -71,6 +78,17 @@ function SettlePanel({ p }: { p: ProjectDetail }) {
   const refresh = useRefreshAfterTx();
   const { run, start, reset } = useTxRunner();
   const [done, setDone] = useState(false);
+  const [slow, setSlow] = useState(false);
+  const qc = useQueryClient();
+  useEffect(() => {
+    // Re-read the project until the indexer shows it settled; the panel then disappears on its own.
+    const poll = setInterval(() => void qc.invalidateQueries({ queryKey: ["project"] }), 5_000);
+    const backup = setTimeout(() => setSlow(true), SETTLE_BACKUP_AFTER_MS);
+    return () => {
+      clearInterval(poll);
+      clearTimeout(backup);
+    };
+  }, [qc]);
   const steps = useMemo<TxStep[]>(
     () => (p.contracts.offering ? [{ label: c.settleButton, write: { address: p.contracts.offering, abi: offeringManagerAbi, functionName: "settle", args: [] } }] : []),
     [p.contracts.offering, c],
@@ -84,14 +102,21 @@ function SettlePanel({ p }: { p: ProjectDetail }) {
   }
   return (
     <aside className="buy" aria-label={c.aria}>
-      <p className="muted" style={{ fontSize: ".84rem" }}>{c.settleNote}</p>
-      {!isConnected ? (
-        <WalletButton />
-      ) : (
-        <button type="button" className="btn primary" disabled={run.running || done || steps.length === 0} onClick={settle}>
-          {run.running ? <span className="spin" aria-hidden="true" /> : null}
-          {c.settleButton}
-        </button>
+      <p className="muted" style={{ fontSize: ".84rem" }} role="status">
+        {!slow && <span className="spin" aria-hidden="true" />} {c.settleNote}
+      </p>
+      {slow && (
+        <>
+          <p className="muted" style={{ fontSize: ".8rem" }}>{c.settleSlow}</p>
+          {!isConnected ? (
+            <WalletButton />
+          ) : (
+            <button type="button" className="btn primary" disabled={run.running || done || steps.length === 0} onClick={settle}>
+              {run.running ? <span className="spin" aria-hidden="true" /> : null}
+              {c.settleButton}
+            </button>
+          )}
+        </>
       )}
       {run.states.length > 0 && <TxProgress steps={steps} run={run} explorer={explorer} />}
       {done && <p className="okmsg" role="status">{c.settleDone}</p>}

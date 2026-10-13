@@ -178,6 +178,7 @@ export const zhCN = {
     settleNote: "名额已满，份额正在自动发放。",
     settleButton: "完成募集，发放份额",
     settleDone: "份额已发放",
+    settleSlow: "自动发放比平时慢，你也可以点下面的按钮手动完成。",
     block: {
       closed: "当前不在募集期",
       notStarted: (when: string) => `${when} 开放认购`,

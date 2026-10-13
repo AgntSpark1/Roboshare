@@ -255,6 +255,7 @@ export const vi: Messages = {
     settleNote: "Đã đủ số lượng. Phần sở hữu đang được phát hành tự động.",
     settleButton: "Hoàn tất đợt gọi vốn và phát hành",
     settleDone: "Đã phát hành phần sở hữu",
+    settleSlow: "Việc phát hành tự động đang chậm hơn bình thường. Bạn cũng có thể hoàn tất bằng nút bên dưới.",
     block: {
       notStarted: (when: string) => `Mở đăng ký lúc ${when}`,
       gas: "Ví cần một ít BNB để trả phí mạng",
