@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "Hanya untuk chain uji lokal (TEST-ONLY)",
   noWalletDetected: "Dompet tidak terdeteksi",
   walletsHint: "MetaMask, Binance, OKX, TokenPocket, Bitget, Trust, dan lainnya",
+  scanConnect: "Pindai untuk terhubung",
+  scanConnectHint: "Pindai kode QR dengan dompet di ponsel Anda (WalletConnect)",
   switchTo: (c) => `Beralih ke ${c}`,
   switchNetwork: "Ganti jaringan",
   disconnectWallet: "Putuskan dompet",

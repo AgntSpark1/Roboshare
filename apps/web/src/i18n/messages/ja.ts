@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "ローカルテストチェーン専用（TEST-ONLY）",
   noWalletDetected: "ウォレットが見つかりません",
   walletsHint: "MetaMask、Binance、OKX、TokenPocket、Bitget、Trust など",
+  scanConnect: "QRで接続",
+  scanConnectHint: "スマホのウォレットでQRコードを読み取ります（WalletConnect）",
   switchTo: (c) => `${c}に切り替え`,
   switchNetwork: "ネットワーク切替",
   disconnectWallet: "ウォレットを切断",

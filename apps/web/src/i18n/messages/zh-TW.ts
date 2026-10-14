@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "僅限本地測試鏈（TEST-ONLY）",
   noWalletDetected: "未偵測到錢包",
   walletsHint: "MetaMask、幣安、OKX、TokenPocket、Bitget、Trust 等",
+  scanConnect: "掃碼連接",
+  scanConnectHint: "用手機錢包掃描二維碼（WalletConnect）",
   switchTo: (c) => `切換到${c}`,
   switchNetwork: "切換網路",
   disconnectWallet: "中斷錢包連線",

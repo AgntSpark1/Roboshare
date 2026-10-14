@@ -1,5 +1,6 @@
 import { createConfig, createConnector, http, injected, mock, type Config } from "@wagmi/core";
 import { bsc, bscTestnet, foundry } from "viem/chains";
+import { walletConnect } from "./walletConnect";
 import type { Address, Chain } from "viem";
 
 export const SUPPORTED_CHAINS: Record<number, Chain> = { 56: bsc, 97: bscTestnet, 31337: foundry };
@@ -12,6 +13,8 @@ export interface WalletEnv {
    * without a browser wallet) can sign. Ignored on any chain other than 31337.
    */
   testWallets?: Address[];
+  /** WalletConnect (Reown) project ID; enables scan-to-connect. Public, inlined into the page. Unset = no QR option. */
+  walletConnectProjectId?: string;
 }
 
 export function readWalletEnv(env: Record<string, string | undefined>): WalletEnv {
@@ -22,6 +25,7 @@ export function readWalletEnv(env: Record<string, string | undefined>): WalletEn
       .split(",")
       .map((s) => s.trim())
       .filter((s): s is Address => /^0x[0-9a-fA-F]{40}$/.test(s)),
+    walletConnectProjectId: env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined,
   };
 }
 
@@ -35,6 +39,19 @@ export function makeWagmiConfig(env: WalletEnv): Config {
     ssr: true,
     connectors: [
       injected({ shimDisconnect: true }),
+      ...(env.walletConnectProjectId
+        ? [
+            walletConnect({
+              projectId: env.walletConnectProjectId,
+              metadata: {
+                name: "RoboShare",
+                description: "Robotaxi 份额",
+                url: typeof window !== "undefined" ? window.location.origin : "https://roboshare.app",
+                icons: [],
+              },
+            }),
+          ]
+        : []),
       ...tests.map(testWallet),
     ],
     transports: { [chain.id]: http(env.rpcUrl) },

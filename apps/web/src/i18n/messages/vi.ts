@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "Chỉ dùng cho chuỗi thử nghiệm cục bộ (TEST-ONLY)",
   noWalletDetected: "Không tìm thấy ví",
   walletsHint: "MetaMask, Binance, OKX, TokenPocket, Bitget, Trust và các ví khác",
+  scanConnect: "Quét mã để kết nối",
+  scanConnectHint: "Quét mã QR bằng ví trên điện thoại (WalletConnect)",
   switchTo: (c) => `Chuyển sang ${c}`,
   switchNetwork: "Đổi mạng",
   disconnectWallet: "Ngắt kết nối ví",

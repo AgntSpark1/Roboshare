@@ -6,7 +6,7 @@ import { Modal } from "./Modal";
 import { shortAddr } from "../format";
 import { useSession, useSignIn, useSignOut } from "../session";
 import { TEST_WALLET_PREFIX } from "../wagmi";
-import { walletApps } from "../walletApps";
+import { walletApps, WALLETCONNECT_LOGO } from "../walletApps";
 import { useUiStrings } from "../i18n";
 
 
@@ -16,7 +16,9 @@ import { useUiStrings } from "../i18n";
  */
 function walletList(connectors: readonly Connector[]) {
   const announced = connectors.some((c) => c.type === "injected" && c.id !== "injected");
-  return connectors.filter((c) => !(announced && c.id === "injected"));
+  const list = connectors.filter((c) => !(announced && c.id === "injected"));
+  // Scan-to-connect first: it works from any browser, phone or desktop.
+  return [...list.filter((c) => c.type === "walletConnect"), ...list.filter((c) => c.type !== "walletConnect")];
 }
 
 /** Connect, switch to this site's network, sign in (SIWE) and sign out. Test wallets appear only on a local anvil chain. */
@@ -97,16 +99,18 @@ export function WalletButton({ signInLabel, compact = false }: { signInLabel?: s
                       if (await connect(c)) setOpen(false);
                     }}
                   >
-                    {c.icon && !test ? (
+                    {c.type === "walletConnect" ? (
+                      <img className="wl" src={WALLETCONNECT_LOGO} alt="" style={{ background: "#fff", padding: 4 }} />
+                    ) : c.icon && !test ? (
                       <img className="wl" src={c.icon} alt="" />
                     ) : (
                       <span className="wl" style={{ background: test ? "#8B7BFF" : "#F6B53D" }} aria-hidden="true">{test ? "T" : "W"}</span>
                     )}
                     <span>
-                      <b>{test ? t.testWallet(shortAddr(acct)) : c.name === "Injected" ? t.browserWallet : c.name}</b>
+                      <b>{c.type === "walletConnect" ? t.scanConnect : test ? t.testWallet(shortAddr(acct)) : c.name === "Injected" ? t.browserWallet : c.name}</b>
                       <br />
                       <small className="muted">
-                        {busy ? t.confirmConnect : test ? t.testOnly : noWallet && c.id === "injected" ? t.noWalletDetected : t.walletsHint}
+                        {busy ? t.confirmConnect : c.type === "walletConnect" ? t.scanConnectHint : test ? t.testOnly : noWallet && c.id === "injected" ? t.noWalletDetected : t.walletsHint}
                       </small>
                     </span>
                     {busy && <span className="spin" aria-hidden="true" />}

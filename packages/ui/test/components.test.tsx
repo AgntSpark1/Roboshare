@@ -78,6 +78,27 @@ describe("components", () => {
     expect(document.body.style.overflow).toBe("hidden");
   });
 
+  it("offers scan-to-connect first when a WalletConnect project ID is set, and hides it otherwise", async () => {
+    const { unmount } = render(
+      <Web3Providers env={{ chainId: 97, walletConnectProjectId: "0123456789abcdef0123456789abcdef" }}>
+        <WalletButton />
+      </Web3Providers>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "连接钱包" }));
+    const dialog = screen.getByRole("dialog", { name: "连接钱包" });
+    const entries = within(dialog).getAllByRole("button").filter((b) => b.closest(".wallets"));
+    expect(entries[0]).toHaveTextContent("扫码连接");
+    expect(entries[0]!.querySelector("img")?.getAttribute("src")).toMatch(/^data:image\/svg\+xml/);
+    unmount();
+    render(
+      <Web3Providers env={{ chainId: 97 }}>
+        <WalletButton />
+      </Web3Providers>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "连接钱包" }));
+    expect(within(screen.getByRole("dialog", { name: "连接钱包" })).queryByText("扫码连接")).not.toBeInTheDocument();
+  });
+
   it("offers to open the page in a wallet app when the browser has no wallet", async () => {
     render(
       <Web3Providers env={{ chainId: 97 }}>

@@ -1,4 +1,4 @@
-import { BINANCE_SVG, BITGET_SVG, METAMASK_SVG, OKX_SVG, TOKENPOCKET_SVG, TRUST_SVG } from "./walletLogos";
+import { WALLETCONNECT_SVG, BINANCE_SVG, BITGET_SVG, METAMASK_SVG, OKX_SVG, TOKENPOCKET_SVG, TRUST_SVG } from "./walletLogos";
 
 export interface WalletApp {
   name: string;
@@ -8,7 +8,7 @@ export interface WalletApp {
   url: string;
 }
 
-const svgUri = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+export const svgUri = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 /** Called only in the browser (the dialog reads window.location), so btoa is available. */
 const b64 = (s: string) => window.btoa(s);
 
@@ -37,3 +37,6 @@ export function walletApps(href: string, chainId: number, names: { binance?: str
     { name: "Trust Wallet", logo: svgUri(TRUST_SVG), url: `https://link.trustwallet.com/open_url?coin_id=20000714&url=${enc}` },
   ];
 }
+
+/** Logo for the WalletConnect (scan-to-connect) entry. */
+export const WALLETCONNECT_LOGO = svgUri(WALLETCONNECT_SVG);

@@ -17,6 +17,7 @@
     "@roboshare/shared": "workspace:*",
     "@tanstack/react-query": "5.103.1",
     "@wagmi/core": "2.22.1",
+    "@walletconnect/ethereum-provider": "2.21.1",
     "viem": "2.57.4"
   },
   "peerDependencies": {
