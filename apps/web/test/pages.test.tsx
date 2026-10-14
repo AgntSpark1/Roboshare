@@ -46,6 +46,13 @@ describe("project card", () => {
     rerender(<ProjectCard p={{ ...base, state: "ACTIVE", term: { termDays: 720, startedAt: "2026-09-01T00:00:00.000Z", endsAt: "2028-08-21T00:00:00.000Z", remainingDays: 679 } }} />);
     expect(screen.getByTestId("term-line")).toHaveTextContent("运营期 720 天 · 剩余 679 天 · 每月分配 · 到期卖车款按份额返还");
   });
+
+  it("labels a testnet demo vehicle", () => {
+    const { rerender } = render(<ProjectCard p={base} />);
+    expect(screen.queryByText("演示车辆")).not.toBeInTheDocument();
+    rerender(<ProjectCard p={{ ...base, demo: true }} />);
+    expect(screen.getByText("演示车辆")).toBeInTheDocument();
+  });
 });
 
 describe("investor notes", () => {

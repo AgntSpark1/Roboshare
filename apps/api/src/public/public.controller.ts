@@ -49,6 +49,7 @@ export class PublicController {
     ]);
     const meta = new Map(metas.map((m) => [m.projectIdOnchain, m]));
     const supply = await this.supplies();
+    const demos = await this.demos();
     return plain({
       items: projects.map((p) => ({
         id: p.projectIdOnchain,
@@ -60,6 +61,7 @@ export class PublicController {
         issuedUnits: supply.get(p.projectIdOnchain) ?? 0,
         authorizedUnits: SHARE_CAP,
         term: term(p),
+        demo: demos.has(p.projectIdOnchain),
         offering: p.offering
           ? { status: p.offering.status, unitsSold: p.offering.unitsSold, minUnits: p.offering.minUnits, maxUnits: p.offering.maxUnits, unitPrice: p.offering.unitPrice, startAt: p.offering.startAt, endAt: p.offering.endAt }
           : null,
@@ -100,6 +102,7 @@ export class PublicController {
     if (!p) throw notFound("project");
     const meta = await this.prisma.projectMeta.findUnique({ where: { projectIdOnchain: id } });
     const supply = await this.supplies(id);
+    const demos = await this.demos(id);
     return plain({
       id: p.projectIdOnchain,
       assetId: p.assetIdOnchain,
@@ -112,6 +115,7 @@ export class PublicController {
       contracts: { token: p.tokenAddress, offering: p.offeringAddress, distributor: p.distributorAddress },
       fundedAtBlock: p.fundedAtBlock,
       term: term(p),
+      demo: demos.has(id),
       offering: p.offering
         ? {
             status: p.offering.status,
@@ -275,6 +279,15 @@ export class PublicController {
       addresses: s.addresses,
       reserves: s.reserves,
     });
+  }
+
+  /** Testnet demo vehicles created by the matchmaker (MATCHMAKER_DESIGN.md), labeled on the site. */
+  private async demos(projectId?: string) {
+    const rows = await this.prisma.vehicleQueue.findMany({
+      where: { chainId: this.cfg.chainId, demo: true, projectIdOnchain: projectId ? projectId : { not: null } },
+      select: { projectIdOnchain: true },
+    });
+    return new Set(rows.map((d) => d.projectIdOnchain!));
   }
 
   private async supplies(projectId?: string) {

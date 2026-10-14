@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@roboshare/db";
-import { allocate, auditRegistryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
+import { allocate, assetRegistryAbi, auditRegistryAbi, projectFactoryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
 import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
@@ -749,6 +749,74 @@ describe("autopilot and daily operating data", () => {
     } finally {
       cfg.autopilotSubmitter = undefined;
       cfg.autopilotApprover = undefined;
+    }
+  });
+});
+
+describe("robot matchmaking", () => {
+  const FACTORY = ADDR(0xfac2);
+  const LAUNCHER = ADDR(0x1a1);
+  const VERIFIER = ADDR(0x1a2);
+  const BACKSTOP = ADDR(0xb5);
+
+  it("starts switched off and refuses settings from a non-staff account", async () => {
+    const r = await http().get("/api/v1/admin/matchmaker").set("Cookie", cookies.operator!).expect(200);
+    expect(r.body.settings).toMatchObject({ launchEnabled: false, backstopEnabled: false, launchMode: "SAFE" });
+    expect(r.body.ready).toEqual({ launch: false, backstop: false });
+    const body = { launchEnabled: true, launchMode: "AUTO", maxOpen: 1, demoVehicles: true, backstopEnabled: true, backstopHoursBeforeEnd: 24, backstopMaxUsdt: 10_000, autoActivate: true };
+    await http().put("/api/v1/admin/matchmaker/settings").set("Cookie", cookies.investor!).send(body).expect(403);
+    await http().put("/api/v1/admin/matchmaker/settings").set("Cookie", cookies.operator!).send({ ...body, maxOpen: 0 }).expect(400);
+    const ok = await http().put("/api/v1/admin/matchmaker/settings").set("Cookie", cookies.operator!).send(body).expect(200);
+    expect(ok.body).toMatchObject({ launchEnabled: true, launchMode: "AUTO" });
+  });
+
+  it("queues vehicles and only removes ones not yet listing", async () => {
+    const v = { slug: "byd-e6-7777", title: "BYD e6 #7777", make: "BYD", model: "e6", assetRef: "vin-hash-7777" };
+    await http().post("/api/v1/admin/matchmaker/vehicles").set("Cookie", cookies.reviewer!).send(v).expect(403);
+    const r = await http().post("/api/v1/admin/matchmaker/vehicles").set("Cookie", cookies.operator!).send(v).expect(201);
+    await http().post("/api/v1/admin/matchmaker/vehicles").set("Cookie", cookies.operator!).send(v).expect(409);
+    await prisma.vehicleQueue.update({ where: { id: r.body.id }, data: { status: "LISTED" } });
+    await http().delete(`/api/v1/admin/matchmaker/vehicles/${r.body.id}`).set("Cookie", cookies.operator!).expect(409);
+    await prisma.vehicleQueue.update({ where: { id: r.body.id }, data: { status: "QUEUED" } });
+    await http().delete(`/api/v1/admin/matchmaker/vehicles/${r.body.id}`).set("Cookie", cookies.operator!).expect(200);
+  });
+
+  it("queues one Safe batch with the template and the missing grants, never the admin role", async () => {
+    await http().post("/api/v1/admin/matchmaker/setup").set("Cookie", cookies.operator!).send({ enabled: true, unitPriceUsdt: 100, minUnits: 10, perWalletMax: 100, durationDays: 7, termDays: 720, minLaunchIntervalMinutes: 60 }).expect(503);
+    cfg.projectFactory = FACTORY;
+    await prisma.matchmakerSettings.update({ where: { chainId: 31337 }, data: { launcherAddress: LAUNCHER, verifierAddress: VERIFIER, backstopAddress: BACKSTOP } });
+    try {
+      const r = await http().post("/api/v1/admin/matchmaker/setup").set("Cookie", cookies.operator!).send({ enabled: true, unitPriceUsdt: 100, minUnits: 10, perWalletMax: 100, durationDays: 7, termDays: 720, minLaunchIntervalMinutes: 60 }).expect(201);
+      const calls = r.body.proposal.calls as { to: string; data: string }[];
+      const decoded = calls.map((c) => {
+        const abi = c.to.toLowerCase() === FACTORY ? projectFactoryAbi : assetRegistryAbi;
+        return decodeFunctionData({ abi, data: c.data as `0x${string}` }) as { functionName: string; args: readonly unknown[] };
+      });
+      expect(decoded.map((d) => d.functionName)).toEqual(["grantRole", "setLaunchTemplate", "grantRole", "grantRole", "grantRole"]);
+      const t = decoded[1]!.args[0] as { unitPrice: bigint; treasury: string; enabled: boolean };
+      expect(t.unitPrice).toBe(100n * ONE);
+      expect(t.enabled).toBe(true);
+      // defaults to the treasury of the latest offering
+      expect(t.treasury.toLowerCase()).toBe(ADDR(0x7e).toLowerCase());
+      for (const d of decoded.filter((x) => x.functionName === "grantRole")) expect(d.args[0]).not.toBe(`0x${"0".repeat(64)}`);
+
+      const off = await http().post("/api/v1/admin/matchmaker/setup").set("Cookie", cookies.operator!).send({ enabled: false, unitPriceUsdt: 100, minUnits: 10, perWalletMax: 100, durationDays: 7, termDays: 720, minLaunchIntervalMinutes: 60 }).expect(201);
+      expect(off.body.proposal.calls).toHaveLength(1);
+    } finally {
+      cfg.projectFactory = undefined;
+    }
+  });
+
+  it("labels demo vehicles on the public project", async () => {
+    await prisma.vehicleQueue.create({ data: { chainId: 31337, slug: "demo-x", title: "Demo", assetRef: "testnet-demo:x", demo: true, status: "LISTED", projectIdOnchain: PID, createdBy: "matchmaker" } });
+    try {
+      const one = await http().get(`/api/v1/projects/${PID}`).expect(200);
+      expect(one.body.demo).toBe(true);
+      expect(one.body.offering.platformUnits).toBeUndefined();
+      const list = await http().get("/api/v1/projects").expect(200);
+      expect(list.body.items.find((i: { id: string }) => i.id === PID).demo).toBe(true);
+    } finally {
+      await prisma.vehicleQueue.deleteMany({ where: { slug: "demo-x" } });
     }
   });
 });

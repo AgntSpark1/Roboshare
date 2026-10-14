@@ -11,6 +11,7 @@ const NAV: { href: string; label: string; group: string }[] = [
   { href: "/", label: "概览", group: "运营" },
   { href: "/projects", label: "车辆项目", group: "运营" },
   { href: "/offerings", label: "募集结算", group: "运营" },
+  { href: "/matchmaker", label: "撮合", group: "运营" },
   { href: "/reports", label: "财务报告", group: "资金" },
   { href: "/daily", label: "每日运营", group: "资金" },
   { href: "/autopilot", label: "自动分配", group: "资金" },

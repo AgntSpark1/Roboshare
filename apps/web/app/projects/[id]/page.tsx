@@ -50,6 +50,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <div className="title-row">
               <h1>{p.meta?.title ?? code}</h1>
               <StatePill state={p.state} />
+              {p.demo && <span className="tag-s" data-testid="demo-tag">{c.demoTag}</span>}
             </div>
             <p className="muted">{p.meta?.summary ?? c.noSummary}</p>
             {term && <p className="term-line" data-testid="term-line" style={{ marginTop: 8 }}>{term}</p>}

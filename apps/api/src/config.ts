@@ -29,6 +29,8 @@ export const configSchema = z.object({
   assetRegistry: optionalAddress,
   auditRegistry: optionalAddress,
   paymentToken: optionalAddress,
+  /** The factory with automatic listing (ProjectFactory.launch); the matchmaking page sets its template. */
+  projectFactory: optionalAddress,
   /** The 2/3 governance Safe; it holds admin on every contract directly (no timelock). */
   safe: optionalAddress,
   /** Public addresses of the monthly distribution autopilot wallets (keys live only in the worker). */
@@ -58,6 +60,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     assetRegistry: env.ASSET_REGISTRY,
     auditRegistry: env.AUDIT_REGISTRY,
     paymentToken: env.PAYMENT_TOKEN,
+    projectFactory: env.PROJECT_FACTORY,
     autopilotSubmitter: env.AUTOPILOT_SUBMITTER,
     autopilotApprover: env.AUTOPILOT_APPROVER,
   });
