@@ -48,6 +48,12 @@
       "tx": "0x465e37d475a315802a15213b94afb1ad6baa4739743b43a2187739e4f35cf188"
     },
     "ProjectFactory": {
+      "address": "0x5eCE541b3bbc400C10EFa9eD2e40d8A2cB2c261c",
+      "tx": "0xf4e8eec7e0bcdd5d47585e0b21b242a48ef0b8fdaae109818ed59c05401aff1a",
+      "block": 136753282,
+      "note": "2026-10-14 matchmaker factory (launch + LaunchTemplate), DeployLaunchFactory.s.sol; reuses the existing deployers. ProjectFactoryV1 still owns the RSD001 demo project."
+    },
+    "ProjectFactoryV1": {
       "address": "0x32E3879324A16B05eF9768687754C65D5D40Fa4A",
       "tx": "0x57f6926a2de6139d51e733819f35081f7501539718c7ce5382f66a4efad8c2fe"
     }
@@ -73,7 +79,8 @@
     "feeRecipient": "0x42EA4D5FC64C3A02512ba12A2AE33066040726A1",
     "settler": "0x43DAf13690424D0e40EDe889444f2987e7D751dE",
     "autopilotSubmitter": "0xdAb257aE4F3E7c9584E60F202Bf137AcA8f90B56",
-    "autopilotApprover": "0x4DDb888BEB3aE46f847E8E7C7C99e5Cc1Ef2190e"
+    "autopilotApprover": "0x4DDb888BEB3aE46f847E8E7C7C99e5Cc1Ef2190e",
+    "backstop": "0x0C2d2C338DCCf44f95ede95C1fBcaF7A52540Ed4"
   },
   "verification": "pending (needs Etherscan v2 API key)"
 }
