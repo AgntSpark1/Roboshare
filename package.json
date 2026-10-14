@@ -17,8 +17,7 @@
     "overrides": {
       "deepmerge-ts": "8.0.2",
       "postcss": "8.5.23",
-      "ws@>=8.0.0 <8.21.0": "8.22.0",
-      "@walletconnect/logger>pino": "10.0.0"
+      "ws@>=8.0.0 <8.21.0": "8.22.0"
     },
     "auditConfig": {
       "ignoreGhsas": [
