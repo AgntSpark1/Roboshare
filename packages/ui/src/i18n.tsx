@@ -40,6 +40,8 @@ export interface UiStrings {
   testOnly: string;
   noWalletDetected: string;
   walletsHint: string;
+  scanConnect: string;
+  scanConnectHint: string;
   switchTo: (chain: string) => string;
   switchNetwork: string;
   disconnectWallet: string;
@@ -88,6 +90,8 @@ export const zhUiStrings: UiStrings = {
   testOnly: "仅本地测试链（TEST-ONLY）",
   noWalletDetected: "未检测到钱包",
   walletsHint: "MetaMask、币安、OKX、TokenPocket、Bitget、Trust 等",
+  scanConnect: "扫码连接",
+  scanConnectHint: "用手机钱包扫描二维码（WalletConnect）",
   switchTo: (c) => `切换到${c}`,
   switchNetwork: "切换网络",
   disconnectWallet: "断开钱包",

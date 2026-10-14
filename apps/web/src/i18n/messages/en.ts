@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "Local test chain only (TEST-ONLY)",
   noWalletDetected: "No wallet detected",
   walletsHint: "MetaMask, Binance, OKX, TokenPocket, Bitget, Trust and more",
+  scanConnect: "Scan to connect",
+  scanConnectHint: "Scan the QR code with your phone wallet (WalletConnect)",
   switchTo: (c) => `Switch to ${c}`,
   switchNetwork: "Switch network",
   disconnectWallet: "Disconnect wallet",

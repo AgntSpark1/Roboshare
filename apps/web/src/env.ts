@@ -8,6 +8,7 @@ export const walletEnv: WalletEnv = {
     .split(",")
     .map((s) => s.trim())
     .filter((s): s is `0x${string}` => /^0x[0-9a-fA-F]{40}$/.test(s)),
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined,
 };
 
 export const EXPLORER: Record<number, string | undefined> = { 56: "https://bscscan.com", 97: "https://testnet.bscscan.com" };

@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "เฉพาะเชนทดสอบในเครื่อง (TEST-ONLY)",
   noWalletDetected: "ไม่พบวอลเล็ต",
   walletsHint: "MetaMask, Binance, OKX, TokenPocket, Bitget, Trust และอื่น ๆ",
+  scanConnect: "สแกนเพื่อเชื่อมต่อ",
+  scanConnectHint: "สแกนคิวอาร์โค้ดด้วยกระเป๋าเงินในมือถือ (WalletConnect)",
   switchTo: (c) => `เปลี่ยนไปที่ ${c}`,
   switchNetwork: "เปลี่ยนเครือข่าย",
   disconnectWallet: "ตัดการเชื่อมต่อวอลเล็ต",

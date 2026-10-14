@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "Solo cadena de prueba local (TEST-ONLY)",
   noWalletDetected: "No se detectó billetera",
   walletsHint: "MetaMask, Binance, OKX, TokenPocket, Bitget, Trust y más",
+  scanConnect: "Conectar con QR",
+  scanConnectHint: "Escanea el código QR con la billetera de tu móvil (WalletConnect)",
   switchTo: (c) => `Cambiar a ${c}`,
   switchNetwork: "Cambiar red",
   disconnectWallet: "Desconectar billetera",

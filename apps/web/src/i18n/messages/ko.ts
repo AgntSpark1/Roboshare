@@ -16,6 +16,8 @@ const ui: UiStrings = {
   testOnly: "로컬 테스트 체인 전용(TEST-ONLY)",
   noWalletDetected: "지갑을 찾을 수 없음",
   walletsHint: "MetaMask, 바이낸스, OKX, TokenPocket, Bitget, Trust 등",
+  scanConnect: "QR로 연결",
+  scanConnectHint: "휴대폰 지갑으로 QR 코드를 스캔하세요 (WalletConnect)",
   switchTo: (c) => `${c}(으)로 전환`,
   switchNetwork: "네트워크 전환",
   disconnectWallet: "지갑 연결 해제",
