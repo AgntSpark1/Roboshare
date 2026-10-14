@@ -3090,6 +3090,32 @@ export const projectFactoryAbi = [
   },
   {
     "type": "function",
+    "name": "LAUNCHER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_LAUNCH_DURATION_DAYS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "assetRegistry",
     "inputs": [],
     "outputs": [
@@ -3261,6 +3287,118 @@ export const projectFactoryAbi = [
   },
   {
     "type": "function",
+    "name": "lastLaunchAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "launch",
+    "inputs": [
+      {
+        "name": "projectId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "symbol",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "d",
+        "type": "tuple",
+        "internalType": "struct ProjectFactory.Deployment",
+        "components": [
+          {
+            "name": "token",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "offering",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "distributor",
+            "type": "address",
+            "internalType": "address"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "launchTemplate",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "enabled",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "unitPrice",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minUnits",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "perWalletMax",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "durationDays",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "termDays",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "minLaunchInterval",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "treasury",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "termsHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "offeringDeployer",
     "inputs": [],
     "outputs": [
@@ -3356,6 +3494,66 @@ export const projectFactoryAbi = [
   },
   {
     "type": "function",
+    "name": "setLaunchTemplate",
+    "inputs": [
+      {
+        "name": "t",
+        "type": "tuple",
+        "internalType": "struct ProjectFactory.LaunchTemplate",
+        "components": [
+          {
+            "name": "enabled",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "unitPrice",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "minUnits",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "perWalletMax",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "durationDays",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "termDays",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minLaunchInterval",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "treasury",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "termsHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setRoles",
     "inputs": [
       {
@@ -3428,6 +3626,66 @@ export const projectFactoryAbi = [
   },
   {
     "type": "event",
+    "name": "LaunchTemplateSet",
+    "inputs": [
+      {
+        "name": "template",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct ProjectFactory.LaunchTemplate",
+        "components": [
+          {
+            "name": "enabled",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "unitPrice",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "minUnits",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "perWalletMax",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "durationDays",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "termDays",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minLaunchInterval",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "treasury",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "termsHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ProjectDeployed",
     "inputs": [
       {
@@ -3453,6 +3711,37 @@ export const projectFactoryAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProjectLaunched",
+    "inputs": [
+      {
+        "name": "projectId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "launcher",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "offering",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "endTime",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
       }
     ],
     "anonymous": false
@@ -3595,12 +3884,49 @@ export const projectFactoryAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidTemplate",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LaunchDisabled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LaunchTooSoon",
+    "inputs": [
+      {
+        "name": "nextAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ProjectNotVerified",
     "inputs": [
       {
         "name": "state",
         "type": "uint8",
         "internalType": "enum ProjectState"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TermMismatch",
+    "inputs": [
+      {
+        "name": "projectTermDays",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "templateTermDays",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ]
   },

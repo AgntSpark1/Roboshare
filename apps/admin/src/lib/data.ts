@@ -44,6 +44,77 @@ export interface AutopilotStatus {
   issues: AutomationEvent[];
 }
 
+export interface MatchmakerSettings {
+  launchEnabled: boolean;
+  launchMode: "AUTO" | "SAFE";
+  maxOpen: number;
+  demoVehicles: boolean;
+  backstopEnabled: boolean;
+  backstopHoursBeforeEnd: number;
+  backstopMaxUsdt: number;
+  autoActivate: boolean;
+  launcherAddress: string | null;
+  verifierAddress: string | null;
+  backstopAddress: string | null;
+  template: {
+    enabled: boolean; unitPrice: string; minUnits: number; perWalletMax: number; durationDays: number; termDays: number;
+    minLaunchInterval: number; treasury: string;
+  } | null;
+}
+
+export interface QueuedVehicle {
+  id: string;
+  slug: string;
+  title: string;
+  make: string | null;
+  model: string | null;
+  demo: boolean;
+  status: "QUEUED" | "REGISTERING" | "WAITING_SAFE" | "LISTED" | "FAILED";
+  projectIdOnchain: string | null;
+  lastError: string | null;
+  createdAt: string;
+}
+
+export interface MatchmakerStatus {
+  settings: MatchmakerSettings;
+  factory: string | null;
+  roles: { factoryLinked: boolean; launcherOperator: boolean; verifierReviewer: boolean; launcherLaunch: boolean };
+  ready: { launch: boolean; backstop: boolean };
+  queue: QueuedVehicle[];
+  events: AutomationEvent[];
+}
+
+export const useMatchmaker = () =>
+  useQuery({ queryKey: ["admin", "matchmaker"], refetchInterval: 30_000, queryFn: () => api.get<MatchmakerStatus>("/admin/matchmaker") });
+
+/** Chinese line for a matchmaker event. */
+export function matchText(e: Pick<AutomationEvent, "kind" | "message">): string {
+  let m: RegExpMatchArray | null;
+  switch (e.kind) {
+    case "VEHICLE_REGISTERED":
+      return `已登记车辆：${e.message}`;
+    case "VEHICLE_VERIFIED":
+      return `已核验车辆：${e.message}`;
+    case "VEHICLE_LISTED":
+      return `已上架开放认购：${e.message.replace(/ is on sale$/, "")}`;
+    case "LAUNCH_QUEUED":
+      return `${e.message.replace(/ waits for two Safe confirmations$/, "")} 等待多签确认上架`;
+    case "ACTIVATE_QUEUED":
+      m = e.message.match(/^(.*) is funded/);
+      return `${m ? m[1] : "车辆"} 已满额，等待多签确认“投入运营”`;
+    case "BACKSTOP_FILLED":
+      m = e.message.match(/remaining (\d+) units for (\d+) USDT/);
+      return m ? `平台认购剩余 ${m[1]} 份，花费 ${m[2]} USDT` : "平台已认购剩余份额";
+    case "BACKSTOP_SHORT":
+      m = e.message.match(/needs (\d+) USDT/);
+      return `平台钱包 USDT 不足${m ? `，需要 ${m[1]} USDT` : ""}，补足后自动认购`;
+    case "BACKSTOP_OVER_CAP":
+      return "剩余份额超过平台单个项目认购上限，需人工处理";
+    default:
+      return `撮合系统提醒：${e.message}`;
+  }
+}
+
 export const useAutopilot = () =>
   useQuery({ queryKey: ["admin", "autopilot"], refetchInterval: 30_000, queryFn: () => api.get<AutopilotStatus>("/admin/autopilot") });
 

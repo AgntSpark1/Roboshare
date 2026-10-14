@@ -115,6 +115,8 @@ export const zhCN = {
     currency: "结算币种",
     progress: "募集进度",
     offeringNote: (end: string, min: number) => `${end} 截止。满 ${min} 份即成团，没成团全额退款。`,
+    platformUnits: (n: number) => `其中 ${n} 份由平台自有资金认购`,
+    demoTag: "演示车辆",
     statusAria: "项目状态",
     currentState: "当前状态",
     activeNote: "车辆运营中，收益按月分配，在“我的资产”一键领取。",

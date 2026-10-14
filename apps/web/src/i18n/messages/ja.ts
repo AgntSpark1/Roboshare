@@ -194,6 +194,8 @@ export const ja: Messages = {
     currency: "決済通貨",
     progress: "募集状況",
     offeringNote: (end: string, min: number) => `${end} 締切。${min} 口で成立、不成立なら全額返金。`,
+    platformUnits: (n: number) => `うち ${n} 口はプラットフォームが自己資金で購入`,
+    demoTag: "デモ車両",
     statusAria: "プロジェクトの状態",
     currentState: "現在の状態",
     activeNote: "車両は運行中です。収益は毎月分配され、「マイ資産」でワンタップで受け取れます。",

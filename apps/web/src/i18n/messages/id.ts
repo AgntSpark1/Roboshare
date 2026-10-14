@@ -194,6 +194,8 @@ export const id: Messages = {
     currency: "Mata uang penyelesaian",
     progress: "Progres penggalangan",
     offeringNote: (end: string, min: number) => `Ditutup ${end}. Berhasil jika mencapai ${min} unit; jika tidak, uang kembali penuh.`,
+    platformUnits: (n: number) => `${n} unit di antaranya dibeli platform dengan dana sendiri`,
+    demoTag: "Kendaraan demo",
     statusAria: "Status proyek",
     currentState: "Status saat ini",
     activeNote: "Mobil sedang beroperasi. Pendapatan dibagikan tiap bulan; klaim sekali ketuk di “Aset saya”.",

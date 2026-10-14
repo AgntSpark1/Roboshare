@@ -194,6 +194,8 @@ export const vi: Messages = {
     currency: "Đồng thanh toán",
     progress: "Tiến độ huy động",
     offeringNote: (end: string, min: number) => `Kết thúc ${end}. Đủ ${min} phần là thành công, không đủ hoàn tiền toàn bộ.`,
+    platformUnits: (n: number) => `Trong đó ${n} phần do nền tảng mua bằng vốn tự có`,
+    demoTag: "Xe trình diễn",
     statusAria: "Trạng thái dự án",
     currentState: "Trạng thái hiện tại",
     activeNote: "Xe đang vận hành. Thu nhập chia hằng tháng, nhận bằng một chạm ở “Tài sản của tôi”.",

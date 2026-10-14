@@ -194,6 +194,8 @@ export const zhTW: Messages = {
     currency: "結算幣種",
     progress: "募集進度",
     offeringNote: (end: string, min: number) => `${end} 截止。滿 ${min} 份即成團，沒成團全額退款。`,
+    platformUnits: (n: number) => `其中 ${n} 份由平台自有資金認購`,
+    demoTag: "示範車輛",
     statusAria: "項目狀態",
     currentState: "目前狀態",
     activeNote: "車輛營運中，收益按月分配，在「我的資產」一鍵領取。",

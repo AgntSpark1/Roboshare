@@ -58,8 +58,15 @@ contract DistributorDeployer {
 
 /// @title ProjectFactory
 /// @notice Deploys and wires one project's token, offering and distributor, then links them in the
-/// AssetRegistry. Only governance (DEFAULT_ADMIN_ROLE, held by the governance Safe) can deploy.
+/// AssetRegistry. Governance (DEFAULT_ADMIN_ROLE, held by the governance Safe) can deploy any project.
+///
+/// Automatic listing (MATCHMAKER_DESIGN.md): governance sets one launch template, and a LAUNCHER_ROLE
+/// wallet may then deploy and open the offering of a verified project on exactly those terms, at most
+/// once per `minLaunchInterval`. The launcher picks nothing about money: price, size, window and
+/// treasury all come from the template, and the offering's admin is handed to governance in the same
+/// transaction. Governance can disable the template or revoke the role at any time.
 contract ProjectFactory is AccessControl {
+    bytes32 public constant LAUNCHER_ROLE = keccak256("LAUNCHER_ROLE");
     struct Roles {
         address admin; // governance Safe
         address operator;
@@ -81,6 +88,21 @@ contract ProjectFactory is AccessControl {
         address distributor;
     }
 
+    /// @notice Terms every automatically listed offering uses. Set by governance only.
+    struct LaunchTemplate {
+        bool enabled;
+        uint256 unitPrice; // USDT base units per unit
+        uint32 minUnits;
+        uint32 perWalletMax;
+        uint32 durationDays; // offering window, from the launch
+        uint32 termDays; // the project's operating term must equal this
+        uint32 minLaunchInterval; // seconds between two launches
+        address treasury; // issuer treasury Safe that receives the proceeds
+        bytes32 termsHash; // AuditRegistry recordId of the template's offering terms
+    }
+
+    uint32 public constant MAX_LAUNCH_DURATION_DAYS = 365;
+
     /// @dev Same as AssetRegistry.DEFAULT_TERM_DAYS, applied when the offering opens without a term.
     uint32 private constant DEFAULT_TERM_DAYS = 720;
 
@@ -93,12 +115,20 @@ contract ProjectFactory is AccessControl {
     DistributorDeployer public immutable distributorDeployer;
 
     Roles public roles;
+    LaunchTemplate public launchTemplate;
+    uint64 public lastLaunchAt;
 
     event RolesUpdated(Roles roles);
     event ProjectDeployed(bytes32 indexed projectId, address token, address offering, address distributor);
+    event LaunchTemplateSet(LaunchTemplate template);
+    event ProjectLaunched(bytes32 indexed projectId, address indexed launcher, address offering, uint64 endTime);
 
     error ZeroValue();
     error ProjectNotVerified(ProjectState state);
+    error InvalidTemplate();
+    error LaunchDisabled();
+    error LaunchTooSoon(uint64 nextAt);
+    error TermMismatch(uint32 projectTermDays, uint32 templateTermDays);
 
     constructor(
         IAssetRegistry assetRegistry_,
@@ -132,11 +162,69 @@ contract ProjectFactory is AccessControl {
         _setRoles(roles_);
     }
 
+    function setLaunchTemplate(LaunchTemplate calldata t) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (t.enabled) {
+            uint32 cap = 100; // RwaShareToken.CAP, checked again by OfferingManager.configure
+            if (
+                t.unitPrice == 0 || t.minUnits == 0 || t.minUnits > cap || t.perWalletMax == 0 || t.perWalletMax > cap
+                    || t.durationDays == 0 || t.durationDays > MAX_LAUNCH_DURATION_DAYS || t.termDays == 0
+                    || t.treasury == address(0) || t.termsHash == 0
+            ) revert InvalidTemplate();
+        }
+        launchTemplate = t;
+        emit LaunchTemplateSet(t);
+    }
+
     function deployProject(ProjectParams calldata p)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
         returns (Deployment memory d)
     {
+        d = _deploy(p, roles.admin);
+    }
+
+    /// @notice Deploys a verified project and opens its offering on the launch template's terms.
+    /// Callable by a LAUNCHER_ROLE wallet or by governance itself (one Safe transaction per vehicle).
+    function launch(bytes32 projectId, string calldata name, string calldata symbol)
+        external
+        returns (Deployment memory d)
+    {
+        if (!hasRole(LAUNCHER_ROLE, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+            revert AccessControlUnauthorizedAccount(msg.sender, LAUNCHER_ROLE);
+        }
+        LaunchTemplate memory t = launchTemplate;
+        if (!t.enabled) revert LaunchDisabled();
+        uint64 nextAt = lastLaunchAt == 0 ? 0 : lastLaunchAt + t.minLaunchInterval;
+        if (block.timestamp < nextAt) revert LaunchTooSoon(nextAt);
+        (uint32 termDays,,) = assetRegistry.termOf(projectId);
+        if (termDays == 0) termDays = DEFAULT_TERM_DAYS;
+        if (termDays != t.termDays) revert TermMismatch(termDays, t.termDays);
+        lastLaunchAt = uint64(block.timestamp);
+
+        // This factory is the offering's admin only until the offering is open, then governance takes over.
+        d = _deploy(ProjectParams({projectId: projectId, name: name, symbol: symbol, treasury: t.treasury}), address(this));
+        OfferingManager offering = OfferingManager(d.offering);
+        uint64 endTime = uint64(block.timestamp) + uint64(t.durationDays) * 1 days;
+        offering.configure(
+            OfferingManager.OfferingConfig({
+                unitPrice: t.unitPrice,
+                minUnits: t.minUnits,
+                maxUnits: uint32(RwaShareToken(d.token).CAP()),
+                perWalletMax: t.perWalletMax,
+                startTime: uint64(block.timestamp),
+                endTime: endTime,
+                treasury: t.treasury,
+                termsHash: t.termsHash
+            })
+        );
+        offering.open();
+        bytes32 adminRole = offering.DEFAULT_ADMIN_ROLE();
+        offering.grantRole(adminRole, roles.admin);
+        offering.renounceRole(adminRole, address(this));
+        emit ProjectLaunched(projectId, msg.sender, d.offering, endTime);
+    }
+
+    function _deploy(ProjectParams memory p, address offeringAdmin) private returns (Deployment memory d) {
         if (p.treasury == address(0)) revert ZeroValue();
         ProjectState s = assetRegistry.stateOf(p.projectId);
         if (s != ProjectState.VERIFIED) revert ProjectNotVerified(s);
@@ -146,7 +234,7 @@ contract ProjectFactory is AccessControl {
             p.name, p.symbol, p.projectId, assetRegistry, identityRegistry, r.admin, r.pauser
         );
         d.offering = offeringDeployer.deploy(
-            p.projectId, assetRegistry, identityRegistry, IRwaShareToken(d.token), address(router), r.admin, r.operator, r.pauser
+            p.projectId, assetRegistry, identityRegistry, IRwaShareToken(d.token), address(router), offeringAdmin, r.operator, r.pauser
         );
 
         // The term is locked once contracts are linked (AssetRegistry.setOperatingTerm), so the fee tiers

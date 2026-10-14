@@ -8,12 +8,14 @@ import { Indexer } from "./indexer.js";
 import { reconcile } from "./reconcile.js";
 import { autoSettle, settleSender } from "./settler.js";
 import { Autopilot, dailyOperatingTotals, loadAutopilotConfig } from "./autopilot.js";
+import { Matchmaker, loadMatchmakerConfig } from "./matchmaker.js";
 
 const POLL_MS = Number(process.env.INDEXER_POLL_MS ?? 3000);
 const RECONCILE_EVERY = Number(process.env.RECONCILE_EVERY_TICKS ?? 100);
 const LOCK_KEY = "roboshare:indexer:leader";
 const SETTLE_EVERY_MS = Number(process.env.SETTLE_POLL_MS ?? 15_000);
 const AUTOPILOT_EVERY_MS = Number(process.env.AUTOPILOT_EVERY_MS ?? 60_000);
+const MATCHMAKER_EVERY_MS = Number(process.env.MATCHMAKER_EVERY_MS ?? 30_000);
 const AAVE_EVERY_MS = Number(process.env.AAVE_POLL_MS ?? 300_000);
 
 /** Optional: read-only Aave V3 market data from BSC mainnet (AAVE_RPC_URL), independent of CHAIN_ID. */
@@ -59,6 +61,17 @@ async function main() {
   let piloting = false;
   let lastPilot = 0;
 
+  // Optional: robot matchmaking (matchmaker.ts). Lists the next vehicle and has the disclosed platform wallet buy
+  // unsold units near the deadline; each part is switched on in the console.
+  const mmCfg = loadMatchmakerConfig();
+  const matchmaker = mmCfg ? new Matchmaker(prisma, client, mmCfg) : undefined;
+  if (matchmaker) {
+    await matchmaker.init();
+    console.log(JSON.stringify({ msg: "matchmaker ready", launcher: matchmaker.launcher?.address, verifier: matchmaker.verifier?.address, backstop: matchmaker.backstop?.address }));
+  }
+  let matching = false;
+  let lastMatch = 0;
+
   let ticks = 0;
   for (;;) {
     // Only one active indexer: hold a short Redis lease and renew it every loop.
@@ -82,6 +95,15 @@ async function main() {
           .then((ev) => ev.forEach((e) => console.log(JSON.stringify({ msg: "autopilot", ...e }))))
           .catch((err) => console.error(JSON.stringify({ msg: "autopilot error", error: String(err) })))
           .finally(() => { piloting = false; });
+      }
+      if (matchmaker && !matching && Date.now() - lastMatch >= MATCHMAKER_EVERY_MS) {
+        matching = true;
+        lastMatch = Date.now();
+        void matchmaker
+          .tick()
+          .then((ev) => ev.forEach((e) => console.log(JSON.stringify({ msg: "matchmaker", ...e }))))
+          .catch((err) => console.error(JSON.stringify({ msg: "matchmaker error", error: String(err) })))
+          .finally(() => { matching = false; });
       }
       try {
         const r = await indexer.tick();

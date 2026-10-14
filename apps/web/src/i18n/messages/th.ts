@@ -194,6 +194,8 @@ export const th: Messages = {
     currency: "สกุลเงินที่ใช้ชำระ",
     progress: "ความคืบหน้าการระดมทุน",
     offeringNote: (end: string, min: number) => `ปิด ${end} ครบ ${min} หน่วยถือว่าสำเร็จ ไม่ครบคืนเงินเต็มจำนวน`,
+    platformUnits: (n: number) => `ในจำนวนนี้ ${n} หน่วยแพลตฟอร์มซื้อด้วยเงินของตนเอง`,
+    demoTag: "รถสาธิต",
     statusAria: "สถานะโครงการ",
     currentState: "สถานะปัจจุบัน",
     activeNote: "รถกำลังให้บริการ แบ่งรายได้ทุกเดือน รับได้ในคลิกเดียวที่ “สินทรัพย์ของฉัน”",

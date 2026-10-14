@@ -194,6 +194,8 @@ export const es: Messages = {
     currency: "Moneda de liquidación",
     progress: "Progreso de la oferta",
     offeringNote: (end: string, min: number) => `Cierra el ${end}. Se financia con ${min} participaciones; si no, reembolso total.`,
+    platformUnits: (n: number) => `${n} participaciones compradas por la plataforma con fondos propios`,
+    demoTag: "Vehículo de demostración",
     statusAria: "Estado del proyecto",
     currentState: "Estado actual",
     activeNote: "El coche está operando. Los ingresos se reparten cada mes; cóbralos con un toque en “Mis activos”.",

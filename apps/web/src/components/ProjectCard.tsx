@@ -26,7 +26,7 @@ export function ProjectCard({ p }: { p: ProjectListItem }) {
         <div className="t">
           <div>
             <div className="code">{code}</div>
-            <h3>{p.title ?? c.untitled}</h3>
+            <h3>{p.title ?? c.untitled}{p.demo && <span className="tag-s">{t.project.demoTag}</span>}</h3>
           </div>
           <StatePill state={p.state} />
         </div>

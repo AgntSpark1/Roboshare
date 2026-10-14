@@ -194,6 +194,8 @@ export const ko: Messages = {
     currency: "정산 통화",
     progress: "모집 현황",
     offeringNote: (end: string, min: number) => `${end} 마감. ${min}좌가 모이면 성립, 미성립 시 전액 환불.`,
+    platformUnits: (n: number) => `이 중 ${n}좌는 플랫폼이 자체 자금으로 매입`,
+    demoTag: "데모 차량",
     statusAria: "프로젝트 상태",
     currentState: "현재 상태",
     activeNote: "차량이 운행 중입니다. 수익은 매달 분배되며 ‘내 자산’에서 한 번에 받을 수 있습니다.",

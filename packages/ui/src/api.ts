@@ -58,6 +58,7 @@ export const api = {
   post: <T>(path: string, body: unknown = {}, opts: { idempotencyKey?: string } = {}) =>
     call<T>("POST", path, body, opts.idempotencyKey ? { "idempotency-key": opts.idempotencyKey } : {}),
   put: <T>(path: string, body: unknown = {}) => call<T>("PUT", path, body),
+  del: <T>(path: string) => call<T>("DELETE", path),
 };
 
 // ------------------------------------------------------------------ response shapes used by both sites
@@ -72,6 +73,9 @@ export interface OfferingSummary {
   startAt?: string;
   perWalletMax?: number;
   termsHash?: string;
+  /** Units the platform bought with its own USDT to complete the offering (disclosed wallet, MATCHMAKER_DESIGN.md). */
+  platformUnits?: number;
+  platformWallet?: string | null;
 }
 
 export interface ProjectListItem {
@@ -85,6 +89,8 @@ export interface ProjectListItem {
   authorizedUnits: number;
   /** Operating term; null until the indexer has seen OperatingTermSet. startedAt / endsAt / remainingDays stay null until operations start. */
   term?: ProjectTerm | null;
+  /** Testnet demo vehicle created by the matchmaker; not a real vehicle. */
+  demo?: boolean;
   offering: OfferingSummary | null;
 }
 

@@ -194,6 +194,8 @@ export const en: Messages = {
     currency: "Settlement currency",
     progress: "Funding progress",
     offeringNote: (end: string, min: number) => `Closes ${end}. Funded at ${min} units; full refund if not funded.`,
+    platformUnits: (n: number) => `${n} units bought by the platform with its own funds`,
+    demoTag: "Demo vehicle",
     statusAria: "Project status",
     currentState: "Status",
     activeNote: "The car is on the road. Income is distributed monthly; claim it in “My assets” with one tap.",

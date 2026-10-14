@@ -622,6 +622,7 @@ model AutomationEvent {
   chainId          Int
   projectIdOnchain String
   /// REPORT_SUBMITTED | REPORT_APPROVED | BATCH_PROPOSED | BATCH_APPROVED | TREASURY_SHORT | OVER_CAP | LOSS_MONTH | RECONCILIATION_BLOCKED | ERROR
+  /// Matchmaker: VEHICLE_REGISTERED | VEHICLE_VERIFIED | VEHICLE_LISTED | LAUNCH_QUEUED | ACTIVATE_QUEUED | BACKSTOP_FILLED | BACKSTOP_SHORT | BACKSTOP_OVER_CAP | MATCHMAKER_BLOCKED
   kind             String
   message          String
   txHash           String?
@@ -629,6 +630,68 @@ model AutomationEvent {
 
   @@index([createdAt])
   @@map("automation_event")
+  @@schema("app")
+}
+
+/// Robot matchmaking (MATCHMAKER_DESIGN.md): automatic listing of the next vehicle and platform backstop of unsold
+/// units. One row per chain, edited in the console; the worker reads it every tick. Price, size and window of an
+/// automatically listed offering come from the on-chain launch template (ProjectFactory.launchTemplate), not from here.
+model MatchmakerSettings {
+  chainId                Int      @id
+  /// Master switch for automatic listing.
+  launchEnabled          Boolean  @default(false)
+  /// AUTO = the launcher wallet lists; SAFE = the worker queues one Safe transaction per vehicle for owners to confirm.
+  launchMode             String   @default("SAFE")
+  /// How many offerings may be open at once before the next vehicle is listed.
+  maxOpen                Int      @default(1)
+  /// Testnet only: when the vehicle queue is empty, create a clearly labeled demo vehicle.
+  demoVehicles           Boolean  @default(false)
+  /// Platform buys the unsold units with its own USDT through the normal router.
+  backstopEnabled        Boolean  @default(false)
+  /// Fill once the offering is within this many hours of its end.
+  backstopHoursBeforeEnd Int      @default(24)
+  /// Largest amount the platform spends on one offering, in whole USDT.
+  backstopMaxUsdt        Int      @default(10000)
+  /// Queue a Safe transaction to start operating once an automatically listed vehicle is funded.
+  autoActivate           Boolean  @default(true)
+  /// Public addresses the worker reports from its keys, for display (keys stay in the worker env).
+  launcherAddress        String?
+  verifierAddress        String?
+  backstopAddress        String?
+  /// The on-chain launch template as the worker last read it (for display).
+  template               Json?
+  updatedBy              String?
+  updatedAt              DateTime @updatedAt
+
+  @@map("matchmaker_settings")
+  @@schema("app")
+}
+
+/// Vehicles waiting to be listed automatically, oldest first.
+model VehicleQueue {
+  id               String    @id @default(uuid()) @db.Uuid
+  chainId          Int
+  slug             String    @unique
+  title            String
+  make             String?
+  model            String?
+  modelYear        Int?
+  summary          String?
+  /// Off-chain asset reference (e.g. a salted VIN hash); only its hash goes on-chain.
+  assetRef         String
+  /// Testnet demo vehicle created by the worker, labeled as such on the site.
+  demo             Boolean   @default(false)
+  /// QUEUED | REGISTERING | WAITING_SAFE | LISTED | FAILED
+  status           String    @default("QUEUED")
+  projectIdOnchain String?   @unique
+  safeTxId         String?   @db.Uuid
+  lastError        String?
+  createdBy        String
+  createdAt        DateTime  @default(now())
+  listedAt         DateTime?
+
+  @@index([chainId, status, createdAt])
+  @@map("vehicle_queue")
   @@schema("app")
 }
 
