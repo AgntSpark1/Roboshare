@@ -73,9 +73,6 @@ export interface OfferingSummary {
   startAt?: string;
   perWalletMax?: number;
   termsHash?: string;
-  /** Units the platform bought with its own USDT to complete the offering (disclosed wallet, MATCHMAKER_DESIGN.md). */
-  platformUnits?: number;
-  platformWallet?: string | null;
 }
 
 export interface ProjectListItem {

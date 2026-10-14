@@ -807,19 +807,15 @@ describe("robot matchmaking", () => {
     }
   });
 
-  it("shows the platform's own units and demo vehicles on the public project", async () => {
-    await prisma.subscription.create({ data: { projectIdOnchain: PID, wallet: BACKSTOP, units: 5, amount: (5_000n * ONE).toString(), status: "SETTLED", lastTxHash: "0x03" } });
+  it("labels demo vehicles on the public project", async () => {
     await prisma.vehicleQueue.create({ data: { chainId: 31337, slug: "demo-x", title: "Demo", assetRef: "testnet-demo:x", demo: true, status: "LISTED", projectIdOnchain: PID, createdBy: "matchmaker" } });
     try {
       const one = await http().get(`/api/v1/projects/${PID}`).expect(200);
-      expect(one.body.offering).toMatchObject({ platformUnits: 5, platformWallet: BACKSTOP });
       expect(one.body.demo).toBe(true);
+      expect(one.body.offering.platformUnits).toBeUndefined();
       const list = await http().get("/api/v1/projects").expect(200);
-      const item = list.body.items.find((i: { id: string }) => i.id === PID);
-      expect(item.offering.platformUnits).toBe(5);
-      expect(item.demo).toBe(true);
+      expect(list.body.items.find((i: { id: string }) => i.id === PID).demo).toBe(true);
     } finally {
-      await prisma.subscription.delete({ where: { projectIdOnchain_wallet: { projectIdOnchain: PID, wallet: BACKSTOP } } });
       await prisma.vehicleQueue.deleteMany({ where: { slug: "demo-x" } });
     }
   });

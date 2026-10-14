@@ -109,8 +109,8 @@ describe("robot matchmaking on a local chain", () => {
     expect(await prisma.vehicleQueue.count()).toBe(1);
   }, 120_000);
 
-  it("leaves the offering alone until close to its end", async () => {
-    await prisma.matchmakerSettings.update({ where: { chainId: CHAIN }, data: { backstopEnabled: true, backstopHoursBeforeEnd: 24, backstopMaxUsdt: 100_000 } });
+  it("does not buy during the sale", async () => {
+    await prisma.matchmakerSettings.update({ where: { chainId: CHAIN }, data: { backstopEnabled: true, backstopHoursBeforeEnd: 1, backstopMaxUsdt: 100_000 } });
     const v = await prisma.vehicleQueue.findFirstOrThrow();
     const alice = c.accounts[7]!;
     await send(c, alice, { address: usdt, abi: mintAbi, functionName: "mint", args: [alice, 30n * UNIT_PRICE] });
@@ -120,7 +120,7 @@ describe("robot matchmaking on a local chain", () => {
   }, 60_000);
 
   it("reports a platform wallet without enough USDT", async () => {
-    await c.test.increaseTime({ seconds: 2 * 86_400 + 600 });
+    await c.test.increaseTime({ seconds: 3 * 86_400 - 1_800 }); // last half hour of the 3-day window
     await c.test.mine({ blocks: 1 });
     expect(await run(2)).toEqual(["BACKSTOP_SHORT"]);
   }, 60_000);

@@ -648,8 +648,8 @@ model MatchmakerSettings {
   demoVehicles           Boolean  @default(false)
   /// Platform buys the unsold units with its own USDT through the normal router.
   backstopEnabled        Boolean  @default(false)
-  /// Fill once the offering is within this many hours of its end.
-  backstopHoursBeforeEnd Int      @default(24)
+  /// Fill in one purchase once the offering is within this many hours of its end (subscriptions close at the end).
+  backstopHoursBeforeEnd Int      @default(1)
   /// Largest amount the platform spends on one offering, in whole USDT.
   backstopMaxUsdt        Int      @default(10000)
   /// Queue a Safe transaction to start operating once an automatically listed vehicle is funded.

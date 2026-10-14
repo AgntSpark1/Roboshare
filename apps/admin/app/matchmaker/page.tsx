@@ -89,17 +89,17 @@ export default function Matchmaker() {
       <section className="panel" aria-labelledby="mm">
         <h2 id="mm">撮合系统</h2>
         <p className="muted small" style={{ marginBottom: 10 }}>
-          一辆车卖完，系统自动上架下一辆。募集快到期还没卖完时，平台钱包用平台自己的 USDT 认购剩余份额（网站显示为“平台认购”），满额后自动结算，再提醒多签确认投入运营。平台不会用伪装成散户的钱包认购。
+          一辆车卖完，系统自动上架下一辆。募集最后阶段还没卖完时，平台钱包用平台自己的 USDT 一次性认购剩余份额，满额后自动结算，再提醒多签确认投入运营。募集期间平台不会提前买入，也不会拆成多个钱包认购。
         </p>
         {q.error && <p className="err" role="alert">{errorText(q.error)}</p>}
         {d && s && (
           <div className="health">
             <div><span>自动上架</span><b className={s.launchEnabled && d.ready.launch ? "c-good" : "c-warn"}>{!s.launchEnabled ? "已关闭" : d.ready.launch ? (s.launchMode === "AUTO" ? "运行中（全自动）" : "运行中（每辆车多签确认）") : "等待多签授权"}</b></div>
-            <div><span>平台补齐</span><b className={s.backstopEnabled && d.ready.backstop ? "c-good" : "c-warn"}>{!s.backstopEnabled ? "已关闭" : d.ready.backstop ? `截止前 ${s.backstopHoursBeforeEnd} 小时自动补齐` : "后台程序未配置平台钱包"}</b></div>
+            <div><span>平台补齐</span><b className={s.backstopEnabled && d.ready.backstop ? "c-good" : "c-warn"}>{!s.backstopEnabled ? "已关闭" : d.ready.backstop ? `截止前 ${s.backstopHoursBeforeEnd} 小时内一次性补齐` : "后台程序未配置平台钱包"}</b></div>
             <div><span>上架模板</span><span>{t?.enabled ? `每份 ${formatUsdt(t.unitPrice)} USDT · 共 100 份 · 最少 ${t.minUnits} 份成立 · 募集 ${t.durationDays} 天 · 运营期 ${t.termDays} 天` : "未设置"}</span></div>
             <div><span>上新车钱包</span><span className="mono">{s.launcherAddress ? shortAddr(s.launcherAddress) : "—"}</span></div>
             <div><span>核验钱包</span><span className="mono">{s.verifierAddress ? shortAddr(s.verifierAddress) : "—"}</span></div>
-            <div><span>平台认购钱包（公开）</span><span className="mono">{s.backstopAddress ? shortAddr(s.backstopAddress) : "—"}</span></div>
+            <div><span>平台认购钱包</span><span className="mono">{s.backstopAddress ? shortAddr(s.backstopAddress) : "—"}</span></div>
           </div>
         )}
       </section>

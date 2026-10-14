@@ -54,9 +54,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </div>
             <p className="muted">{p.meta?.summary ?? c.noSummary}</p>
             {term && <p className="term-line" data-testid="term-line" style={{ marginTop: 8 }}>{term}</p>}
-            {!!o?.platformUnits && p.state !== "OFFERING" && (
-              <p className="muted" data-testid="platform-units" style={{ fontSize: ".8rem", marginTop: 6 }}>{c.platformUnits(o.platformUnits)}</p>
-            )}
             <div className="facts">
               <div><span>{c.model}</span><b>{[p.meta?.make, p.meta?.model].filter(Boolean).join(" ") || "—"}</b></div>
               <div><span>{c.issuedCap}</span><b>{t.units.of(p.issuedUnits, p.authorizedUnits)}</b></div>
@@ -70,9 +67,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 <p className="muted" style={{ fontSize: ".8rem", marginTop: 10 }}>
                   {c.offeringNote(formatDate(o.endAt), o.minUnits)}
                 </p>
-                {!!o.platformUnits && (
-                  <p className="muted" data-testid="platform-units" style={{ fontSize: ".8rem", marginTop: 4 }}>{c.platformUnits(o.platformUnits)}</p>
-                )}
               </div>
             )}
           </div>

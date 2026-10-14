@@ -49,7 +49,7 @@ export class PublicController {
     ]);
     const meta = new Map(metas.map((m) => [m.projectIdOnchain, m]));
     const supply = await this.supplies();
-    const platform = await this.platform();
+    const demos = await this.demos();
     return plain({
       items: projects.map((p) => ({
         id: p.projectIdOnchain,
@@ -61,9 +61,9 @@ export class PublicController {
         issuedUnits: supply.get(p.projectIdOnchain) ?? 0,
         authorizedUnits: SHARE_CAP,
         term: term(p),
-        demo: platform.demo.has(p.projectIdOnchain),
+        demo: demos.has(p.projectIdOnchain),
         offering: p.offering
-          ? { status: p.offering.status, unitsSold: p.offering.unitsSold, minUnits: p.offering.minUnits, maxUnits: p.offering.maxUnits, unitPrice: p.offering.unitPrice, startAt: p.offering.startAt, endAt: p.offering.endAt, platformUnits: platform.units.get(p.projectIdOnchain) ?? 0 }
+          ? { status: p.offering.status, unitsSold: p.offering.unitsSold, minUnits: p.offering.minUnits, maxUnits: p.offering.maxUnits, unitPrice: p.offering.unitPrice, startAt: p.offering.startAt, endAt: p.offering.endAt }
           : null,
       })),
     });
@@ -102,7 +102,7 @@ export class PublicController {
     if (!p) throw notFound("project");
     const meta = await this.prisma.projectMeta.findUnique({ where: { projectIdOnchain: id } });
     const supply = await this.supplies(id);
-    const platform = await this.platform(id);
+    const demos = await this.demos(id);
     return plain({
       id: p.projectIdOnchain,
       assetId: p.assetIdOnchain,
@@ -115,13 +115,10 @@ export class PublicController {
       contracts: { token: p.tokenAddress, offering: p.offeringAddress, distributor: p.distributorAddress },
       fundedAtBlock: p.fundedAtBlock,
       term: term(p),
-      demo: platform.demo.has(id),
+      demo: demos.has(id),
       offering: p.offering
         ? {
             status: p.offering.status,
-            /** Units the platform bought itself to complete the offering (disclosed backstop wallet). */
-            platformUnits: platform.units.get(id) ?? 0,
-            platformWallet: platform.wallet,
             unitPrice: p.offering.unitPrice,
             minUnits: p.offering.minUnits,
             maxUnits: p.offering.maxUnits,
@@ -284,28 +281,13 @@ export class PublicController {
     });
   }
 
-  /**
-   * The platform backstop (MATCHMAKER_DESIGN.md): units its disclosed wallet subscribed to complete an offering, and
-   * which projects are testnet demo vehicles. The wallet address comes from the worker via matchmaker_settings.
-   */
-  private async platform(projectId?: string) {
-    const s = await this.prisma.matchmakerSettings.findUnique({ where: { chainId: this.cfg.chainId } });
-    const wallet = s?.backstopAddress ?? null;
-    const subs = wallet
-      ? await this.prisma.subscription.findMany({
-          where: { wallet, status: { in: ["ESCROWED", "SETTLED"] }, ...(projectId ? { projectIdOnchain: projectId } : {}) },
-          select: { projectIdOnchain: true, units: true },
-        })
-      : [];
-    const demos = await this.prisma.vehicleQueue.findMany({
+  /** Testnet demo vehicles created by the matchmaker (MATCHMAKER_DESIGN.md), labeled on the site. */
+  private async demos(projectId?: string) {
+    const rows = await this.prisma.vehicleQueue.findMany({
       where: { chainId: this.cfg.chainId, demo: true, projectIdOnchain: projectId ? projectId : { not: null } },
       select: { projectIdOnchain: true },
     });
-    return {
-      wallet,
-      units: new Map(subs.map((x) => [x.projectIdOnchain, x.units])),
-      demo: new Set(demos.map((d) => d.projectIdOnchain!)),
-    };
+    return new Set(rows.map((d) => d.projectIdOnchain!));
   }
 
   private async supplies(projectId?: string) {

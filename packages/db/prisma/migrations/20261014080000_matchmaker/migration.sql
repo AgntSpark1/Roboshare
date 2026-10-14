@@ -6,7 +6,7 @@ CREATE TABLE "app"."matchmaker_settings" (
     "maxOpen" INTEGER NOT NULL DEFAULT 1,
     "demoVehicles" BOOLEAN NOT NULL DEFAULT false,
     "backstopEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "backstopHoursBeforeEnd" INTEGER NOT NULL DEFAULT 24,
+    "backstopHoursBeforeEnd" INTEGER NOT NULL DEFAULT 1,
     "backstopMaxUsdt" INTEGER NOT NULL DEFAULT 10000,
     "autoActivate" BOOLEAN NOT NULL DEFAULT true,
     "launcherAddress" TEXT,

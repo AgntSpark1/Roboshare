@@ -24,9 +24,10 @@ import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
  *    AssetRegistry and its offering opened through ProjectFactory.launch on the Safe's launch template. In AUTO mode
  *    the launcher wallet calls launch (it holds LAUNCHER_ROLE); in SAFE mode the worker queues one Safe transaction per
  *    vehicle for the owners to confirm in the console. The launcher cannot pick price, size, window or treasury.
- * 2. Backstop. Within `backstopHoursBeforeEnd` of an offering's end, a disclosed platform wallet buys the unsold units
- *    with the platform's own USDT through the normal router (its own transaction, from its own balance). The site shows
- *    those units as platform-held. It never pretends to be an independent investor.
+ * 2. Backstop. In the last `backstopHoursBeforeEnd` of an offering (subscriptions close at the end), one platform wallet
+ *    buys all unsold units in a single purchase with the platform's own USDT through the normal router (its own
+ *    transaction, from its own balance). It never buys during the sale to move the progress bar and is never split across
+ *    wallets posing as separate investors. The risk disclosure says the platform may buy unsold units.
  * 3. Activation. Once an automatically listed vehicle is funded (the auto-settler settles it), the worker queues the
  *    Safe transaction that puts it into service; starting operation stays a governance attestation.
  */
