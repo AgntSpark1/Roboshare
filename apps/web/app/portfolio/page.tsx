@@ -18,11 +18,13 @@ import {
   useTxRunner,
   useUiStrings,
   WalletButton,
+  type DailyRevenueItem,
   type ProjectDetail,
   type TxStep,
 } from "@roboshare/ui";
 import { explorer } from "@/env";
 import { useFreezeStatus, useMySubscriptions, useRefreshAfterTx, useUsdtState } from "@/lib/data";
+import { holderDaily, pendingTotal, sumByDay, type DailyEarning } from "@/lib/earnings";
 import { useI18n } from "@/i18n/I18nProvider";
 
 interface Holding {
@@ -91,6 +93,22 @@ function Dashboard() {
   const details = useQueries({ queries: ids.map((id) => ({ queryKey: ["project", id], queryFn: () => api.get<ProjectDetail>(`/projects/${id}`) })) });
   const project = (id: string) => details.find((d) => d.data?.id === id)?.data;
   const name = (id: string) => project(id)?.meta?.title ?? shortAddr(id);
+  // Two months of days covers everything not yet in a monthly distribution.
+  const heldIds = (holdings.data?.items ?? []).map((h) => h.projectId);
+  const dailyRows = useQueries({
+    queries: heldIds.map((id) => ({
+      queryKey: ["daily-revenue", id, 62],
+      queryFn: () => api.get<{ items: DailyRevenueItem[] }>(`/projects/${id}/daily-revenue?days=62`),
+      retry: false,
+    })),
+  });
+  const dailyOf = new Map<string, DailyEarning[]>();
+  (holdings.data?.items ?? []).forEach((h, i) => {
+    const items = dailyRows[i]?.data?.items;
+    const p = project(h.projectId);
+    if (items?.length && p) dailyOf.set(h.projectId, holderDaily(items, h.units, h.issuedUnits, p.feeTiers));
+  });
+  const myDaily = sumByDay([...dailyOf.values()]);
 
   const claimable = (dists.data?.items ?? []).filter((d) => !d.claimed);
   const totalClaimable = claimable.reduce((s, d) => s + BigInt(d.net), 0n);
@@ -129,6 +147,8 @@ function Dashboard() {
           <div className="tile"><span className="eyebrow">{c.holdings}</span><span className="num">{totalUnits}</span><small className="muted">{c.projectsCount(totalUnits, holdings.data?.items.length ?? 0)}{pendingUnits > 0 && ` · ${c.pendingUnits(pendingUnits)}`}</small></div>
         </div>
 
+        {totalUnits > 0 && <DailyEarnings days={myDaily} />}
+
         <div className="panel">
           <h2 className="h3">{c.claimableTitle}</h2>
           {claimable.length === 0 ? (
@@ -156,6 +176,9 @@ function Dashboard() {
                   <div>
                     <h3 className="h4"><Link href={`/projects/${h.projectId}`}>{name(h.projectId)}</Link></h3>
                     <small>{stateLabel(project(h.projectId)?.state ?? "", t.ui.states)} · {c.shareOfIssued(formatBps(h.shareBps))}</small>
+                    {dailyOf.get(h.projectId)?.[0] && (
+                      <small style={{ display: "block", color: "var(--amber)" }} data-testid="holding-daily">{c.daily.holdingLine(dailyOf.get(h.projectId)![0]!.day, formatUsdt(dailyOf.get(h.projectId)![0]!.amount))}</small>
+                    )}
                     {["FUNDED", "ACTIVE"].includes(project(h.projectId)?.state ?? "") && (
                       <small> · <Link href={`/market?sell=${h.projectId}`} style={{ color: "var(--amber)" }}>{c.transfer}</Link></small>
                     )}
@@ -193,6 +216,44 @@ function Dashboard() {
         </div>
       </div>
     </section>
+  );
+}
+
+function DailyEarnings({ days }: { days: DailyEarning[] }) {
+  const { t } = useI18n();
+  const c = t.portfolio.daily;
+  const pendingTag = <span className="tag-s warn-t">{t.project.daily.pending}</span>;
+  const latest = days[0];
+  return (
+    <div className="panel" data-testid="daily-earnings">
+      <h2 className="h3">{c.title}</h2>
+      {!latest ? (
+        <p className="muted">{c.none}</p>
+      ) : (
+        <>
+          <div className="daily-today">
+            <span className="muted">{c.latest(latest.day)}</span>
+            <b className="num" data-testid="daily-latest">{formatUsdt(latest.amount)} USDT</b>
+            {latest.pending && pendingTag}
+          </div>
+          <p className="muted">{c.pendingTotal(formatUsdt(pendingTotal(days)))}</p>
+          <div className="table-wrap">
+            <table>
+              <caption className="sr-only">{t.project.daily.recent}</caption>
+              <thead><tr><th>{t.project.daily.date}</th><th className="r">{c.income}</th></tr></thead>
+              <tbody>
+                {days.slice(0, 7).map((d) => (
+                  <tr key={d.day}>
+                    <td>{d.day}{d.pending && pendingTag}</td>
+                    <td className="r">{formatUsdt(d.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

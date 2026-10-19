@@ -306,6 +306,14 @@ export const es: Messages = {
     status: { ESCROWED: "En depósito", SETTLED: "Liquidada", REFUNDABLE: "Reembolsable", REFUNDED: "Reembolsada" },
     finalizeFailed: "Confirmar oferta fallida",
     claimRefund: "Cobrar reembolso",
+    daily: {
+      title: "Ganancias diarias",
+      none: "Cuando el vehículo empiece a operar, aquí verás cada día tus ganancias estimadas.",
+      latest: (d: string) => `${d} ganancias estimadas`,
+      pendingTotal: (a: string) => `Pendiente: ${a} USDT · se paga tras la liquidación mensual`,
+      income: "Mis ganancias (USDT)",
+      holdingLine: (d: string, a: string) => `${d} ganancias +${a} USDT`,
+    },
   },
   promo: {
     title: "Centro de referidos",

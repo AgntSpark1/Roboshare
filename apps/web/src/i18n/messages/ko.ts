@@ -306,6 +306,14 @@ export const ko: Messages = {
     status: { ESCROWED: "예치 중", SETTLED: "정산 완료", REFUNDABLE: "환불 가능", REFUNDED: "환불 완료" },
     finalizeFailed: "모집 실패 확정",
     claimRefund: "환불 받기",
+    daily: {
+      title: "일일 수익",
+      none: "차량 운행이 시작되면 매일 예상 수익이 여기에 표시됩니다.",
+      latest: (d: string) => `${d} 예상 수익`,
+      pendingTotal: (a: string) => `정산 대기 누적 ${a} USDT · 월별 정산 후 지급`,
+      income: "내 수익 (USDT)",
+      holdingLine: (d: string, a: string) => `${d} 수익 +${a} USDT`,
+    },
   },
   promo: {
     title: "추천 센터",

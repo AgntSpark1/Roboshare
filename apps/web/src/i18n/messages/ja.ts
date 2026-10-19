@@ -306,6 +306,14 @@ export const ja: Messages = {
     status: { ESCROWED: "預託中", SETTLED: "精算済み", REFUNDABLE: "返金可能", REFUNDED: "返金済み" },
     finalizeFailed: "募集不成立を確定",
     claimRefund: "返金を受け取る",
+    daily: {
+      title: "毎日の収益",
+      none: "車両の運行開始後、ここに毎日の見込み収益が表示されます。",
+      latest: (d: string) => `${d} 見込み収益`,
+      pendingTotal: (a: string) => `精算待ち累計 ${a} USDT · 月次精算後に分配`,
+      income: "私の収益（USDT）",
+      holdingLine: (d: string, a: string) => `${d} 収益 +${a} USDT`,
+    },
   },
   promo: {
     title: "紹介センター",

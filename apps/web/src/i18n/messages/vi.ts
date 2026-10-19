@@ -306,6 +306,14 @@ export const vi: Messages = {
     status: { ESCROWED: "Đang ký quỹ", SETTLED: "Đã quyết toán", REFUNDABLE: "Có thể hoàn tiền", REFUNDED: "Đã hoàn tiền" },
     finalizeFailed: "Xác nhận huy động thất bại",
     claimRefund: "Nhận hoàn tiền",
+    daily: {
+      title: "Thu nhập hằng ngày",
+      none: "Khi xe đi vào vận hành, thu nhập ước tính của bạn sẽ hiển thị tại đây mỗi ngày.",
+      latest: (d: string) => `${d} thu nhập ước tính`,
+      pendingTotal: (a: string) => `Chờ quyết toán: ${a} USDT · chi trả sau quyết toán hằng tháng`,
+      income: "Thu nhập của tôi (USDT)",
+      holdingLine: (d: string, a: string) => `${d} thu nhập +${a} USDT`,
+    },
   },
   promo: {
     title: "Trung tâm giới thiệu",
