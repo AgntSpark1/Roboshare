@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Req, UseGuards, UseInterceptors } from "@nestjs/common";
-import { assetRegistryAbi, canonicalJson, projectFactoryAbi } from "@roboshare/shared";
+import { assetRegistryAbi, canonicalJson, projectActivatorAbi, projectFactoryAbi } from "@roboshare/shared";
 import { getAddress, isAddress, keccak256, stringToHex, type Address } from "viem";
 import { z } from "zod";
 import { Roles, RoleGuard, type AuthedRequest } from "../auth/guards.js";
@@ -15,11 +15,13 @@ const OPERATOR_ROLE = keccak256(stringToHex("OPERATOR_ROLE"));
 const REVIEWER_ROLE = keccak256(stringToHex("REVIEWER_ROLE"));
 const FACTORY_ROLE = keccak256(stringToHex("FACTORY_ROLE"));
 const LAUNCHER_ROLE = keccak256(stringToHex("LAUNCHER_ROLE"));
+const ACTIVATOR_ROLE = keccak256(stringToHex("ACTIVATOR_ROLE"));
+const ADMIN_ROLE = `0x${"0".repeat(64)}` as const;
 /** Default offering terms record for automatically listed vehicles (replace with an anchored record before mainnet). */
 export const DEFAULT_TEMPLATE_TERMS = keccak256(stringToHex("roboshare:offering-terms:auto-listing-v1"));
 const EVENT_KINDS = [
   "VEHICLE_REGISTERED", "VEHICLE_VERIFIED", "VEHICLE_LISTED", "LAUNCH_QUEUED", "ACTIVATE_QUEUED",
-  "BACKSTOP_FILLED", "BACKSTOP_SHORT", "BACKSTOP_OVER_CAP", "MATCHMAKER_BLOCKED",
+  "VEHICLE_ACTIVATED", "BACKSTOP_FILLED", "BACKSTOP_SHORT", "BACKSTOP_OVER_CAP", "MATCHMAKER_BLOCKED",
 ];
 
 const settingsBody = z.object({
@@ -32,6 +34,8 @@ const settingsBody = z.object({
   backstopMaxUsdt: z.number().int().min(0).max(100_000_000),
   autoActivate: z.boolean(),
 });
+
+const activatorBody = z.object({ action: z.enum(["on", "off"]) });
 
 const vehicleBody = z.object({
   slug: z.string().regex(/^[a-z0-9-]{3,64}$/),
@@ -80,7 +84,9 @@ export class MatchmakerController {
       launch: roles.factoryLinked && roles.launcherOperator && roles.verifierReviewer && (settings.launchMode === "SAFE" || roles.launcherLaunch),
       backstop: !!settings.backstopAddress,
     };
-    return plain({ settings, factory: this.cfg.projectFactory ?? null, roles, ready, queue, events });
+    const activator = this.cfg.projectActivator ?? null;
+    const autoActivate = !!activator && roles.activatorAdmin;
+    return plain({ settings, factory: this.cfg.projectFactory ?? null, activator, autoActivateReady: autoActivate, roles, ready, queue, events });
   }
 
   @Put("settings")
@@ -157,6 +163,31 @@ export class MatchmakerController {
     return plain({ proposal });
   }
 
+  /**
+   * Testnet only: one Safe batch so funded vehicles start operating without a signature each time. It gives the
+   * ProjectActivator registry admin (it can only move FUNDED -> ACTIVE) and the launcher ACTIVATOR_ROLE on it.
+   * With action "off" it takes the registry admin back.
+   */
+  @Post("activator")
+  @Roles("OPERATOR", "GOV_VIEW")
+  async activator(@Req() req: AuthedRequest, @Body(new ZodPipe(activatorBody)) body: z.infer<typeof activatorBody>) {
+    const activator = this.need(this.cfg.projectActivator, "PROJECT_ACTIVATOR");
+    const registry = this.need(this.cfg.assetRegistry, "ASSET_REGISTRY");
+    const safe = this.need(this.cfg.safe, "SAFE");
+    const launcher = (await this.settings()).launcherAddress as Address | null;
+    const calls: (Call & { description: string })[] = [];
+    if (body.action === "on") {
+      if (!launcher) throw new ApiError(409, "CONFLICT", "the worker has not reported its launcher wallet yet");
+      calls.push({ ...call(registry, assetRegistryAbi, "grantRole", [ADMIN_ROLE, activator]), description: "AssetRegistry: admin to ProjectActivator (it can only start funded vehicles)" });
+      calls.push({ ...call(activator, projectActivatorAbi, "grantRole", [ACTIVATOR_ROLE, launcher]), description: "ProjectActivator: ACTIVATOR_ROLE to the matchmaker launcher" });
+    } else {
+      calls.push({ ...call(registry, assetRegistryAbi, "revokeRole", [ADMIN_ROLE, activator]), description: "AssetRegistry: take admin back from ProjectActivator" });
+    }
+    const proposal = await queueSafe(this.prisma, viaSafe(this.cfg.chainId, safe, calls, `automatic activation ${body.action}`), req.session!.wallet);
+    await this.audit(req, "MATCHMAKER_ACTIVATOR", "matchmaker", "activator", body);
+    return plain({ proposal });
+  }
+
   private async settings() {
     return this.prisma.matchmakerSettings.upsert({ where: { chainId: this.cfg.chainId }, update: {}, create: { chainId: this.cfg.chainId } });
   }
@@ -173,6 +204,7 @@ export class MatchmakerController {
       launcherOperator: has(registry, OPERATOR_ROLE, s.launcherAddress),
       verifierReviewer: has(registry, REVIEWER_ROLE, s.verifierAddress),
       launcherLaunch: has(factory, LAUNCHER_ROLE, s.launcherAddress),
+      activatorAdmin: has(registry, ADMIN_ROLE, this.cfg.projectActivator ?? null),
     };
   }
 
