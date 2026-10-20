@@ -78,7 +78,9 @@ export interface QueuedVehicle {
 export interface MatchmakerStatus {
   settings: MatchmakerSettings;
   factory: string | null;
-  roles: { factoryLinked: boolean; launcherOperator: boolean; verifierReviewer: boolean; launcherLaunch: boolean };
+  activator: string | null;
+  autoActivateReady: boolean;
+  roles: { factoryLinked: boolean; launcherOperator: boolean; verifierReviewer: boolean; launcherLaunch: boolean; activatorAdmin: boolean };
   ready: { launch: boolean; backstop: boolean };
   queue: QueuedVehicle[];
   events: AutomationEvent[];
@@ -102,6 +104,8 @@ export function matchText(e: Pick<AutomationEvent, "kind" | "message">): string 
     case "ACTIVATE_QUEUED":
       m = e.message.match(/^(.*) is funded/);
       return `${m ? m[1] : "车辆"} 已满额，等待多签确认“投入运营”`;
+    case "VEHICLE_ACTIVATED":
+      return `已自动投入运营：${e.message.replace(/ started operating$/, "")}`;
     case "BACKSTOP_FILLED":
       m = e.message.match(/remaining (\d+) units for (\d+) USDT/);
       return m ? `平台认购剩余 ${m[1]} 份，花费 ${m[2]} USDT` : "平台已认购剩余份额";

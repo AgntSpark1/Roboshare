@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { PrismaClient } from "@roboshare/db";
-import { assetRegistryAbi, offeringManagerAbi, projectFactoryAbi, subscriptionRouterAbi } from "@roboshare/shared";
+import { assetRegistryAbi, offeringManagerAbi, projectActivatorAbi, projectFactoryAbi, subscriptionRouterAbi } from "@roboshare/shared";
 import { erc20Abi, keccak256, parseAbi, stringToHex, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -164,5 +166,36 @@ describe("robot matchmaking on a local chain", () => {
     const pid = projectIdForSlug("byd-e6-0001");
     expect(await offeringOf(pid)).not.toBe("0x0000000000000000000000000000000000000000");
     expect((await prisma.vehicleQueue.findUniqueOrThrow({ where: { slug: "byd-e6-0001" } })).status).toBe("LISTED");
+  }, 120_000);
+
+  it("with the activator set up, starts a funded vehicle without a Safe signature", async () => {
+    await prisma.matchmakerSettings.update({ where: { chainId: CHAIN }, data: { launchEnabled: false } });
+    const pid = projectIdForSlug("byd-e6-0001");
+    const offering = await offeringOf(pid);
+    const bob = c.accounts[6]!;
+    await send(c, bob, { address: usdt, abi: mintAbi, functionName: "mint", args: [bob, 100n * UNIT_PRICE] });
+    await send(c, bob, { address: usdt, abi: erc20Abi, functionName: "approve", args: [c.addr.SubscriptionRouter!, 2n ** 256n - 1n] });
+    await send(c, bob, { address: c.addr.SubscriptionRouter!, abi: subscriptionRouterAbi, functionName: "subscribe", args: [pid, 100, 100n * UNIT_PRICE] });
+    await send(c, bob, { address: offering, abi: offeringManagerAbi, functionName: "settle" });
+    // Without the activator the matchmaker asks the Safe, as before.
+    expect(await run(2)).toEqual(["ACTIVATE_QUEUED"]);
+
+    const art = JSON.parse(readFileSync(join(resolve(import.meta.dirname, "../../.."), "contracts/out/ProjectActivator.sol/ProjectActivator.json"), "utf8")) as { bytecode: { object: Hex } };
+    const safe = c.accounts[1]!;
+    const hash = await c.wallet.deployContract({ account: safe, chain: null, abi: projectActivatorAbi, bytecode: art.bytecode.object, args: [c.addr.AssetRegistry!, safe] });
+    const activator = (await c.pub.waitForTransactionReceipt({ hash })).contractAddress!;
+    await send(c, safe, { address: c.addr.AssetRegistry!, abi: assetRegistryAbi, functionName: "grantRole", args: [`0x${"0".repeat(64)}`, activator] });
+    await send(c, safe, { address: activator, abi: projectActivatorAbi, functionName: "grantRole", args: [keccak256(stringToHex("ACTIVATOR_ROLE")), launcher] });
+
+    mm = new Matchmaker(prisma, c.pub as any, {
+      chainId: CHAIN, rpcUrl: c.rpcUrl, assetRegistry: c.addr.AssetRegistry!, projectFactory: c.addr.ProjectFactory!,
+      subscriptionRouter: c.addr.SubscriptionRouter!, paymentToken: usdt, safe, projectActivator: activator,
+      launcherKey, verifierKey, backstopKey, issuerId: bytes32("issuer"), rightsDocHash: bytes32("rights"),
+    }, () => now);
+    expect(await run(2)).toEqual(["VEHICLE_ACTIVATED"]);
+    expect((await prisma.project.findUniqueOrThrow({ where: { projectIdOnchain: pid } })).state).toBe("ACTIVE");
+    // The now-stale Safe proposal is closed, not left for owners to sign.
+    const proposals = await prisma.safeTx.findMany({ where: { to: c.addr.AssetRegistry!.toLowerCase(), data: { contains: pid.slice(2) } } });
+    expect(proposals.map((q) => [q.status, q.closeReason])).toEqual([["CANCELLED", "started operating automatically"]]);
   }, 120_000);
 });

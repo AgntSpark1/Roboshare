@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@roboshare/db";
-import { allocate, assetRegistryAbi, auditRegistryAbi, projectFactoryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
+import { allocate, assetRegistryAbi, auditRegistryAbi, projectActivatorAbi, projectFactoryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
 import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
@@ -804,6 +804,24 @@ describe("robot matchmaking", () => {
       expect(off.body.proposal.calls).toHaveLength(1);
     } finally {
       cfg.projectFactory = undefined;
+    }
+  });
+
+  it("queues the testnet activator grants and the switch-off", async () => {
+    const ACT = ADDR(0xac7);
+    await http().post("/api/v1/admin/matchmaker/activator").set("Cookie", cookies.operator!).send({ action: "on" }).expect(503);
+    cfg.projectActivator = ACT;
+    try {
+      const r = await http().post("/api/v1/admin/matchmaker/activator").set("Cookie", cookies.operator!).send({ action: "on" }).expect(201);
+      const calls = r.body.proposal.calls as { to: string; data: string }[];
+      expect(calls.map((c) => c.to.toLowerCase())).toEqual([cfg.assetRegistry!.toLowerCase(), ACT]);
+      const grant = decodeFunctionData({ abi: projectActivatorAbi, data: calls[1]!.data as `0x${string}` }) as { functionName: string; args: readonly unknown[] };
+      expect(grant.functionName).toBe("grantRole");
+      expect((grant.args[1] as string).toLowerCase()).toBe(LAUNCHER);
+      const off = await http().post("/api/v1/admin/matchmaker/activator").set("Cookie", cookies.operator!).send({ action: "off" }).expect(201);
+      expect(decodeFunctionData({ abi: assetRegistryAbi, data: off.body.proposal.calls[0].data }).functionName).toBe("revokeRole");
+    } finally {
+      cfg.projectActivator = undefined;
     }
   });
 
