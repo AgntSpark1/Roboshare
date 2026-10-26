@@ -509,6 +509,23 @@ model ReferralTree {
   @@schema("app")
 }
 
+/// A promotion team (REFERRAL_DESIGN.md §9): a leader wallet and the code in its team link.
+/// Members are derived from the on-chain referral bindings under the leader, not stored here.
+model Team {
+  id              String   @id @default(uuid()) @db.Uuid
+  /// Upper-case letters and digits, used as /t/CODE.
+  code            String   @unique
+  name            String
+  /// Lower-case wallet; one team per leader.
+  leader          String   @unique
+  note            String?
+  createdAt       DateTime @default(now())
+  createdByUserId String   @db.Uuid
+
+  @@map("team")
+  @@schema("app")
+}
+
 // ---------------------------------------------------------------- app: users and admin
 
 model User {

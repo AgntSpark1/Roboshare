@@ -611,6 +611,64 @@ describe("referrals", () => {
   });
 });
 
+describe("promotion teams", () => {
+  // After the referral tests: investor → other → 0xc3, all on chain bindings. The investor also
+  // holds 1 wei escrowed in the frozen-wallet offering test.
+  const INVESTED = (100_000n * ONE + 1n).toString();
+  let id = "";
+
+  it("creates a team for operators only, with a normalised code", async () => {
+    await http().post("/api/v1/admin/teams").set("Cookie", cookies.reviewer!).send({ code: "A01", name: "华东一队", leader: investor.address }).expect(403);
+    await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "x", name: "bad", leader: investor.address }).expect(400);
+    const r = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: " a01 ", name: "华东一队", leader: investor.address }).expect(201);
+    expect(r.body).toEqual(expect.objectContaining({ code: "A01", name: "华东一队", leader: investor.address }));
+    id = r.body.id;
+  });
+
+  it("never lets a new team take wallets from an existing one", async () => {
+    const taken = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "A01", name: "dup", leader: ADDR(0xbeef) }).expect(409);
+    expect(taken.body.error.code).toBe("TEAM_CODE_TAKEN");
+    const twice = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "B01", name: "dup", leader: investor.address }).expect(409);
+    expect(twice.body.error.code).toBe("LEADER_HAS_TEAM");
+    const inside = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "B01", name: "sub", leader: ADDR(0xc3) }).expect(409);
+    expect(inside.body.error).toEqual(expect.objectContaining({ code: "LEADER_IN_TEAM", details: { team: "A01" } }));
+  });
+
+  it("resolves a team link to its leader", async () => {
+    const r = await http().get("/api/v1/teams/a01").expect(200);
+    expect(r.body).toEqual({ code: "A01", name: "华东一队", leader: investor.address });
+    await http().get("/api/v1/teams/ZZ99").expect(404);
+  });
+
+  it("counts the whole invite tree under the leader for staff", async () => {
+    const list = await http().get("/api/v1/admin/teams").set("Cookie", cookies.reviewer!).expect(200);
+    expect(list.body.items).toEqual([
+      expect.objectContaining({ code: "A01", leaderSubscribed: true, members: 3, investors: 2, invested: INVESTED, rewards: (140n * ONE).toString(), fee: (675n * ONE).toString() }),
+    ]);
+    const one = await http().get(`/api/v1/admin/teams/${id}`).set("Cookie", cookies.reviewer!).expect(200);
+    expect(one.body.members.map((m: any) => [m.wallet, m.depth, m.invitedBy, m.invites])).toEqual([
+      [investor.address, 0, null, 1],
+      [other.address, 1, investor.address, 1],
+      [getAddress(ADDR(0xc3)), 2, other.address, 0],
+    ]);
+    expect(one.body.totals.members).toBe(3);
+  });
+
+  it("shows the leader their own team with a wallet sign-in only", async () => {
+    const r = await http().get("/api/v1/team/me").set("Cookie", cookies.investor!).expect(200);
+    expect(r.body.team.code).toBe("A01");
+    expect(r.body.totals.invested).toBe(INVESTED);
+    const no = await http().get("/api/v1/team/me").set("Cookie", cookies.operator!).expect(403);
+    expect(no.body.error.code).toBe("NOT_TEAM_LEADER");
+    await http().get("/api/v1/team/me").expect(401);
+  });
+
+  it("renames a team but keeps its code and leader", async () => {
+    const r = await http().put(`/api/v1/admin/teams/${id}`).set("Cookie", cookies.operator!).send({ name: "华东一队（新）", code: "ZZ" }).expect(200);
+    expect(r.body).toEqual(expect.objectContaining({ code: "A01", name: "华东一队（新）", leader: investor.address }));
+  });
+});
+
 describe("resale market", () => {
   it("lists trades from the market newest first with a per-project reference price", async () => {
     const market = ADDR(0x3a7).toLowerCase();

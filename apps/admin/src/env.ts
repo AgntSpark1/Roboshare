@@ -16,3 +16,6 @@ export const explorer = EXPLORER[walletEnv.chainId];
 export const isTestChain = walletEnv.chainId !== 56;
 export const CHAIN_NAME: Record<number, string> = { 56: "BNB Smart Chain", 97: "BSC 测试网", 31337: "本地测试链" };
 export const RISK_VERSION = "2026-10";
+/** Investor site origin for team links (e.g. https://roboshare.io); empty shows the path only. */
+export const WEB_URL = (process.env.NEXT_PUBLIC_WEB_URL ?? "").replace(/\/+$/, "");
+export const teamLink = (code: string) => `${WEB_URL}/t/${code}`;
