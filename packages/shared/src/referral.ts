@@ -1,24 +1,41 @@
 /**
- * Referral rewards (REFERRAL_DESIGN.md): two levels, paid from the platform fee only.
+ * Referral rewards (REFERRAL_DESIGN.md §10): three levels, paid from the platform fee only.
  * Mirrors the leaf layout ReferralRewards.sol verifies with OpenZeppelin MerkleProof.
  */
 import { encodeAbiParameters, getAddress, keccak256, type Address, type Hex } from "viem";
 import { BPS_DENOMINATOR } from "./fees.js";
 
-/** Default terms; the binding event carries the terms actually in force for each referee. */
-export const REFERRAL_DEFAULT_SHARE_BPS = 2_000;
+/** Default binding window; the binding event carries the window actually in force for each referee. */
 export const REFERRAL_DEFAULT_WINDOW_SECONDS = 365 * 24 * 60 * 60;
 /**
- * Second level: the referrer's own referrer gets this share of the same platform fee, within the
- * referee's binding window. Set in code (accrual is off-chain, like the Merkle root); there is no third level.
+ * Share of the referee's gross distribution (before the platform share) each level earns: the direct
+ * referrer 10%, their referrer 5%, the one above 3%. Nobody further up earns anything. Set in code, like
+ * the Merkle root; the shareBps recorded in ReferralBound is not used for the amount.
  */
-export const REFERRAL_LEVEL2_SHARE_BPS = 500;
+export const REFERRAL_LEVEL_BPS: readonly number[] = [1_000, 500, 300];
+/** What the router is told as shareBps when governance switches referrals on (recorded only). */
+export const REFERRAL_DEFAULT_SHARE_BPS = REFERRAL_LEVEL_BPS[0]!;
 
-/** Referrer's cut of one platform fee: floor(fee * shareBps / 10000). Never more than the fee. */
-export function referralReward(fee: bigint, shareBps: number): bigint {
-  if (fee < 0n) throw new RangeError("fee must be non-negative");
+/** floor(amount * shareBps / 10000). Never more than the amount. */
+export function referralReward(amount: bigint, shareBps: number): bigint {
+  if (amount < 0n) throw new RangeError("amount must be non-negative");
   if (!Number.isInteger(shareBps) || shareBps < 0 || shareBps > 10_000) throw new RangeError("shareBps out of range");
-  return (fee * BigInt(shareBps)) / BPS_DENOMINATOR;
+  return (amount * BigInt(shareBps)) / BPS_DENOMINATOR;
+}
+
+/**
+ * Rewards for levels 1..3 on one allocation: floor(gross * bps / 10000) each, paid from the platform fee
+ * and never more than that fee in total (earlier levels first). Holders' net is never touched.
+ */
+export function referralRewards(gross: bigint, fee: bigint): bigint[] {
+  if (gross < 0n || fee < 0n) throw new RangeError("amounts must be non-negative");
+  let left = fee;
+  return REFERRAL_LEVEL_BPS.map((bps) => {
+    const r = referralReward(gross, bps);
+    const paid = r < left ? r : left;
+    left -= paid;
+    return paid;
+  });
 }
 
 /** keccak256(bytes.concat(keccak256(abi.encode(account, cumulative)))) */

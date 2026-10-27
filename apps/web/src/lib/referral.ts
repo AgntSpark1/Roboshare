@@ -82,11 +82,12 @@ export interface MyReferrals {
   wallet: Address;
   contract: Address | null;
   referredBy: { referrer: Address; shareBps: number; expiresAt: string } | null;
-  /** Share of the platform fee paid on second-level referees (people your referrals invited). */
-  level2ShareBps: number;
+  /** Share of the referee's gross payout each level earns, paid from the platform's 30% (REFERRAL_DESIGN.md §10). */
+  levelBps: number[];
   referees: ReferralMember[];
   level2: (ReferralMember & { via: Address })[];
-  history: { projectId: string; projectTitle: string | null; batchId: number; referee: Address; level: 1 | 2; fee: string; shareBps: number; reward: string }[];
+  level3: (ReferralMember & { via: Address })[];
+  history: { projectId: string; projectTitle: string | null; batchId: number; referee: Address; level: 1 | 2 | 3; gross: string; fee: string; shareBps: number; reward: string }[];
   earned: string;
   claimed: string;
   pendingPublication: string;

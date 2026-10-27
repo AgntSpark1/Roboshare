@@ -19,7 +19,7 @@ interface Summary {
   topReferrers: { referrer: string; accrued: string }[];
 }
 
-/** Single-tier referral programme (REFERRAL_DESIGN.md). Rewards are paid from platform fees only. */
+/** Three-level referral programme (REFERRAL_DESIGN.md §10). Rewards are paid from platform fees only. */
 export default function Referrals() {
   const { can } = useRoles();
   const refresh = useRefresh();
@@ -32,7 +32,7 @@ export default function Referrals() {
       <section className="panel" aria-labelledby="ref">
         <h2 id="ref">邀请奖励概况</h2>
         <div className="warnbox">
-          两级邀请：一级 = 被邀请人每期分配中平台手续费的一部分，二级 = 邀请人的邀请人再得同一笔手续费的 5%，没有第三级；由平台手续费钱包充值到奖励合约后才能领取。主网开启前须完成法律审查（多级返佣有传销风险，按成交付佣金可能构成无牌经纪）。
+          三级邀请：被邀请人每期分润总额的 10%（直推）、5%（二级）、3%（三级），全部从平台 30% 分成里支付，不动投资者的 70%；较早发行、费率较低的项目，奖励总额不超过平台当期手续费。没有第四级。由平台手续费钱包充值到奖励合约后才能领取。主网开启前须由律师书面确认（三级计酬达到传销认定的层级标准，按成交付佣金可能构成无牌经纪），开关默认关闭。
         </div>
         {s.error && <p className="err" role="alert">{errorText(s.error)}</p>}
         {d && (
@@ -101,7 +101,6 @@ export default function Referrals() {
 
 function TermsProposal() {
   const [enabled, setEnabled] = useState(false);
-  const [share, setShare] = useState("20");
   const [days, setDays] = useState("365");
   const [proposal, setProposal] = useState<SafeProposal | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -109,7 +108,7 @@ function TermsProposal() {
     setErr(null);
     setProposal(null);
     try {
-      setProposal(await api.post<SafeProposal>("/admin/referrals/terms", { enabled, shareBps: Math.round(Number(share) * 100), windowDays: Number(days) }));
+      setProposal(await api.post<SafeProposal>("/admin/referrals/terms", { enabled, windowDays: Number(days) }));
     } catch (e) {
       setErr(errorText(e));
     }
@@ -125,10 +124,9 @@ function TermsProposal() {
               <option value="on">开启</option>
             </select>
           </label>
-          <label className="field"><span>手续费分成比例（%，最高 50）</span><input value={share} inputMode="decimal" onChange={(e) => setShare(e.target.value)} /></label>
           <label className="field"><span>绑定后有效天数</span><input value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} /></label>
         </div>
-        <p className="muted small">新条款只影响之后的新绑定。同时开关邀请绑定和奖励领取。</p>
+        <p className="muted small">奖励比例 10% / 5% / 3% 写在代码里，这里只设开关和绑定后的奖励期；新奖励期只影响之后的新绑定。同时开关邀请绑定和奖励领取。</p>
         <div><button type="button" className="btn sm" onClick={prepare}>生成 Safe 提案</button></div>
         {err && <p className="err" role="alert">{err}</p>}
         {proposal && <ProposalView proposal={proposal} />}

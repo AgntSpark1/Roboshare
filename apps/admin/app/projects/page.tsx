@@ -70,9 +70,9 @@ export default function Projects() {
   );
 }
 
-/** Fee discount kicks in at LONG_TERM_DAYS (packages/shared fees.ts); the contract default is 720. */
+/** New projects pay the same flat 30% platform share for every term (FeeTiers.sol); the contract default is 720. */
 const TERM_CHOICES = [
-  { days: 720, label: "720 天（手续费各档减 2.5%）" },
+  { days: 720, label: "720 天" },
   { days: 360, label: "360 天" },
 ];
 

@@ -9,7 +9,7 @@ import {
   financialReportSchema,
   revenueDistributorAbi,
   reportHash,
-  tiersForTerm,
+  projectTiers,
   type FinancialReport,
 } from "@roboshare/shared";
 
@@ -294,7 +294,7 @@ export class AdminController {
       orderBy: { batchIdOnchain: "desc" },
     });
     const carriedDust = lastBatch ? BigInt(lastBatch.dustOut.toFixed()) : 0n;
-    const result = allocate(BigInt(body.amount), carriedDust, holders, body.capitalReturn ? NO_FEE_TIERS : tiersForTerm(project.termDays));
+    const result = allocate(BigInt(body.amount), carriedDust, holders, body.capitalReturn ? NO_FEE_TIERS : projectTiers(project));
     return { result: { ...result, carriedDustIn: carriedDust }, holders, distributor: getAddress(project.distributorAddress) as Address };
   }
 

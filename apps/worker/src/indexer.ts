@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@roboshare/db";
-import { auditRegistryAbi } from "@roboshare/shared";
+import { auditRegistryAbi, revenueDistributorAbi } from "@roboshare/shared";
 import { decodeEventLog, type Hex, type Log, type PublicClient } from "viem";
 import type { IndexerConfig } from "./config.js";
 import { CONTRACT_KINDS, type ContractKind } from "./contracts.js";
@@ -127,6 +127,15 @@ export class Indexer {
           blockNumber: log.blockNumber!,
         });
         ev.args.record = toJson(r);
+      } else if (ev.name === "ProjectContractsLinked") {
+        // Fee tiers are fixed per distributor; keep them so fee previews match what the contract charges.
+        const [minUnits, bps] = (await this.client.readContract({
+          address: ev.args.distributor as Hex,
+          abi: revenueDistributorAbi,
+          functionName: "tiers",
+          blockNumber: log.blockNumber!,
+        })) as readonly [readonly number[], readonly number[]];
+        ev.args.tiers = minUnits.map((m, i) => ({ minUnits: Number(m), bps: Number(bps[i]) }));
       }
     }
 

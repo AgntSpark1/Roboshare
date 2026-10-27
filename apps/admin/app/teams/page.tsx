@@ -28,7 +28,7 @@ export default function Teams() {
       <section className="panel" aria-labelledby="teams">
         <h2 id="teams">推广团队</h2>
         <p className="muted small">
-          每个团队有一个团队长钱包和团队链接。投资者第一次认购时在链上永久绑定邀请人，团队长和成员邀请来的人都自动归入同一团队，不会串队。所有奖励仍按两级邀请规则，从同一个奖励合约统一发放。团队长用自己的钱包登录本控制台的"团队后台"（/leader）只读查看本团队数据。
+          每个团队有一个团队长钱包和团队链接。投资者第一次认购时在链上永久绑定邀请人，团队长和成员邀请来的人都自动归入同一团队，不会串队。所有奖励仍按三级邀请规则（10% / 5% / 3%，由平台从 30% 分成里支付），从同一个奖励合约统一发放。团队长用自己的钱包登录本控制台的"团队后台"（/leader）只读查看本团队数据。
         </p>
         {list.error && <p className="err" role="alert">{errorText(list.error)}</p>}
         {items.length === 0 ? (

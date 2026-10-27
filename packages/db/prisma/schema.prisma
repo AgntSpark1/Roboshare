@@ -140,6 +140,9 @@ model Project {
   termDays           Int?
   /// Block time of the first FUNDED -> ACTIVE transition; the term ends termDays later.
   operatingStartedAt DateTime?
+  /// Fee tiers the distributor was deployed with ([{ minUnits, bps }]), read from chain when it is linked.
+  /// Null for distributors indexed before this was recorded (they use the legacy tiers).
+  feeTiers           Json?
 
   stateChanges ProjectStateChange[]
   offering     Offering?
@@ -453,14 +456,16 @@ model Referral {
   @@schema("app")
 }
 
-/// A referrer's cut of the platform fee on one referee allocation, accrued when the batch is approved.
-/// level 1: the referee's own referrer; level 2: that referrer's referrer.
+/// A referrer's reward on one referee allocation, accrued when the batch is approved and paid from the
+/// platform fee. level 1: the referee's own referrer; 2: that referrer's referrer; 3: the one above.
 model ReferralAccrual {
   projectIdOnchain String
   batchIdOnchain   Int
   referee          String
   level            Int     @default(1)
   referrer         String
+  /// The referee's gross allocation, which the level's share applies to (0 on rows accrued before §10).
+  gross            Decimal @default(0) @db.Decimal(78, 0)
   fee              Decimal @db.Decimal(78, 0)
   shareBps         Int
   reward           Decimal @db.Decimal(78, 0)

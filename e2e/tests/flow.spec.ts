@@ -182,13 +182,13 @@ test("investor claims the distribution in USDT", async () => {
   const usdt = readState().addr.MockUSDT!;
   const before = await s.pub.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [ROLES.alice] });
   await page.getByRole("link", { name: "我的资产" }).first().click();
-  // Sole holder of 60 units: gross 9,000; default 720-day term, tier 50+ = 7.5% operator share, net 8,325.
+  // Sole holder of 60 units: gross 9,000; flat 30% platform share, net 6,300.
   const expected = allocate(9_000n * ONE, 0n, [{ address: ROLES.alice, units: UNITS }], tiersForTerm(DEFAULT_TERM_DAYS)).allocations[0]!.net;
   expect(expected).toBe(8_325n * ONE);
-  await expect(page.getByTestId("claimable-total")).toHaveText("8,325.00");
+  await expect(page.getByTestId("claimable-total")).toHaveText("6,300.00");
   await axe(page, "portfolio");
   const balance = () => s.pub.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [ROLES.alice] });
-  await runTx(page, page.getByRole("button", { name: /领取 8,325.00 USDT/ }), async () => {
+  await runTx(page, page.getByRole("button", { name: /领取 6,300.00 USDT/ }), async () => {
     await expect.poll(async () => (await balance()) - before, { timeout: 30_000 }).toBe(expected);
   });
   await s.indexed();

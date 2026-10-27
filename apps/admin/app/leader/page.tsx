@@ -17,7 +17,7 @@ export default function Leader() {
     <section className="panel" aria-labelledby="team">
       <h2 id="team">{d.team.name}</h2>
       <p className="muted small">
-        把团队链接发给新投资者。他们第一次认购时会在链上永久记在你的团队下；成员再邀请的人也归入你的团队。邀请奖励按平台两级规则计算，在投资者网站"推广"页由本人领取。
+        把团队链接发给新投资者。他们第一次认购时会在链上永久记在你的团队下；成员再邀请的人也归入你的团队。邀请奖励按平台三级规则计算，在投资者网站"推广"页由本人领取。
       </p>
       <TeamView d={d} />
     </section>

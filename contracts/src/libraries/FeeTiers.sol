@@ -3,33 +3,25 @@ pragma solidity 0.8.30;
 
 /// @title FeeTiers
 /// @notice Operator-fee tier lookup. Tier `i` applies to holdings of at least `minUnits[i]` units.
-/// Default business rule (proposed, not a market standard):
-///   1-4 units 20%, 5-9 17.5%, 10-19 15%, 20-49 12.5%, 50-100 10%.
+/// Default for new projects (REFERRAL_DESIGN.md §10, 2026-10-27): one flat 30% platform share, so holders
+/// keep 70%; promotion rewards are paid out of that 30%. Projects deployed earlier keep the tiers they
+/// were deployed with (1-4 units 20% ... 50+ 10%, 2.5% less for terms of 720 days or more).
 library FeeTiers {
     uint256 internal constant BPS_DENOMINATOR = 10_000;
 
-    /// @notice Projects with an operating term of at least LONG_TERM_DAYS pay LONG_TERM_DISCOUNT_BPS less
-    /// on every tier (OPERATING_TERM_PROPOSAL.md §4.4): 720 days -> 17.5%, 15%, 12.5%, 10%, 7.5%.
-    uint32 internal constant LONG_TERM_DAYS = 720;
-    uint16 internal constant LONG_TERM_DISCOUNT_BPS = 250;
+    uint16 internal constant PLATFORM_SHARE_BPS = 3000;
 
     error InvalidTiers();
 
     function defaultTiers() internal pure returns (uint32[] memory minUnits, uint16[] memory bps) {
-        minUnits = new uint32[](5);
-        bps = new uint16[](5);
-        (minUnits[0], minUnits[1], minUnits[2], minUnits[3], minUnits[4]) = (1, 5, 10, 20, 50);
-        (bps[0], bps[1], bps[2], bps[3], bps[4]) = (2000, 1750, 1500, 1250, 1000);
+        minUnits = new uint32[](1);
+        bps = new uint16[](1);
+        (minUnits[0], bps[0]) = (1, PLATFORM_SHARE_BPS);
     }
 
-    /// @notice Default tiers for a project with the given operating term.
-    function tiersForTerm(uint32 termDays) internal pure returns (uint32[] memory minUnits, uint16[] memory bps) {
-        (minUnits, bps) = defaultTiers();
-        if (termDays >= LONG_TERM_DAYS) {
-            for (uint256 i; i < bps.length; ++i) {
-                bps[i] -= LONG_TERM_DISCOUNT_BPS;
-            }
-        }
+    /// @notice Default tiers for a project with the given operating term: the same flat share for every term.
+    function tiersForTerm(uint32) internal pure returns (uint32[] memory minUnits, uint16[] memory bps) {
+        return defaultTiers();
     }
 
     /// @dev Thresholds strictly ascending and starting at 1; bps non-increasing and <= 10_000.

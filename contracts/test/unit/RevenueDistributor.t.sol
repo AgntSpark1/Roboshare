@@ -50,43 +50,37 @@ contract RevenueDistributorTest is BaseTest {
     function test_TokenomicsWorkedExample() public {
         (uint256 id,) = _proposeAndApprove(10_000 * ONE);
         uint256[6] memory expectedNet =
-            [uint256(4_500 * ONE), 2_187.5e18, 850 * ONE, 742.5e18, 320 * ONE, 160 * ONE];
+            [uint256(3_500 * ONE), 1_750 * ONE, 700 * ONE, 630 * ONE, 280 * ONE, 140 * ONE];
         for (uint256 i; i < holders.length; ++i) {
             assertEq(distributor.allocationOf(id, holders[i]).net, expectedNet[i], "net");
         }
         RevenueDistributor.Batch memory b = distributor.getBatch(id);
-        assertEq(b.totalNet, 8_760 * ONE);
-        assertEq(b.totalFee, 1_240 * ONE);
+        assertEq(b.totalNet, 7_000 * ONE);
+        assertEq(b.totalFee, 3_000 * ONE);
         assertEq(b.dustOut, 0);
-        assertEq(usdt.balanceOf(feeRecipient), 1_240 * ONE);
-        assertEq(usdt.balanceOf(address(distributor)), 8_760 * ONE);
+        assertEq(usdt.balanceOf(feeRecipient), 3_000 * ONE);
+        assertEq(usdt.balanceOf(address(distributor)), 7_000 * ONE);
     }
 
-    /// Master-prompt example: 10 of 100 units, 15% tier, D = 10,000 -> 850.
+    /// 10 of 100 units, flat 30% platform share, D = 10,000 -> 700.
     function test_MasterPromptExample() public {
         (uint256 id,) = _proposeAndApprove(10_000 * ONE);
-        assertEq(distributor.allocationOf(id, holders[2]).net, 850 * ONE);
-        assertEq(distributor.allocationOf(id, holders[2]).feeBps, 1500);
+        assertEq(distributor.allocationOf(id, holders[2]).net, 700 * ONE);
+        assertEq(distributor.allocationOf(id, holders[2]).feeBps, 3000);
     }
 
-    function test_TierBoundaries() public view {
-        assertEq(distributor.tierBpsFor(1), 2000);
-        assertEq(distributor.tierBpsFor(4), 2000);
-        assertEq(distributor.tierBpsFor(5), 1750);
-        assertEq(distributor.tierBpsFor(9), 1750);
-        assertEq(distributor.tierBpsFor(10), 1500);
-        assertEq(distributor.tierBpsFor(19), 1500);
-        assertEq(distributor.tierBpsFor(20), 1250);
-        assertEq(distributor.tierBpsFor(49), 1250);
-        assertEq(distributor.tierBpsFor(50), 1000);
-        assertEq(distributor.tierBpsFor(100), 1000);
+    function test_FlatPlatformShareForEveryHolding() public view {
+        assertEq(distributor.tierBpsFor(1), 3000);
+        assertEq(distributor.tierBpsFor(9), 3000);
+        assertEq(distributor.tierBpsFor(50), 3000);
+        assertEq(distributor.tierBpsFor(100), 3000);
     }
 
     function test_ClaimOnceOnly() public {
         (uint256 id,) = _proposeAndApprove(10_000 * ONE);
         vm.prank(holders[0]);
         distributor.claim(id);
-        assertEq(usdt.balanceOf(holders[0]), 4_500 * ONE);
+        assertEq(usdt.balanceOf(holders[0]), 3_500 * ONE);
         vm.prank(holders[0]);
         vm.expectRevert(abi.encodeWithSelector(RevenueDistributor.AlreadyClaimed.selector, id, holders[0]));
         distributor.claim(id);
@@ -103,7 +97,7 @@ contract RevenueDistributorTest is BaseTest {
         (uint256 id,) = _proposeAndApprove(10_000 * ONE);
         vm.prank(operator);
         distributor.claimFor(id, holders[1]);
-        assertEq(usdt.balanceOf(holders[1]), 2_187.5e18);
+        assertEq(usdt.balanceOf(holders[1]), 1_750 * ONE);
         assertEq(usdt.balanceOf(operator), 0);
     }
 
@@ -119,7 +113,7 @@ contract RevenueDistributorTest is BaseTest {
         identity.unfreeze(holders[3]);
         vm.prank(holders[3]);
         distributor.claim(id);
-        assertEq(usdt.balanceOf(holders[3]), 742.5e18);
+        assertEq(usdt.balanceOf(holders[3]), 630 * ONE);
     }
 
     /// Required test 6: duplicate distribution batches.
@@ -342,7 +336,7 @@ contract RevenueDistributorTest is BaseTest {
         token.transfer(newcomer, 50); // after the snapshot block
         vm.roll(block.number + 1);
         (uint256 id,) = _proposeAndApprove(10_000 * ONE);
-        assertEq(distributor.allocationOf(id, holders[0]).net, 4_500 * ONE);
+        assertEq(distributor.allocationOf(id, holders[0]).net, 3_500 * ONE);
         assertEq(distributor.allocationOf(id, newcomer).net, 0);
     }
 

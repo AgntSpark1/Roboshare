@@ -89,6 +89,7 @@ export default function Home() {
 function TierCalculator({ termDays }: { termDays?: number }) {
   const { t } = useI18n();
   const tiers = tiersForTerm(termDays);
+  const top = Math.max(...tiers.map((x) => x.bps));
   const h = t.home;
   const [units, setUnits] = useState(12);
   const r = allocate(SAMPLE_D, 0n, [{ address: "you", units }, ...(units < 100 ? [{ address: "others", units: 100 - units }] : [])], tiers);
@@ -111,7 +112,7 @@ function TierCalculator({ termDays }: { termDays?: number }) {
               return (
                 <div key={tier.minUnits} className={`tier-row${on ? " on" : ""}`}>
                   <span className="u">{t.units.range(tier.minUnits, next ? next.minUnits - 1 : 100)}</span>
-                  <span className="b"><i style={{ width: `${(tier.bps / 2000) * 100}%` }} /></span>
+                  <span className="b"><i style={{ width: `${(tier.bps / top) * 100}%` }} /></span>
                   <span className="p">{formatBps(tier.bps)}</span>
                 </div>
               );

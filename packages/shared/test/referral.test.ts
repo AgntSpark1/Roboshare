@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { buildReferralTree, referralLeaf, referralReward, verifyReferralProof } from "../src/referral.js";
+import { buildReferralTree, referralLeaf, referralReward, referralRewards, verifyReferralProof } from "../src/referral.js";
 
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as const;
 
@@ -41,5 +41,19 @@ describe("referral rewards", () => {
     expect(() => buildReferralTree([])).toThrow();
     expect(() => buildReferralTree([{ account: addr(1), cumulative: 1n }, { account: addr(1), cumulative: 2n }])).toThrow();
     expect(() => buildReferralTree([{ account: addr(1), cumulative: 0n }])).toThrow();
+  });
+});
+
+describe("three-level rewards", () => {
+  it("pays 10% / 5% / 3% of the referee's gross out of the 30% platform share", () => {
+    // 1000 gross, 300 platform share: 100 + 50 + 30, the platform keeps 120.
+    expect(referralRewards(1_000n, 300n)).toEqual([100n, 50n, 30n]);
+  });
+
+  it("never pays more than the platform fee on a legacy low-fee project", () => {
+    // 7.5% legacy tier: the 75 fee only covers part of level 1.
+    expect(referralRewards(1_000n, 75n)).toEqual([75n, 0n, 0n]);
+    expect(referralRewards(1_000n, 120n)).toEqual([100n, 20n, 0n]);
+    expect(referralRewards(1_000n, 0n)).toEqual([0n, 0n, 0n]);
   });
 });

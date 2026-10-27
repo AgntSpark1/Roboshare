@@ -53,27 +53,20 @@ contract OperatingTermTest is BaseTest {
         assets.setOperatingTerm(PID, 720);
     }
 
-    function test_ShortTermKeepsStandardTiers() public {
+    function test_EveryTermGetsTheFlatPlatformShare() public {
+        projectTermDays = 180;
         _deployProject();
-        assertEq(distributor.tierBpsFor(1), 2000);
-        assertEq(distributor.tierBpsFor(50), 1000);
+        (uint32[] memory minUnits, uint16[] memory bps) = distributor.tiers();
+        assertEq(minUnits.length, 1);
+        assertEq(minUnits[0], 1);
+        assertEq(bps[0], 3000);
     }
 
-    function test_LongTermDiscountsEveryTier() public {
+    function test_LongTermGetsTheSameShare() public {
         projectTermDays = 720;
         _deployProject();
-        (, uint16[] memory bps) = distributor.tiers();
-        assertEq(bps[0], 1750);
-        assertEq(bps[1], 1500);
-        assertEq(bps[2], 1250);
-        assertEq(bps[3], 1000);
-        assertEq(bps[4], 750);
-    }
-
-    function test_UnsetTermGetsLongTermTiers() public {
-        projectTermDays = 0;
-        _deployProject();
-        assertEq(distributor.tierBpsFor(1), 1750);
+        assertEq(distributor.tierBpsFor(1), 3000);
+        assertEq(distributor.tierBpsFor(100), 3000);
     }
 
     function test_TermLockedOnceOfferingOpens() public {
