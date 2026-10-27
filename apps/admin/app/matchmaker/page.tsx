@@ -65,6 +65,10 @@ export default function Matchmaker() {
     const body = { enabled, unitPriceUsdt: n("unitPriceUsdt"), minUnits: n("minUnits"), perWalletMax: n("perWalletMax"), durationDays: n("durationDays"), termDays: n("termDays"), minLaunchIntervalMinutes: n("minLaunchIntervalMinutes") };
     setProposal((await api.post<{ proposal: SafeProposal }>("/admin/matchmaker/setup", body)).proposal);
   });
+  const activator = (on: boolean) => run(async () => {
+    if (!on && !window.confirm("关闭后，满额车辆要在“多签待签”确认后才投入运营。确定？")) return;
+    setProposal((await api.post<{ proposal: SafeProposal }>("/admin/matchmaker/activator", { action: on ? "on" : "off" })).proposal);
+  });
   const addVehicle = (e: FormEvent) => {
     e.preventDefault();
     return run(async () => {
@@ -148,6 +152,19 @@ export default function Matchmaker() {
             <button type="button" className="btn primary sm" onClick={() => setup(true)}>生成多签交易：设置模板并授权</button>
             <button type="button" className="btn danger sm" onClick={() => setup(false)}>关闭自动上架</button>
           </div>
+        )}
+        {d?.activator && (
+          <>
+            <p className="muted small" style={{ marginTop: 12 }}>
+              满额自动投入运营：{d.autoActivateReady ? "已开启" : "未开启"}。开启后满额车辆自动开始运营，不再需要多签确认。
+            </p>
+            {can("OPERATOR", "GOV_VIEW") && (
+              <div className="row" style={{ marginTop: 6 }}>
+                {!d.autoActivateReady && <button type="button" className="btn primary sm" onClick={() => activator(true)}>生成多签交易：开启自动投入运营</button>}
+                {d.autoActivateReady && <button type="button" className="btn danger sm" onClick={() => activator(false)}>关闭自动投入运营</button>}
+              </div>
+            )}
+          </>
         )}
         {proposal && <div style={{ marginTop: 12 }}><ProposalView proposal={proposal} /></div>}
       </section>

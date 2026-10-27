@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@roboshare/db";
-import { assetRegistryAbi, offeringManagerAbi, projectFactoryAbi, subscriptionRouterAbi } from "@roboshare/shared";
+import { assetRegistryAbi, offeringManagerAbi, projectActivatorAbi, projectFactoryAbi, subscriptionRouterAbi } from "@roboshare/shared";
 import {
   createWalletClient,
   encodeFunctionData,
@@ -39,6 +39,8 @@ export interface MatchmakerConfig {
   subscriptionRouter: Address;
   paymentToken?: Address;
   safe?: Address;
+  /** ProjectActivator (testnet and mainnet), so a funded vehicle starts operating without a Safe signature. */
+  projectActivator?: Address;
   /** OPERATOR_ROLE on the AssetRegistry (register, set term) and, in AUTO mode, LAUNCHER_ROLE on the factory. */
   launcherKey?: Hex;
   /** REVIEWER_ROLE on the AssetRegistry (verify). Must differ from the launcher: the registry refuses self-approval. */
@@ -58,6 +60,7 @@ export interface MatchmakerEvent {
 
 /** Reason hash of the activation the worker queues; fixed so a queued proposal is recognised again. */
 export const ACTIVATE_REASON = keccak256(stringToHex("roboshare:matchmaker:in-service"));
+const ACTIVATOR_ROLE = keccak256(stringToHex("ACTIVATOR_ROLE"));
 const RECEIPT_TIMEOUT_MS = 120_000;
 const ISSUE_REPEAT_MS = 6 * 3600_000;
 const ONE_USDT = 10n ** 18n;
@@ -85,6 +88,7 @@ export function loadMatchmakerConfig(env: NodeJS.ProcessEnv = process.env): Matc
     subscriptionRouter: getAddress(env.SUBSCRIPTION_ROUTER!),
     paymentToken: env.PAYMENT_TOKEN ? getAddress(env.PAYMENT_TOKEN) : undefined,
     safe: env.SAFE ? getAddress(env.SAFE) : undefined,
+    projectActivator: env.PROJECT_ACTIVATOR ? getAddress(env.PROJECT_ACTIVATOR) : undefined,
     launcherKey,
     verifierKey,
     backstopKey,
@@ -340,12 +344,37 @@ export class Matchmaker {
     const listed = await this.prisma.vehicleQueue.findMany({ where: { chainId: this.cfg.chainId, status: "LISTED", projectIdOnchain: { not: null } } });
     if (!listed.length) return;
     const funded = await this.prisma.project.findMany({ where: { projectIdOnchain: { in: listed.map((v) => v.projectIdOnchain!) }, state: "FUNDED" } });
+    if (!funded.length) return;
+    const direct = await this.canActivate();
     for (const p of funded) {
-      const data = encodeFunctionData({ abi: assetRegistryAbi, functionName: "transition", args: [p.projectIdOnchain as Hex, State.ACTIVE, ACTIVATE_REASON] });
+      const pid = p.projectIdOnchain as Hex;
+      const data = encodeFunctionData({ abi: assetRegistryAbi, functionName: "transition", args: [pid, State.ACTIVE, ACTIVATE_REASON] });
       const title = listed.find((v) => v.projectIdOnchain === p.projectIdOnchain)?.title ?? p.projectIdOnchain;
+      if (direct) {
+        if (Number(await this.read(this.cfg.assetRegistry, assetRegistryAbi, "stateOf", [pid])) !== State.FUNDED) continue; // indexer lagging
+        const hash = await this.send(this.launcher!, this.cfg.projectActivator!, projectActivatorAbi, "activate", [pid]);
+        // A Safe proposal queued before automatic activation was switched on would now revert: close it.
+        await this.prisma.safeTx.updateMany({
+          where: { chainId: this.cfg.chainId, to: this.cfg.assetRegistry.toLowerCase(), data, status: "PENDING" },
+          data: { status: "CANCELLED", closedAt: this.now(), closedBy: this.launcher!.address.toLowerCase(), closeReason: "started operating automatically" },
+        });
+        events.push({ projectId: pid, kind: "VEHICLE_ACTIVATED", message: `${title} started operating`, txHash: hash });
+        continue;
+      }
       const id = await this.queueSafe(this.cfg.assetRegistry, data, `撮合：${title} 已满额，投入运营`);
-      if (id) events.push({ projectId: p.projectIdOnchain, kind: "ACTIVATE_QUEUED", message: `${title} is funded; confirm "start operating" on the Safe page` });
+      if (id) events.push({ projectId: pid, kind: "ACTIVATE_QUEUED", message: `${title} is funded; confirm "start operating" on the Safe page` });
     }
+  }
+
+  /** The activator is set up (it holds registry admin, the launcher holds ACTIVATOR_ROLE). Else the Safe signs. */
+  private async canActivate(): Promise<boolean> {
+    const a = this.cfg.projectActivator;
+    if (!a || !this.launcher) return false;
+    const [admin, role] = await Promise.all([
+      this.read(this.cfg.assetRegistry, assetRegistryAbi, "hasRole", [`0x${"0".repeat(64)}`, a]) as Promise<boolean>,
+      this.read(a, projectActivatorAbi, "hasRole", [ACTIVATOR_ROLE, this.launcher.address]) as Promise<boolean>,
+    ]);
+    return admin && role;
   }
 
   /** Queues a single Safe call once. The same target and calldata in any state counts as done, so a call the owners

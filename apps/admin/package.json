@@ -14,7 +14,7 @@
     "@roboshare/shared": "workspace:*",
     "@roboshare/ui": "workspace:*",
     "@tanstack/react-query": "5.103.1",
-    "next": "15.5.27",
+    "next": "15.5.28",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "viem": "2.57.4",
@@ -29,6 +29,6 @@
     "@types/react-dom": "19.2.2",
     "jsdom": "27.0.1",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   }
 }
