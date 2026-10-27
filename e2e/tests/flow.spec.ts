@@ -184,7 +184,7 @@ test("investor claims the distribution in USDT", async () => {
   await page.getByRole("link", { name: "我的资产" }).first().click();
   // Sole holder of 60 units: gross 9,000; flat 30% platform share, net 6,300.
   const expected = allocate(9_000n * ONE, 0n, [{ address: ROLES.alice, units: UNITS }], tiersForTerm(DEFAULT_TERM_DAYS)).allocations[0]!.net;
-  expect(expected).toBe(8_325n * ONE);
+  expect(expected).toBe(6_300n * ONE);
   await expect(page.getByTestId("claimable-total")).toHaveText("6,300.00");
   await axe(page, "portfolio");
   const balance = () => s.pub.readContract({ address: usdt, abi: erc20Abi, functionName: "balanceOf", args: [ROLES.alice] });
