@@ -306,6 +306,14 @@ export const zhTW: Messages = {
     status: { ESCROWED: "託管中", SETTLED: "已結算", REFUNDABLE: "可退款", REFUNDED: "已退款" },
     finalizeFailed: "確認募集失敗",
     claimRefund: "領取退款",
+    daily: {
+      title: "每日收益",
+      none: "車輛投入營運後，這裡每天顯示你的預估收益。",
+      latest: (d: string) => `${d} 預估收益`,
+      pendingTotal: (a: string) => `待結算累計 ${a} USDT · 每月結算後發放`,
+      income: "我的收益（USDT）",
+      holdingLine: (d: string, a: string) => `${d} 收益 +${a} USDT`,
+    },
   },
   promo: {
     title: "推廣中心",

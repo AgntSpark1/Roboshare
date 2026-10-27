@@ -227,6 +227,14 @@ export const zhCN = {
     status: { ESCROWED: "托管中", SETTLED: "已结算", REFUNDABLE: "可退款", REFUNDED: "已退款" } as Record<string, string>,
     finalizeFailed: "确认募集失败",
     claimRefund: "领取退款",
+    daily: {
+      title: "每日收益",
+      none: "车辆投入运营后，这里每天显示你的预估收益。",
+      latest: (d: string) => `${d} 预估收益`,
+      pendingTotal: (a: string) => `待结算累计 ${a} USDT · 每月结算后发放`,
+      income: "我的收益（USDT）",
+      holdingLine: (d: string, a: string) => `${d} 收益 +${a} USDT`,
+    },
   },
   promo: {
     title: "推广中心",

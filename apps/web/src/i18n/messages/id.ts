@@ -306,6 +306,14 @@ export const id: Messages = {
     status: { ESCROWED: "Dalam escrow", SETTLED: "Diselesaikan", REFUNDABLE: "Bisa refund", REFUNDED: "Sudah refund" },
     finalizeFailed: "Konfirmasi penggalangan gagal",
     claimRefund: "Klaim refund",
+    daily: {
+      title: "Penghasilan harian",
+      none: "Setelah kendaraan beroperasi, perkiraan penghasilan Anda tampil di sini setiap hari.",
+      latest: (d: string) => `${d} perkiraan penghasilan`,
+      pendingTotal: (a: string) => `Menunggu penyelesaian: ${a} USDT · dibayar setelah penyelesaian bulanan`,
+      income: "Penghasilan saya (USDT)",
+      holdingLine: (d: string, a: string) => `${d} penghasilan +${a} USDT`,
+    },
   },
   promo: {
     title: "Pusat referal",

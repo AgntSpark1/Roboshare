@@ -306,6 +306,14 @@ export const th: Messages = {
     status: { ESCROWED: "อยู่ในเอสโครว์", SETTLED: "ชำระแล้ว", REFUNDABLE: "ขอคืนเงินได้", REFUNDED: "คืนเงินแล้ว" },
     finalizeFailed: "ยืนยันว่าระดมทุนไม่สำเร็จ",
     claimRefund: "รับเงินคืน",
+    daily: {
+      title: "รายได้รายวัน",
+      none: "เมื่อรถเริ่มให้บริการ รายได้โดยประมาณของคุณจะแสดงที่นี่ทุกวัน",
+      latest: (d: string) => `${d} รายได้โดยประมาณ`,
+      pendingTotal: (a: string) => `รอชำระรวม ${a} USDT · จ่ายหลังสรุปยอดรายเดือน`,
+      income: "รายได้ของฉัน (USDT)",
+      holdingLine: (d: string, a: string) => `${d} รายได้ +${a} USDT`,
+    },
   },
   promo: {
     title: "ศูนย์แนะนำเพื่อน",

@@ -306,6 +306,14 @@ export const en: Messages = {
     status: { ESCROWED: "In escrow", SETTLED: "Settled", REFUNDABLE: "Refundable", REFUNDED: "Refunded" },
     finalizeFailed: "Confirm offering failed",
     claimRefund: "Claim refund",
+    daily: {
+      title: "Daily earnings",
+      none: "Once the vehicle is on the road, your estimated earnings show here every day.",
+      latest: (d: string) => `${d} estimated earnings`,
+      pendingTotal: (a: string) => `Pending: ${a} USDT · paid after monthly settlement`,
+      income: "My earnings (USDT)",
+      holdingLine: (d: string, a: string) => `${d} earnings +${a} USDT`,
+    },
   },
   promo: {
     title: "Referral center",
