@@ -344,6 +344,7 @@ export const zhTW: Messages = {
     claimed: "已領取",
     claimable: "可領取",
     pending: "待平台發布",
+    cityLine: (amount: string, units: number) => `其中城市獎勵 ${amount} USDT（${units} 份新增投資，持有滿一個月後計入）`,
     claimStep: "領取推廣收益",
     claim: (amt) => `領取 ${amt} USDT`,
     none: "暫無可領取收益",

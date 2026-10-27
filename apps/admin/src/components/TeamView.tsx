@@ -14,8 +14,8 @@ export interface TeamInfo {
 
 export interface TeamDetail {
   team: TeamInfo;
-  totals: { members: number; investors: number; invested: string; rewards: string; fee: string };
-  members: { wallet: string; depth: number; invitedBy: string | null; joinedAt: string | null; invites: number; invested: string; rewards: string; fee: string }[];
+  totals: { members: number; investors: number; invested: string; rewards: string; fee: string; city: string; cityUnits: number };
+  members: { wallet: string; depth: number; invitedBy: string | null; joinedAt: string | null; invites: number; invested: string; rewards: string; fee: string; city: string; cityUnits: number }[];
 }
 
 export function TeamLink({ code }: { code: string }) {
@@ -44,6 +44,7 @@ export function TeamView({ d }: { d: TeamDetail }) {
         <div><span>团队认购额</span><b>{formatUsdt(t.invested)} USDT</b></div>
         <div><span>成员产生的平台手续费</span><b>{formatUsdt(t.fee)} USDT</b></div>
         <div><span>成员累计邀请奖励</span><b>{formatUsdt(t.rewards)} USDT</b></div>
+        <div><span>团队长城市奖励</span><b data-testid="team-city">{formatUsdt(t.city)} USDT · {t.cityUnits} 份</b></div>
       </div>
       {d.members.length === 0 ? (
         <p className="empty">还没有成员。</p>
@@ -52,7 +53,7 @@ export function TeamView({ d }: { d: TeamDetail }) {
           <table>
             <caption className="sr-only">团队成员</caption>
             <thead>
-              <tr><th>钱包</th><th>层级</th><th>邀请人</th><th>加入时间</th><th className="r">直接邀请</th><th className="r">认购额（USDT）</th><th className="r">邀请奖励（USDT）</th></tr>
+              <tr><th>钱包</th><th>层级</th><th>邀请人</th><th>加入时间</th><th className="r">直接邀请</th><th className="r">认购额（USDT）</th><th className="r">邀请奖励（USDT）</th><th className="r">城市奖励（USDT）</th></tr>
             </thead>
             <tbody>
               {d.members.map((m) => (
@@ -64,6 +65,7 @@ export function TeamView({ d }: { d: TeamDetail }) {
                   <td className="r">{m.invites}</td>
                   <td className="r">{formatUsdt(m.invested)}</td>
                   <td className="r">{formatUsdt(m.rewards)}</td>
+                  <td className="r">{formatUsdt(m.city)}</td>
                 </tr>
               ))}
             </tbody>

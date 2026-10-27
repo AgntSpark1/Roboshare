@@ -344,6 +344,7 @@ export const ko: Messages = {
     claimed: "수령 완료",
     claimable: "수령 가능",
     pending: "게시 대기",
+    cityLine: (amount: string, units: number) => `그중 도시 보상 ${amount} USDT (신규 ${units}좌, 1개월 보유 후 반영)`,
     claimStep: "추천 수익 수령",
     claim: (amt) => `${amt} USDT 수령`,
     none: "수령할 수익이 없습니다",

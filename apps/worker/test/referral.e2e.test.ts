@@ -17,6 +17,7 @@ import {
 import { erc20Abi, keccak256, parseAbi, stringToHex, type Address, type Hex } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Indexer } from "../src/indexer.js";
+import { runCityRewards } from "../src/city.js";
 import { asSafe, bytes32, resetDb, send, startAnvil, type Chain } from "./anvil.js";
 
 const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);
@@ -184,5 +185,27 @@ describe("referral rewards against a local chain", () => {
     expect(root.root).toBe(tree.root);
     const claim = await prisma.referralClaim.findUniqueOrThrow({ where: { account: lc(A.alice!) } });
     expect(claim.claimed.toFixed()).toBe(reward.toString());
+  }, 90_000);
+  it("pays the team leader 1% of new units held a month, on the settlement day, once", async () => {
+    // bob leads a team: dave, erin and carol sit under him; alice (above him) and bob himself do not count.
+    await prisma.team.create({ data: { code: "B01", name: "bob", leader: lc(A.bob!), createdByUserId: crypto.randomUUID() } });
+    const token = (await prisma.project.findUniqueOrThrow({ where: { projectIdOnchain: PID } })).tokenAddress as Address;
+    await send(c, A.erin!, { address: token, abi: erc20Abi, functionName: "transfer", args: [A.alice!, 2n] }); // erin keeps 3 of 5
+    await indexer.catchUp();
+    const mint = await prisma.tokenTransfer.findFirstOrThrow({ where: { kind: "MINT" } });
+    const mintedAt = (await prisma.chainBlock.findUniqueOrThrow({ where: { chainId_number: { chainId: 31337, number: mint.blockNumber } } })).timestamp;
+    const cfg = { chainId: 31337, start: new Date(mintedAt.getTime() - 86_400_000), utcOffsetHours: 8, settlementDay: 2 };
+
+    expect((await runCityRewards(prisma, cfg, new Date(mintedAt.getTime() + 10 * 86_400_000))).counted).toBe(0);
+    const later = new Date(mintedAt.getTime() + 70 * 86_400_000);
+    expect((await runCityRewards(prisma, cfg, later)).counted).toBe(3);
+    expect((await runCityRewards(prisma, cfg, later)).counted).toBe(0);
+    const rows = await prisma.cityReward.findMany({ orderBy: { wallet: "asc" } });
+    // 1,000 USDT units: 10 USDT per unit still held.
+    expect(Object.fromEntries(rows.map((r) => [r.wallet, [r.leader, r.mintedUnits, r.units, BigInt(r.reward.toFixed())]]))).toEqual({
+      [lc(A.carol!)]: [lc(A.bob!), 20, 20, 200n * ONE],
+      [lc(A.dave!)]: [lc(A.bob!), 5, 5, 50n * ONE],
+      [lc(A.erin!)]: [lc(A.bob!), 5, 3, 30n * ONE],
+    });
   }, 90_000);
 });

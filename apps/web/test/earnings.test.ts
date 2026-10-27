@@ -7,9 +7,9 @@ const day = (d: string, net: number, status: "PENDING" | "SETTLED" = "PENDING") 
 
 describe("holderDaily", () => {
   it("takes the holder's share of issued units, less the fee tier", () => {
-    // 10 of 100 units → 10%; 10+ units pay 15%.
+    // 10 of 100 units → 10%; new projects keep a flat 30% platform share.
     const [e] = holderDaily([day("2026-10-18", 1000)], 10, 100, DEFAULT_TIERS);
-    expect(e).toEqual({ day: "2026-10-18", amount: BigInt(usdt(85)), pending: true });
+    expect(e).toEqual({ day: "2026-10-18", amount: BigInt(usdt(70)), pending: true });
   });
 
   it("is empty without units", () => {

@@ -344,6 +344,7 @@ export const es: Messages = {
     claimed: "Cobrado",
     claimable: "Disponible",
     pending: "Pendiente de publicar",
+    cityLine: (amount: string, units: number) => `Incluye ${amount} USDT de recompensa de ciudad (${units} unidades nuevas, contadas tras un mes de tenencia)`,
     claimStep: "Cobrar ganancias por referidos",
     claim: (amt) => `Cobrar ${amt} USDT`,
     none: "Nada que cobrar aún",

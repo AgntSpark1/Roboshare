@@ -687,6 +687,23 @@ describe("promotion teams", () => {
     const r = await http().put(`/api/v1/admin/teams/${id}`).set("Cookie", cookies.operator!).send({ name: "华东一队（新）", code: "ZZ" }).expect(200);
     expect(r.body).toEqual(expect.objectContaining({ code: "A01", name: "华东一队（新）", leader: investor.address }));
   });
+
+  it("pays the leader's city reward in the same claim and shows it to staff and the leader", async () => {
+    const lead = investor.address.toLowerCase();
+    await prisma.cityReward.create({
+      data: { mintEventId: crypto.randomUUID(), projectIdOnchain: PID, wallet: other.address.toLowerCase(), leader: lead, mintedUnits: 30, units: 25, reward: (25n * ONE).toString(), mintedAt: new Date(), month: "2026-11" },
+    });
+    const me = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
+    expect(me.body.city).toEqual({ earned: (25n * ONE).toString(), units: 25 });
+    const team = await http().get("/api/v1/team/me").set("Cookie", cookies.investor!).expect(200);
+    expect(team.body.totals).toEqual(expect.objectContaining({ city: (25n * ONE).toString(), cityUnits: 25 }));
+    const summary = await http().get("/api/v1/admin/referrals").set("Cookie", cookies.reviewer!).expect(200);
+    expect(summary.body.city).toEqual({ accrued: (25n * ONE).toString(), units: 25, cap: (100_000n * ONE).toString(), remaining: (99_975n * ONE).toString() });
+    const root = await http().post("/api/v1/admin/referrals/root").set("Cookie", cookies.operator!).expect(201);
+    const tree = await prisma.referralTree.findUnique({ where: { root: root.body.root } });
+    const entry = (tree!.entries as { account: string; cumulative: string }[]).find((e) => e.account.toLowerCase() === lead)!;
+    expect(BigInt(entry.cumulative)).toBe(BigInt(me.body.earned));
+  });
 });
 
 describe("resale market", () => {

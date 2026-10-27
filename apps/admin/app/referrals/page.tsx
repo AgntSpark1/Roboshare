@@ -16,6 +16,7 @@ interface Summary {
   totalPublished: string;
   totalClaimed: string;
   outstanding: string;
+  city: { accrued: string; units: number; cap: string; remaining: string };
   topReferrers: { referrer: string; accrued: string }[];
 }
 
@@ -26,13 +27,13 @@ export default function Referrals() {
   const s = useQuery({ queryKey: ["admin", "referrals"], queryFn: () => api.get<Summary>("/admin/referrals") });
   const [prepared, setPrepared] = useState<{ requiredBalance: string; accounts: number } | null>(null);
   const d = s.data;
-  const unpublished = d ? BigInt(d.totalAccrued) - BigInt(d.totalPublished) : 0n;
+  const unpublished = d ? BigInt(d.totalAccrued) + BigInt(d.city.accrued) - BigInt(d.totalPublished) : 0n;
   return (
     <>
       <section className="panel" aria-labelledby="ref">
         <h2 id="ref">邀请奖励概况</h2>
         <div className="warnbox">
-          三级邀请：被邀请人每期分润总额的 10%（直推）、5%（二级）、3%（三级），全部从平台 30% 分成里支付，不动投资者的 70%；较早发行、费率较低的项目，奖励总额不超过平台当期手续费。没有第四级。由平台手续费钱包充值到奖励合约后才能领取。主网开启前须由律师书面确认（三级计酬达到传销认定的层级标准，按成交付佣金可能构成无牌经纪），开关默认关闭。
+          三级邀请：被邀请人每期分润总额的 10%（直推）、5%（二级）、3%（三级），全部从平台 30% 分成里支付，不动投资者的 70%；较早发行、费率较低的项目，奖励总额不超过平台当期手续费。没有第四级。由平台手续费钱包充值到奖励合约后才能领取。主网开启前须由律师书面确认（多级奖励和按成交付佣金都有合规要求），开关默认关闭。
         </div>
         {s.error && <p className="err" role="alert">{errorText(s.error)}</p>}
         {d && (
@@ -41,6 +42,8 @@ export default function Referrals() {
             <div><span>邀请绑定</span><b>{d.bindings}</b></div>
             <div><span>被邀请人产生的手续费</span><b>{formatUsdt(d.totalFee)} USDT</b></div>
             <div><span>累计计提奖励</span><b>{formatUsdt(d.totalAccrued)} USDT</b></div>
+            <div><span>城市奖励（团队长）</span><b data-testid="city-accrued">{formatUsdt(d.city.accrued)} USDT · {d.city.units} 份</b></div>
+            <div><span>城市奖励剩余额度</span><b>{formatUsdt(d.city.remaining)} / {formatUsdt(d.city.cap)} USDT</b></div>
             <div><span>已发布（最新根）</span><b>{formatUsdt(d.totalPublished)} USDT{d.latestRoot ? ` · 第 ${d.latestRoot.epoch} 期` : ""}</b></div>
             <div><span>已领取</span><b>{formatUsdt(d.totalClaimed)} USDT</b></div>
             <div><span>合约至少需持有</span><b data-testid="outstanding">{formatUsdt(d.outstanding)} USDT</b></div>
@@ -54,7 +57,7 @@ export default function Referrals() {
           <p className="empty">需要运营角色。</p>
         ) : (
           <div className="stack" style={{ gap: 10 }}>
-            <p className="muted small">按所有已计提奖励生成新的 Merkle 根（累计金额），由运营钱包签名上链。发布后请从平台手续费钱包向奖励合约转入差额。</p>
+            <p className="muted small">按所有已计提奖励（含城市奖励）生成新的 Merkle 根（累计金额），由运营钱包签名上链。发布后请从平台手续费钱包向奖励合约转入差额。</p>
             <p>待发布：<b>{formatUsdt(unpublished > 0n ? unpublished : 0n)} USDT</b></p>
             <TxAction
               label="生成并发布奖励根（运营钱包签名）"

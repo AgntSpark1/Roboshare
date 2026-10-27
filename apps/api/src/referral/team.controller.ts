@@ -16,8 +16,8 @@ const dec = (d: Prisma.Decimal | null | undefined) => BigInt(d ? d.toFixed() : "
 const LIVE = { in: ["ESCROWED", "SETTLED"] as ("ESCROWED" | "SETTLED")[] };
 
 /**
- * Promotion teams (REFERRAL_DESIGN.md §9). Teams only group wallets for reporting: rewards stay the
- * two-level referral rewards, settled from one treasury through ReferralRewards.
+ * Promotion teams (REFERRAL_DESIGN.md §9). Teams group wallets for reporting and for the leader's city
+ * reward (§11); every reward is settled from one treasury through ReferralRewards.
  */
 class Teams {
   constructor(private readonly prisma: PrismaService, private readonly chainId: number) {}
@@ -34,15 +34,19 @@ class Teams {
 
   /** Totals per member wallet: invested USDT, referral rewards earned, platform fee their own holdings produced. */
   async stats(wallets: string[]) {
-    const [subs, earned, fees] = await Promise.all([
+    const [subs, earned, fees, city] = await Promise.all([
       this.prisma.subscription.groupBy({ by: ["wallet"], where: { wallet: { in: wallets }, status: LIVE }, _sum: { amount: true } }),
       this.prisma.referralAccrual.groupBy({ by: ["referrer"], where: { referrer: { in: wallets } }, _sum: { reward: true } }),
       this.prisma.referralAccrual.groupBy({ by: ["referee"], where: { referee: { in: wallets }, level: 1 }, _sum: { fee: true } }),
+      this.prisma.cityReward.groupBy({ by: ["wallet"], where: { wallet: { in: wallets } }, _sum: { reward: true, units: true } }),
     ]);
     return {
       invested: new Map(subs.map((s) => [s.wallet, dec(s._sum.amount)])),
       earned: new Map(earned.map((e) => [e.referrer, dec(e._sum.reward)])),
       fee: new Map(fees.map((f) => [f.referee, dec(f._sum.fee)])),
+      /** City reward the leader earned on this member's new units. */
+      city: new Map(city.map((c) => [c.wallet, dec(c._sum.reward)])),
+      cityUnits: new Map(city.map((c) => [c.wallet, BigInt(c._sum.units ?? 0)])),
     };
   }
 
@@ -63,6 +67,7 @@ class Teams {
         invested: sum(s.invested).toString(),
         rewards: sum(s.earned).toString(),
         fee: sum(s.fee).toString(),
+        city: sum(s.city).toString(),
       };
     });
   }
@@ -92,10 +97,12 @@ class Teams {
           invested: (s.invested.get(w) ?? 0n).toString(),
           rewards: (s.earned.get(w) ?? 0n).toString(),
           fee: (s.fee.get(w) ?? 0n).toString(),
+          city: (s.city.get(w) ?? 0n).toString(),
+          cityUnits: Number(s.cityUnits.get(w) ?? 0n),
         };
       })
       .sort((a, b) => a.depth - b.depth || Number((a.block ?? 0n) - (b.block ?? 0n)));
-    const total = (k: "invested" | "rewards" | "fee") => rows.reduce((acc, r) => acc + BigInt(r[k]), 0n).toString();
+    const total = (k: "invested" | "rewards" | "fee" | "city") => rows.reduce((acc, r) => acc + BigInt(r[k]), 0n).toString();
     return plain({
       team: view(team),
       totals: {
@@ -104,6 +111,8 @@ class Teams {
         invested: total("invested"),
         rewards: total("rewards"),
         fee: total("fee"),
+        city: total("city"),
+        cityUnits: rows.reduce((acc, r) => acc + r.cityUnits, 0),
       },
       members: rows.map(({ block: _block, ...r }) => r),
     });

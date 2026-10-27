@@ -265,6 +265,7 @@ export const zhCN = {
     claimed: "已领取",
     claimable: "可领取",
     pending: "待平台发布",
+    cityLine: (amount: string, units: number) => `其中城市奖励 ${amount} USDT（${units} 份新增投资，持有满一个月后计入）`,
     claimStep: "领取推广收益",
     claim: (amt: string) => `领取 ${amt} USDT`,
     none: "暂无可领取收益",

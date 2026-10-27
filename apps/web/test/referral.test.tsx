@@ -78,6 +78,7 @@ const mine = {
     { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: "0x00000000000000000000000000000000000000D4", level: 2, gross: (100n * ONE).toString(), fee: (30n * ONE).toString(), shareBps: 500, reward: (5n * ONE).toString() },
     { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: "0x00000000000000000000000000000000000000E5", level: 3, gross: (100n * ONE).toString(), fee: (30n * ONE).toString(), shareBps: 300, reward: (3n * ONE).toString() },
   ],
+  city: { earned: "0", units: 0 },
   earned: (16n * ONE).toString(),
   claimed: "0",
   pendingPublication: "0",
@@ -123,6 +124,13 @@ describe("referral centre", () => {
     expect(screen.getByText(/最多三层/)).toBeInTheDocument();
     expect(screen.getByText(/直推好友拿他分润的 10%，好友邀请的人拿 5%，再下一层拿 3%/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "领取 16.00 USDT" })).toBeEnabled();
+    expect(screen.queryByTestId("referral-city")).not.toBeInTheDocument();
+  });
+
+  it("shows a team leader's city reward inside the earnings", () => {
+    Object.assign(refState, { test: false, enabled: true, data: { ...mine, city: { earned: (25n * ONE).toString(), units: 25 } }, signedIn: true });
+    render(<ReferralCenter />);
+    expect(screen.getByTestId("referral-city")).toHaveTextContent("其中城市奖励 25.00 USDT（25 份新增投资，持有满一个月后计入）");
   });
 });
 

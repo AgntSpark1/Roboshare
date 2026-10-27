@@ -12,11 +12,13 @@ interface TeamRow extends TeamInfo {
   invested: string;
   rewards: string;
   fee: string;
+  city: string;
 }
 
 /**
  * Promotion teams (REFERRAL_DESIGN.md §9): grouping for reporting only. Members follow the on-chain
- * invite bindings under the leader; rewards stay the two-level referral rewards from one treasury.
+ * invite bindings under the leader. Rewards: three-level referral rewards plus the leader's city reward (§11),
+ * all from one treasury.
  */
 export default function Teams() {
   const { can } = useRoles();
@@ -28,7 +30,7 @@ export default function Teams() {
       <section className="panel" aria-labelledby="teams">
         <h2 id="teams">推广团队</h2>
         <p className="muted small">
-          每个团队有一个团队长钱包和团队链接。投资者第一次认购时在链上永久绑定邀请人，团队长和成员邀请来的人都自动归入同一团队，不会串队。所有奖励仍按三级邀请规则（10% / 5% / 3%，由平台从 30% 分成里支付），从同一个奖励合约统一发放。团队长用自己的钱包登录本控制台的"团队后台"（/leader）只读查看本团队数据。
+          每个团队有一个团队长钱包和团队链接。投资者第一次认购时在链上永久绑定邀请人，团队长和成员邀请来的人都自动归入同一团队，不会串队。所有奖励仍按三级邀请规则（10% / 5% / 3%，由平台从 30% 分成里支付），从同一个奖励合约统一发放。另有城市奖励：团队成员新认购的份额持有满一个月后，团队长每 100 USDT 得 1 USDT，在每月结算日计入，与邀请奖励一起领取，总额 10 万 USDT 发完即止（团队长自己认购的不计）。团队长用自己的钱包登录本控制台的"团队后台"（/leader）只读查看本团队数据。
         </p>
         {list.error && <p className="err" role="alert">{errorText(list.error)}</p>}
         {items.length === 0 ? (
@@ -38,7 +40,7 @@ export default function Teams() {
             <table>
               <caption className="sr-only">推广团队</caption>
               <thead>
-                <tr><th>团队</th><th>团队长</th><th className="r">成员</th><th className="r">已认购</th><th className="r">认购额（USDT）</th><th className="r">邀请奖励（USDT）</th><th /></tr>
+                <tr><th>团队</th><th>团队长</th><th className="r">成员</th><th className="r">已认购</th><th className="r">认购额（USDT）</th><th className="r">邀请奖励（USDT）</th><th className="r">城市奖励（USDT）</th><th /></tr>
               </thead>
               <tbody>
                 {items.map((t) => (
@@ -52,6 +54,7 @@ export default function Teams() {
                     <td className="r">{t.investors}</td>
                     <td className="r">{formatUsdt(t.invested)}</td>
                     <td className="r">{formatUsdt(t.rewards)}</td>
+                    <td className="r">{formatUsdt(t.city)}</td>
                     <td><button type="button" className="btn sm" onClick={() => setOpen(open === t.id ? null : t.id)}>{open === t.id ? "收起" : "查看"}</button></td>
                   </tr>
                 ))}

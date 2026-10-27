@@ -344,6 +344,7 @@ export const vi: Messages = {
     claimed: "Đã nhận",
     claimable: "Có thể nhận",
     pending: "Chờ công bố",
+    cityLine: (amount: string, units: number) => `Trong đó thưởng thành phố ${amount} USDT (${units} phần mới, tính sau một tháng nắm giữ)`,
     claimStep: "Nhận thu nhập giới thiệu",
     claim: (amt) => `Nhận ${amt} USDT`,
     none: "Chưa có gì để nhận",

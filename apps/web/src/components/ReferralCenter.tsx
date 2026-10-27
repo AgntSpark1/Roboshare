@@ -139,6 +139,7 @@ function Earnings({ wallet, r }: { wallet: `0x${string}`; r: MyReferrals | undef
         <div className="tile"><span className="eyebrow">{c.claimed}</span><span className="num">{formatUsdt(r?.claimed ?? "0")}</span><small className="muted">USDT</small></div>
         <div className="tile"><span className="eyebrow">{c.pending}</span><span className="num">{formatUsdt(r?.pendingPublication ?? "0")}</span><small className="muted">USDT</small></div>
       </div>
+      {r && BigInt(r.city?.earned ?? "0") > 0n && <p className="muted small" data-testid="referral-city" style={{ marginTop: 8 }}>{c.cityLine(formatUsdt(r.city.earned), r.city.units)}</p>}
       <div className="row-actions" style={{ marginTop: 12 }}>
         <button type="button" className="btn primary sm" disabled={steps.length === 0 || run.running || run.states[0] === "done"} onClick={claim}>
           {claimable ? c.claim(formatUsdt(claimable.amount)) : c.none}

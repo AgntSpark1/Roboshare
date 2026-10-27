@@ -9,6 +9,7 @@ import { reconcile } from "./reconcile.js";
 import { autoSettle, settleSender } from "./settler.js";
 import { Autopilot, dailyOperatingTotals, loadAutopilotConfig } from "./autopilot.js";
 import { Matchmaker, loadMatchmakerConfig } from "./matchmaker.js";
+import { loadCityConfig, runCityRewards } from "./city.js";
 
 const POLL_MS = Number(process.env.INDEXER_POLL_MS ?? 3000);
 const RECONCILE_EVERY = Number(process.env.RECONCILE_EVERY_TICKS ?? 100);
@@ -16,6 +17,7 @@ const LOCK_KEY = "roboshare:indexer:leader";
 const SETTLE_EVERY_MS = Number(process.env.SETTLE_POLL_MS ?? 15_000);
 const AUTOPILOT_EVERY_MS = Number(process.env.AUTOPILOT_EVERY_MS ?? 60_000);
 const MATCHMAKER_EVERY_MS = Number(process.env.MATCHMAKER_EVERY_MS ?? 30_000);
+const CITY_EVERY_MS = Number(process.env.CITY_REWARD_EVERY_MS ?? 3_600_000);
 const AAVE_EVERY_MS = Number(process.env.AAVE_POLL_MS ?? 300_000);
 
 /** Optional: read-only Aave V3 market data from BSC mainnet (AAVE_RPC_URL), independent of CHAIN_ID. */
@@ -72,6 +74,11 @@ async function main() {
   let matching = false;
   let lastMatch = 0;
 
+  // Optional: the city reward (city.ts), counted on the monthly settlement day. Database only, no keys.
+  const cityCfg = loadCityConfig();
+  if (cityCfg) console.log(JSON.stringify({ msg: "city reward enabled", start: cityCfg.start.toISOString() }));
+  let lastCity = 0;
+
   let ticks = 0;
   for (;;) {
     // Only one active indexer: hold a short Redis lease and renew it every loop.
@@ -104,6 +111,12 @@ async function main() {
           .then((ev) => ev.forEach((e) => console.log(JSON.stringify({ msg: "matchmaker", ...e }))))
           .catch((err) => console.error(JSON.stringify({ msg: "matchmaker error", error: String(err) })))
           .finally(() => { matching = false; });
+      }
+      if (cityCfg && Date.now() - lastCity >= CITY_EVERY_MS) {
+        lastCity = Date.now();
+        await runCityRewards(prisma, cityCfg)
+          .then((r) => r.counted && console.log(JSON.stringify({ msg: "city reward", ...r })))
+          .catch((err) => console.error(JSON.stringify({ msg: "city reward error", error: String(err) })));
       }
       try {
         const r = await indexer.tick();
