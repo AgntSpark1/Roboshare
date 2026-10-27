@@ -344,6 +344,7 @@ export const en: Messages = {
     claimed: "Claimed",
     claimable: "Claimable",
     pending: "Awaiting publication",
+    cityLine: (amount: string, units: number) => `Includes ${amount} USDT city reward (${units} new units, counted after a month of holding)`,
     claimStep: "Claim referral earnings",
     claim: (amt) => `Claim ${amt} USDT`,
     none: "Nothing to claim yet",

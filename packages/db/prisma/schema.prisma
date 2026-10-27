@@ -514,6 +514,30 @@ model ReferralTree {
   @@schema("app")
 }
 
+/// City reward (REFERRAL_DESIGN.md §11): one row per share-token mint the programme has counted, so a mint
+/// is never counted twice. Worked out off-chain from team membership on the monthly settlement day; paid
+/// through the ReferralRewards root together with referral rewards. Survives projection rebuilds.
+model CityReward {
+  /// chain.event id of the mint (stable across projection rebuilds).
+  mintEventId      String   @id @db.Uuid
+  projectIdOnchain String
+  wallet           String
+  leader           String
+  mintedUnits      Int
+  /// Units still held when counted (units sold before the month ended earn nothing).
+  units            Int
+  reward           Decimal  @db.Decimal(78, 0)
+  mintedAt         DateTime
+  /// The month (local, YYYY-MM) whose settlement day counted it.
+  month            String
+  createdAt        DateTime @default(now())
+
+  @@index([leader])
+  @@index([wallet])
+  @@map("city_reward")
+  @@schema("app")
+}
+
 /// A promotion team (REFERRAL_DESIGN.md §9): a leader wallet and the code in its team link.
 /// Members are derived from the on-chain referral bindings under the leader, not stored here.
 model Team {

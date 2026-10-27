@@ -344,6 +344,7 @@ export const th: Messages = {
     claimed: "รับแล้ว",
     claimable: "รับได้",
     pending: "รอประกาศ",
+    cityLine: (amount: string, units: number) => `รวมรางวัลเมือง ${amount} USDT (${units} หน่วยใหม่ นับหลังถือครบหนึ่งเดือน)`,
     claimStep: "รับรายได้จากการแนะนำ",
     claim: (amt) => `รับ ${amt} USDT`,
     none: "ยังไม่มีรายได้ให้รับ",

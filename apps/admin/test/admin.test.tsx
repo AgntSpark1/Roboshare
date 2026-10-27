@@ -72,15 +72,16 @@ describe("team leader back office", () => {
   it("shows the team link, totals and each member's generation", () => {
     const d: TeamDetail = {
       team: { id: "t", code: "A01", name: "华东一队", leader: "0x00000000000000000000000000000000000000a1", note: null, createdAt: "2026-10-26T00:00:00Z" },
-      totals: { members: 2, investors: 2, invested: "3000000000000000000000", rewards: "0", fee: "0" },
+      totals: { members: 2, investors: 2, invested: "3000000000000000000000", rewards: "0", fee: "0", city: "20000000000000000000", cityUnits: 20 },
       members: [
-        { wallet: "0x00000000000000000000000000000000000000a1", depth: 0, invitedBy: null, joinedAt: null, invites: 1, invested: "1000000000000000000000", rewards: "0", fee: "0" },
-        { wallet: "0x00000000000000000000000000000000000000b2", depth: 1, invitedBy: "0x00000000000000000000000000000000000000a1", joinedAt: null, invites: 0, invested: "2000000000000000000000", rewards: "0", fee: "0" },
+        { wallet: "0x00000000000000000000000000000000000000a1", depth: 0, invitedBy: null, joinedAt: null, invites: 1, invested: "1000000000000000000000", rewards: "0", fee: "0", city: "0", cityUnits: 0 },
+        { wallet: "0x00000000000000000000000000000000000000b2", depth: 1, invitedBy: "0x00000000000000000000000000000000000000a1", joinedAt: null, invites: 0, invested: "2000000000000000000000", rewards: "0", fee: "0", city: "20000000000000000000", cityUnits: 20 },
       ],
     };
     render(<TeamView d={d} />);
     expect(screen.getByTestId("team-link")).toHaveTextContent("/t/A01");
     expect(screen.getByRole("cell", { name: "团队长" })).toBeInTheDocument();
     expect(screen.getByText("第 1 代")).toBeInTheDocument();
+    expect(screen.getByTestId("team-city")).toHaveTextContent("20 份");
   });
 });

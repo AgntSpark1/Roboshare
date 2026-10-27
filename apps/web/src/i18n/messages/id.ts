@@ -344,6 +344,7 @@ export const id: Messages = {
     claimed: "Sudah diklaim",
     claimable: "Bisa diklaim",
     pending: "Menunggu publikasi",
+    cityLine: (amount: string, units: number) => `Termasuk hadiah kota ${amount} USDT (${units} unit baru, dihitung setelah dipegang satu bulan)`,
     claimStep: "Klaim penghasilan referal",
     claim: (amt) => `Klaim ${amt} USDT`,
     none: "Belum ada yang bisa diklaim",

@@ -88,6 +88,8 @@ export interface MyReferrals {
   level2: (ReferralMember & { via: Address })[];
   level3: (ReferralMember & { via: Address })[];
   history: { projectId: string; projectTitle: string | null; batchId: number; referee: Address; level: 1 | 2 | 3; gross: string; fee: string; shareBps: number; reward: string }[];
+  /** City reward a team leader earned (REFERRAL_DESIGN.md §11); included in earned and paid in the same claim. */
+  city: { earned: string; units: number };
   earned: string;
   claimed: string;
   pendingPublication: string;

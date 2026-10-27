@@ -344,6 +344,7 @@ export const ja: Messages = {
     claimed: "受取済み",
     claimable: "受取可能",
     pending: "公開待ち",
+    cityLine: (amount: string, units: number) => `うちシティ報酬 ${amount} USDT（新規 ${units} 口、1か月保有後に計上）`,
     claimStep: "紹介収益を受け取る",
     claim: (amt) => `${amt} USDT を受け取る`,
     none: "受け取れる収益はありません",

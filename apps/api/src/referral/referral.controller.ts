@@ -3,6 +3,7 @@ import { Prisma } from "@roboshare/db";
 import {
   buildReferralTree,
   canonicalJson,
+  CITY_REWARD_CAP,
   referralRewardsAbi,
   REFERRAL_DEFAULT_SHARE_BPS,
   REFERRAL_LEVEL_BPS,
@@ -45,12 +46,13 @@ export class MeReferralController {
   @Get("referrals")
   async referrals(@Req() req: AuthedRequest) {
     const wallet = req.session!.wallet;
-    const [mine, referees, accruals, claim, latestRoot] = await Promise.all([
+    const [mine, referees, accruals, claim, latestRoot, city] = await Promise.all([
       this.prisma.referral.findUnique({ where: { referee: wallet } }),
       this.prisma.referral.findMany({ where: { referrer: wallet }, orderBy: { boundBlock: "asc" } }),
       this.prisma.referralAccrual.groupBy({ by: ["referee", "level"], where: { referrer: wallet }, _sum: { reward: true } }),
       this.prisma.referralClaim.findUnique({ where: { account: wallet } }),
       this.prisma.referralRoot.findFirst({ orderBy: { epoch: "desc" } }),
+      this.prisma.cityReward.aggregate({ where: { leader: wallet }, _sum: { reward: true, units: true } }),
     ]);
     // Second and third level: people your direct referrals invited, and the people they invited.
     // Nothing deeper is tracked or paid.
@@ -75,7 +77,8 @@ export class MeReferralController {
       (await this.prisma.projectMeta.findMany({ where: { projectIdOnchain: { in: [...new Set(history.map((h) => h.projectIdOnchain))] } } })).map((m) => [m.projectIdOnchain, m.title]),
     );
     const earnedBy = new Map(accruals.map((a) => [`${a.level}:${a.referee}`, dec(a._sum.reward)]));
-    const earned = [...earnedBy.values()].reduce((s, x) => s + x, 0n);
+    const cityEarned = dec(city._sum.reward);
+    const earned = [...earnedBy.values()].reduce((s, x) => s + x, 0n) + cityEarned;
     const member = (level: number) => (r: (typeof referees)[number]) => ({
       wallet: getAddress(r.referee),
       shareBps: REFERRAL_LEVEL_BPS[level - 1]!,
@@ -117,6 +120,8 @@ export class MeReferralController {
         shareBps: h.shareBps,
         reward: h.reward,
       })),
+      // City reward for team leaders (§11): paid in the same claim as referral rewards.
+      city: { earned: cityEarned.toString(), units: city._sum.units ?? 0 },
       // earned counts every accrual; only amounts in a published root can be claimed yet.
       earned: earned.toString(),
       claimed: claimed.toString(),
@@ -143,13 +148,15 @@ export class AdminReferralController {
   @Get()
   @Roles("OPERATOR", "REVIEWER", "COMPLIANCE", "GOV_VIEW")
   async summary() {
-    const [bindings, accrued, latestRoot, claimed, referrers] = await Promise.all([
+    const [bindings, accrued, latestRoot, claimed, referrers, city] = await Promise.all([
       this.prisma.referral.count(),
       this.prisma.referralAccrual.aggregate({ _sum: { reward: true, fee: true } }),
       this.prisma.referralRoot.findFirst({ orderBy: { epoch: "desc" } }),
       this.prisma.referralClaim.aggregate({ _sum: { claimed: true } }),
       this.prisma.referralAccrual.groupBy({ by: ["referrer"], _sum: { reward: true }, orderBy: { _sum: { reward: "desc" } }, take: 50 }),
+      this.prisma.cityReward.aggregate({ _sum: { reward: true, units: true } }),
     ]);
+    const cityPaid = dec(city._sum.reward);
     const published = dec(latestRoot?.totalCumulative);
     const totalClaimed = dec(claimed._sum.claimed);
     return plain({
@@ -162,6 +169,7 @@ export class AdminReferralController {
       totalClaimed: totalClaimed.toString(),
       // The contract must hold at least this much for every published reward to be claimable.
       outstanding: (published - totalClaimed).toString(),
+      city: { accrued: cityPaid.toString(), units: city._sum.units ?? 0, cap: CITY_REWARD_CAP.toString(), remaining: (CITY_REWARD_CAP - cityPaid).toString() },
       topReferrers: referrers.map((r) => ({ referrer: getAddress(r.referrer), accrued: dec(r._sum.reward).toString() })),
     });
   }
@@ -175,9 +183,16 @@ export class AdminReferralController {
   async prepareRoot(@Req() req: AuthedRequest) {
     const rewards = await contractOf(this.prisma, this.cfg.chainId, "REFERRAL_REWARDS");
     if (!rewards) throw new ApiError(503, "CHAIN_UNAVAILABLE", "REFERRAL_REWARDS is not indexed");
-    const sums = await this.prisma.referralAccrual.groupBy({ by: ["referrer"], _sum: { reward: true } });
-    const input = sums.map((s) => ({ account: getAddress(s.referrer), cumulative: dec(s._sum.reward) })).filter((e) => e.cumulative > 0n);
-    if (input.length === 0) throw new ApiError(409, "NOTHING_TO_PUBLISH", "no referral rewards have accrued");
+    // One cumulative per account: referral rewards plus the city reward (§11), from the same treasury.
+    const [sums, city] = await Promise.all([
+      this.prisma.referralAccrual.groupBy({ by: ["referrer"], _sum: { reward: true } }),
+      this.prisma.cityReward.groupBy({ by: ["leader"], _sum: { reward: true } }),
+    ]);
+    const totals = new Map<string, bigint>();
+    for (const s of sums) totals.set(s.referrer, (totals.get(s.referrer) ?? 0n) + dec(s._sum.reward));
+    for (const c of city) totals.set(c.leader, (totals.get(c.leader) ?? 0n) + dec(c._sum.reward));
+    const input = [...totals].map(([account, cumulative]) => ({ account: getAddress(account), cumulative })).filter((e) => e.cumulative > 0n);
+    if (input.length === 0) throw new ApiError(409, "NOTHING_TO_PUBLISH", "no referral or city rewards have accrued");
     const latest = await this.prisma.referralRoot.findFirst({ orderBy: { epoch: "desc" } });
     const tree = buildReferralTree(input);
     if (latest && latest.root === tree.root) throw new ApiError(409, "NOTHING_TO_PUBLISH", "the live root already covers every accrual");
