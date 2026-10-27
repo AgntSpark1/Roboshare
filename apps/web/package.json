@@ -15,7 +15,7 @@
     "@roboshare/ui": "workspace:*",
     "@tanstack/react-query": "5.103.1",
     "@wagmi/core": "2.22.1",
-    "next": "15.5.27",
+    "next": "15.5.28",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "three": "0.180.0",
@@ -32,6 +32,6 @@
     "@types/three": "0.180.0",
     "jsdom": "27.0.1",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   }
 }

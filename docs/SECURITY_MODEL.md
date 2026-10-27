@@ -74,3 +74,9 @@ flowchart TB
 - **不做 KYC/AML**：项目负责人 2026-10-11 决定（“都不要KYC验证了”“kyc 验证这个功能都去掉”，见 PHASE1_ANALYSIS D-24）完全移除 KYC/投资资格功能，`IdentityRegistry` 只保留冻结名单，用于拦截被盗或受制裁的钱包。主网前必须由律师评估不做 KYC/AML 的合规风险（证券发行、反洗钱、制裁）。
 - 在测试网上对完整生命周期进行彩排，包括一次暂停和一次被驳回的批次。
 - 明确的书面主网部署批准。
+
+### `pnpm audit` 忽略清单（`package.json` → `pnpm.auditConfig.ignoreGhsas`）
+
+| GHSA | 包 | 忽略理由 | 复查条件 |
+|---|---|---|---|
+| GHSA-mrhx-c7xc-m3w5 | zod（仅 `@reown/appkit-wallet` 自带的 3.22.4） | 我们自己的代码和 viem/abitype 已全部升到 zod 4.6.7。剩下这份是 WalletConnect/Reown 钱包库写死的旧版，上游最新版也仍是 3.22.4，且它的 schema 用了 zod 4 不兼容的单参数 `z.record()`，不能强制覆盖。漏洞需要“带长度约束的集合”才会触发，而 appkit-wallet 的 schema 里没有任何 `.min/.max/.length` 约束，只用来解析 Reown 自家 iframe 的消息，不经过用户输入。 | 2026-10-27 审核。`@reown/appkit-wallet` 升级到 zod ≥4.6.6 时删掉此条。 |
