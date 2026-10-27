@@ -4,7 +4,8 @@ import {
   buildReferralTree,
   canonicalJson,
   referralRewardsAbi,
-  REFERRAL_LEVEL2_SHARE_BPS,
+  REFERRAL_DEFAULT_SHARE_BPS,
+  REFERRAL_LEVEL_BPS,
   subscriptionRouterAbi,
   verifyReferralProof,
 } from "@roboshare/shared";
@@ -32,7 +33,7 @@ async function contractOf(prisma: PrismaService, chainId: number, kind: string):
   return row ? getAddress(row.address) : null;
 }
 
-/** Investor view of the two-level referral programme (REFERRAL_DESIGN.md). */
+/** Investor view of the three-level referral programme (REFERRAL_DESIGN.md §10). */
 @Controller("me")
 @UseGuards(InvestorGuard)
 export class MeReferralController {
@@ -51,13 +52,18 @@ export class MeReferralController {
       this.prisma.referralClaim.findUnique({ where: { account: wallet } }),
       this.prisma.referralRoot.findFirst({ orderBy: { epoch: "desc" } }),
     ]);
-    // Second level: people your direct referrals invited. Nothing deeper is tracked or paid.
+    // Second and third level: people your direct referrals invited, and the people they invited.
+    // Nothing deeper is tracked or paid.
     const second = await this.prisma.referral.findMany({
       where: { referrer: { in: referees.map((r) => r.referee) } },
       orderBy: { boundBlock: "asc" },
     });
+    const third = await this.prisma.referral.findMany({
+      where: { referrer: { in: second.map((r) => r.referee) } },
+      orderBy: { boundBlock: "asc" },
+    });
     const [blocks, history] = await Promise.all([
-      this.prisma.chainBlock.findMany({ where: { chainId: this.cfg.chainId, number: { in: [...referees, ...second].map((r) => r.boundBlock) } } }),
+      this.prisma.chainBlock.findMany({ where: { chainId: this.cfg.chainId, number: { in: [...referees, ...second, ...third].map((r) => r.boundBlock) } } }),
       this.prisma.referralAccrual.findMany({
         where: { referrer: wallet },
         orderBy: [{ projectIdOnchain: "asc" }, { batchIdOnchain: "desc" }, { level: "asc" }],
@@ -72,12 +78,12 @@ export class MeReferralController {
     const earned = [...earnedBy.values()].reduce((s, x) => s + x, 0n);
     const member = (level: number) => (r: (typeof referees)[number]) => ({
       wallet: getAddress(r.referee),
-      shareBps: level === 1 ? r.shareBps : REFERRAL_LEVEL2_SHARE_BPS,
+      shareBps: REFERRAL_LEVEL_BPS[level - 1]!,
       expiresAt: r.expiresAt,
       boundAt: boundAt.get(r.boundBlock) ?? null,
       active: r.expiresAt.getTime() > Date.now(),
       earned: (earnedBy.get(`${level}:${r.referee}`) ?? 0n).toString(),
-      ...(level === 2 ? { via: getAddress(r.referrer) } : {}),
+      ...(level > 1 ? { via: getAddress(r.referrer) } : {}),
     });
     const claimed = dec(claim?.claimed);
 
@@ -95,9 +101,10 @@ export class MeReferralController {
       wallet: getAddress(wallet),
       contract: await contractOf(this.prisma, this.cfg.chainId, "REFERRAL_REWARDS"),
       referredBy: mine ? { referrer: getAddress(mine.referrer), shareBps: mine.shareBps, expiresAt: mine.expiresAt } : null,
-      level2ShareBps: REFERRAL_LEVEL2_SHARE_BPS,
+      levelBps: REFERRAL_LEVEL_BPS,
       referees: referees.map(member(1)),
       level2: second.map(member(2)),
+      level3: third.map(member(3)),
       // Most recent first within each project: one row per referee allocation that earned a reward.
       history: history.map((h) => ({
         projectId: h.projectIdOnchain,
@@ -105,6 +112,7 @@ export class MeReferralController {
         batchId: h.batchIdOnchain,
         referee: getAddress(h.referee),
         level: h.level,
+        gross: h.gross,
         fee: h.fee,
         shareBps: h.shareBps,
         reward: h.reward,
@@ -120,7 +128,6 @@ export class MeReferralController {
 
 const termsBody = z.object({
   enabled: z.boolean(),
-  shareBps: z.number().int().min(0).max(5_000),
   windowDays: z.number().int().min(1).max(3_650),
 });
 
@@ -205,7 +212,8 @@ export class AdminReferralController {
     const rewards = await contractOf(this.prisma, this.cfg.chainId, "REFERRAL_REWARDS");
     if (!router || !rewards) throw new ApiError(503, "CHAIN_UNAVAILABLE", "referral contracts are not indexed");
     const calls = [
-      call(router, subscriptionRouterAbi, "setReferralTerms", [body.enabled, body.shareBps, BigInt(body.windowDays) * 86_400n]),
+      // The router records shareBps on each binding; amounts follow REFERRAL_LEVEL_BPS in code (§10).
+      call(router, subscriptionRouterAbi, "setReferralTerms", [body.enabled, REFERRAL_DEFAULT_SHARE_BPS, BigInt(body.windowDays) * 86_400n]),
       call(rewards, referralRewardsAbi, "setClaimsEnabled", [body.enabled]),
     ];
     await this.audit(req, "REFERRAL_TERMS_PREPARE", "referral", "terms", body);

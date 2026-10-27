@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { shortAddr, type PreparedTx, type SafeProposal } from "@roboshare/ui";
 
-function Copy({ text, label }: { text: string; label: string }) {
+export function Copy({ text, label }: { text: string; label: string }) {
   const [ok, setOk] = useState(false);
   return (
     <button

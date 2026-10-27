@@ -63,16 +63,20 @@ const mine = {
   contract: "0x00000000000000000000000000000000000004eF",
   referredBy: null,
   referees: [
-    { wallet: A, shareBps: 2_000, boundAt: "2026-10-01T00:00:00.000Z", expiresAt: "2027-10-01T00:00:00.000Z", active: true, earned: (16n * ONE).toString() },
-    { wallet: "0x00000000000000000000000000000000000000C3", shareBps: 2_000, boundAt: null, expiresAt: "2026-01-01T00:00:00.000Z", active: false, earned: "0" },
+    { wallet: A, shareBps: 1_000, boundAt: "2026-10-01T00:00:00.000Z", expiresAt: "2027-10-01T00:00:00.000Z", active: true, earned: (16n * ONE).toString() },
+    { wallet: "0x00000000000000000000000000000000000000C3", shareBps: 1_000, boundAt: null, expiresAt: "2026-01-01T00:00:00.000Z", active: false, earned: "0" },
   ],
-  level2ShareBps: 500,
+  levelBps: [1_000, 500, 300],
   level2: [
-    { wallet: "0x00000000000000000000000000000000000000D4", via: A, shareBps: 500, boundAt: "2026-10-05T00:00:00.000Z", expiresAt: "2027-10-05T00:00:00.000Z", active: true, earned: (2n * ONE).toString() },
+    { wallet: "0x00000000000000000000000000000000000000D4", via: A, shareBps: 500, boundAt: "2026-10-05T00:00:00.000Z", expiresAt: "2027-10-05T00:00:00.000Z", active: true, earned: (5n * ONE).toString() },
+  ],
+  level3: [
+    { wallet: "0x00000000000000000000000000000000000000E5", via: "0x00000000000000000000000000000000000000D4", shareBps: 300, boundAt: "2026-10-06T00:00:00.000Z", expiresAt: "2027-10-06T00:00:00.000Z", active: true, earned: (3n * ONE).toString() },
   ],
   history: [
-    { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: A, level: 1, fee: (80n * ONE).toString(), shareBps: 2_000, reward: (16n * ONE).toString() },
-    { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: "0x00000000000000000000000000000000000000D4", level: 2, fee: (40n * ONE).toString(), shareBps: 500, reward: (2n * ONE).toString() },
+    { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: A, level: 1, gross: (160n * ONE).toString(), fee: (48n * ONE).toString(), shareBps: 1_000, reward: (16n * ONE).toString() },
+    { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: "0x00000000000000000000000000000000000000D4", level: 2, gross: (100n * ONE).toString(), fee: (30n * ONE).toString(), shareBps: 500, reward: (5n * ONE).toString() },
+    { projectId: `0x${"ab".repeat(32)}`, projectTitle: "星港 01 号", batchId: 3, referee: "0x00000000000000000000000000000000000000E5", level: 3, gross: (100n * ONE).toString(), fee: (30n * ONE).toString(), shareBps: 300, reward: (3n * ONE).toString() },
   ],
   earned: (16n * ONE).toString(),
   claimed: "0",
@@ -104,18 +108,20 @@ describe("referral centre", () => {
     expect(screen.queryByTestId("invite-link")).not.toBeInTheDocument();
   });
 
-  it("lists direct referrals, earnings detail and the claim", () => {
+  it("lists all three levels, earnings detail and the claim", () => {
     Object.assign(refState, { test: false, enabled: true, data: mine, signedIn: true });
     render(<ReferralCenter />);
     expect(screen.queryByTestId("referral-off")).not.toBeInTheDocument();
     expect(screen.getByTestId("members-summary")).toHaveTextContent("共 2 人，1 人在奖励期内");
-    expect(screen.getByText(/星港 01 号 第 3 期 · 平台手续费 80.00 · 你得 16.00 USDT/)).toBeInTheDocument();
+    expect(screen.getByText(/星港 01 号 第 3 期 · 好友分润 160.00 · 你得 16.00 USDT/)).toBeInTheDocument();
     expect(screen.getByText(/加入时间待同步/)).toBeInTheDocument();
     expect(screen.getByTestId("level2-summary")).toHaveTextContent("共 1 人，1 人在奖励期内");
-    expect(screen.getByText(/由 0x.*邀请/)).toBeInTheDocument();
-    expect(screen.getByText(/星港 01 号 第 3 期 · 平台手续费 40.00 · 你得 2.00 USDT/)).toBeInTheDocument();
-    expect(screen.getByText(/最多两层/)).toBeInTheDocument();
-    expect(screen.getByText(/好友再邀请的人认购，你还能拿平台手续费的 5%/)).toBeInTheDocument();
+    expect(screen.getAllByText(/由 0x.*邀请/)).toHaveLength(2);
+    expect(screen.getByText(/星港 01 号 第 3 期 · 好友分润 100.00 · 你得 5.00 USDT/)).toBeInTheDocument();
+    expect(screen.getByTestId("level3-summary")).toHaveTextContent("共 1 人，1 人在奖励期内");
+    expect(screen.getByText(/星港 01 号 第 3 期 · 好友分润 100.00 · 你得 3.00 USDT/)).toBeInTheDocument();
+    expect(screen.getByText(/最多三层/)).toBeInTheDocument();
+    expect(screen.getByText(/直推好友拿他分润的 10%，好友邀请的人拿 5%，再下一层拿 3%/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "领取 16.00 USDT" })).toBeEnabled();
   });
 });

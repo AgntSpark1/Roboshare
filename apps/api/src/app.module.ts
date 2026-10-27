@@ -15,19 +15,20 @@ import { MeController } from "./me/me.controller.js";
 import { TxController } from "./me/tx.controller.js";
 import { PublicController } from "./public/public.controller.js";
 import { AdminReferralController, MeReferralController } from "./referral/referral.controller.js";
+import { AdminTeamController, LeaderTeamController, PublicTeamController } from "./referral/team.controller.js";
 
 @Module({})
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(RateLimitMiddleware)
-      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController);
+      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController, PublicTeamController, LeaderTeamController, AdminTeamController);
   }
 
   static forRoot(cfg: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController],
+      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController, PublicTeamController, LeaderTeamController, AdminTeamController],
       providers: [
         { provide: APP_CONFIG, useValue: cfg },
         { provide: REDIS, useFactory: () => createRedis(cfg.redisUrl) },

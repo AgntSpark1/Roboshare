@@ -1,5 +1,5 @@
 import type { Prisma, PrismaClient } from "@roboshare/db";
-import { PROJECT_STATES, RECORD_KINDS, RECORD_STATUSES, referralReward, REFERRAL_LEVEL2_SHARE_BPS } from "@roboshare/shared";
+import { PROJECT_STATES, RECORD_KINDS, RECORD_STATUSES, referralRewards, REFERRAL_LEVEL_BPS } from "@roboshare/shared";
 import type { ContractKind } from "./contracts.js";
 
 type Tx = Prisma.TransactionClient;
@@ -104,7 +104,13 @@ export async function applyEvent(tx: Tx, e: StoredEvent): Promise<void> {
     case "ProjectContractsLinked":
       await tx.project.update({
         where: { projectIdOnchain: a.projectId },
-        data: { tokenAddress: lc(a.token), offeringAddress: lc(a.offering), distributorAddress: lc(a.distributor) },
+        data: {
+          tokenAddress: lc(a.token),
+          offeringAddress: lc(a.offering),
+          distributorAddress: lc(a.distributor),
+          // Absent on events stored before tiers were recorded: those distributors use the legacy tiers.
+          ...(Array.isArray(a.tiers) ? { feeTiers: a.tiers } : {}),
+        },
       });
       for (const [kind, address] of [
         ["TOKEN", a.token],
@@ -410,10 +416,11 @@ async function ensureBatch(tx: Tx, e: StoredEvent) {
 }
 
 /**
- * Accrues each referrer's share of the platform fee charged to their referees in this batch, and the
- * second-level share for the referrer's own referrer. Both use the referee's binding window; a level is
- * skipped when its receiver is frozen at approval time. There is no KYC, so any other wallet earns
- * rewards. There is no third level.
+ * Accrues promotion rewards on each referee allocation in this batch (REFERRAL_DESIGN.md §10): the
+ * referee's referrer and the two wallets above earn 10% / 5% / 3% of the referee's gross allocation,
+ * paid from the platform fee and capped by it. All levels use the referee's binding window; a level is
+ * skipped (not passed up) when its receiver is frozen at approval time. Nobody above the third level
+ * earns anything.
  */
 async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
   const allocations = await tx.distributionAllocation.findMany({
@@ -426,32 +433,36 @@ async function accrueReferralRewards(tx: Tx, e: StoredEvent, batchId: number) {
   if (!block) throw new Error(`block ${e.blockNumber} not stored before BatchApproved`);
   const at = block.timestamp.getTime();
   const byReferee = new Map(referrals.map((r) => [r.referee, r]));
-  const upline = new Map(
-    (await tx.referral.findMany({ where: { referee: { in: [...new Set(referrals.map((r) => r.referrer))] } } })).map((r) => [r.referee, r.referrer]),
-  );
+  // Referrers of the referrers, two steps up.
+  const upline = new Map<string, string>();
+  let frontier = [...new Set(referrals.map((r) => r.referrer))];
+  for (let step = 1; step < REFERRAL_LEVEL_BPS.length && frontier.length > 0; step++) {
+    const rows = await tx.referral.findMany({ where: { referee: { in: frontier.filter((w) => !upline.has(w)) } } });
+    for (const r of rows) upline.set(r.referee, r.referrer);
+    frontier = rows.map((r) => r.referrer);
+  }
   const frozen = async (wallet: string) => (await tx.eligibility.findUnique({ where: { wallet } }))?.status === "FROZEN";
   for (const alloc of allocations) {
     const ref = byReferee.get(alloc.wallet);
     if (!ref || ref.expiresAt.getTime() <= at) continue;
-    const fee = BigInt(alloc.gross.toFixed()) - BigInt(alloc.net.toFixed());
-    const levels: [number, string | undefined, number][] = [
-      [1, ref.referrer, ref.shareBps],
-      [2, upline.get(ref.referrer), REFERRAL_LEVEL2_SHARE_BPS],
-    ];
-    for (const [level, receiver, shareBps] of levels) {
-      if (!receiver || (await frozen(receiver))) continue;
-      const reward = referralReward(fee, shareBps);
-      if (reward === 0n) continue;
+    const gross = BigInt(alloc.gross.toFixed());
+    const fee = gross - BigInt(alloc.net.toFixed());
+    const rewards = referralRewards(gross, fee);
+    let receiver: string | undefined = ref.referrer;
+    for (let i = 0; i < REFERRAL_LEVEL_BPS.length && receiver; i++, receiver = upline.get(receiver!)) {
+      // The contract makes cycles impossible; never pay the referee their own reward if a projection were wrong.
+      if (receiver === alloc.wallet || rewards[i] === 0n || (await frozen(receiver))) continue;
       await tx.referralAccrual.create({
         data: {
           projectIdOnchain: alloc.projectIdOnchain,
           batchIdOnchain: batchId,
           referee: alloc.wallet,
-          level,
+          level: i + 1,
           referrer: receiver,
+          gross: gross.toString(),
           fee: fee.toString(),
-          shareBps,
-          reward: reward.toString(),
+          shareBps: REFERRAL_LEVEL_BPS[i]!,
+          reward: rewards[i]!.toString(),
         },
       });
     }

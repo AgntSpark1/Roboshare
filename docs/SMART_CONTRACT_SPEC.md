@@ -280,12 +280,12 @@ USDT 不假定支持 EIP-2612 `permit`；如经核实支持，可作为后续优
 ### 8.1 费率档位（每次部署不可变）
 
 ```solidity
-// thresholds ascending, inclusive lower bounds in whole units
-uint32[5] TIER_MIN = [1, 5, 10, 20, 50];
-uint16[5] TIER_BPS = [2000, 1750, 1500, 1250, 1000];
+// 2026-10-27 起新项目（REFERRAL_DESIGN.md §10）：统一 30%，投资者拿 70%
+uint32[1] TIER_MIN = [1];
+uint16[1] TIER_BPS = [3000];
 ```
 
-`ProjectFactory.deployProject` 读取 `AssetRegistry.termOf`（未设置按 720 天）：运营期 ≥ 720 天时每档减 250 基点，即 `[1750, 1500, 1250, 1000, 750]`（`FeeTiers.tiersForTerm`）。
+`FeeTiers.tiersForTerm` 对所有运营期返回同一档 30%。此前部署的项目保留部署时写入的档位（`[2000, 1750, 1500, 1250, 1000]`，运营期 ≥ 720 天每档减 250 基点），索引器在 `ProjectContractsLinked` 时读取 `tiers()` 写入 `project.feeTiers`，预览和展示按实际档位计算。
 
 在构造时校验：阈值从 1 开始严格递增，基点非递增，且每项 ≤ 10 000。变更档位意味着部署新的分配合约，且仅适用于新项目。
 

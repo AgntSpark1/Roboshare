@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { Hash } from "viem";
-import { referralRewardsAbi, REFERRAL_DEFAULT_SHARE_BPS, REFERRAL_DEFAULT_WINDOW_SECONDS, REFERRAL_LEVEL2_SHARE_BPS } from "@roboshare/shared";
+import { referralRewardsAbi, REFERRAL_DEFAULT_WINDOW_SECONDS, REFERRAL_LEVEL_BPS } from "@roboshare/shared";
 import { api, formatBps, formatUsdt, shortAddr, TxProgress, useAccount, useSession, useTxRunner, WalletButton, type TxStep } from "@roboshare/ui";
 import { explorer, isTestChain } from "@/env";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -11,7 +11,7 @@ import { QrCode, qrPng, useQrMatrix } from "./QrCode";
 
 const MONTH = 30 * 24 * 60 * 60;
 
-/** Referral centre: invite link and QR code, referrals on both levels and referral earnings. */
+/** Referral centre: invite link and QR code, referrals on all three levels and referral earnings. */
 export function ReferralCenter() {
   const { t } = useI18n();
   const c = t.promo;
@@ -19,7 +19,7 @@ export function ReferralCenter() {
   const { me, loading } = useSession();
   const terms = useReferralTerms();
   const enabled = terms.data?.enabled === true;
-  const pct = formatBps(terms.data?.shareBps ?? REFERRAL_DEFAULT_SHARE_BPS);
+  const [p1, p2, p3] = REFERRAL_LEVEL_BPS.map((b) => formatBps(b));
   const months = Math.round((terms.data?.windowSeconds ?? REFERRAL_DEFAULT_WINDOW_SECONDS) / MONTH);
 
   return (
@@ -27,7 +27,7 @@ export function ReferralCenter() {
       <div className="wrap stack">
         <div className="sec-h">
           <h1 className="h2">{c.title}</h1>
-          <p>{c.intro(pct, months)} {c.intro2(formatBps(REFERRAL_LEVEL2_SHARE_BPS))}</p>
+          <p>{c.intro(months)} {c.intro2(p1!, p2!, p3!)}</p>
         </div>
         {!enabled && terms.data && (
           <div className="warnbox" role="note" data-testid="referral-off">{isTestChain ? c.preview : c.closed}</div>
@@ -152,8 +152,8 @@ function Earnings({ wallet, r }: { wallet: `0x${string}`; r: MyReferrals | undef
         r!.history.map((h) => (
           <div className="tl" key={`${h.projectId}-${h.batchId}-${h.referee}-${h.level}`}>
             <i aria-hidden="true" />
-            <span className="mono">{shortAddr(h.referee)} · {h.level === 2 ? c.level2 : c.level1}</span>
-            <span>{c.historyRow(h.projectTitle ?? shortAddr(h.projectId), h.batchId, formatUsdt(h.fee), formatUsdt(h.reward))}</span>
+            <span className="mono">{shortAddr(h.referee)} · {h.level === 3 ? c.level3 : h.level === 2 ? c.level2 : c.level1}</span>
+            <span>{c.historyRow(h.projectTitle ?? shortAddr(h.projectId), h.batchId, formatUsdt(h.gross), formatUsdt(h.reward))}</span>
           </div>
         ))
       )}
@@ -166,10 +166,11 @@ function Members({ r }: { r: MyReferrals | undefined }) {
   const c = t.promo;
   const list = r?.referees ?? [];
   const second = r?.level2 ?? [];
+  const third = r?.level3 ?? [];
   return (
     <div className="panel">
       <h2 className="h3">{c.membersTitle}</h2>
-      {list.length === 0 && second.length === 0 ? (
+      {list.length === 0 && second.length === 0 && third.length === 0 ? (
         <p className="muted">{c.membersEmpty}</p>
       ) : (
         <>
@@ -183,6 +184,15 @@ function Members({ r }: { r: MyReferrals | undefined }) {
             <>
               <p className="muted small" data-testid="level2-summary">{c.membersSummary(second.length, second.filter((m) => m.active).length)}</p>
               {second.map((m) => <Member key={m.wallet} m={m} via={m.via} />)}
+            </>
+          )}
+          <h3 className="h4" style={{ marginTop: 16 }}>{c.level3Title}</h3>
+          {third.length === 0 ? (
+            <p className="muted small">{c.level3Empty}</p>
+          ) : (
+            <>
+              <p className="muted small" data-testid="level3-summary">{c.membersSummary(third.length, third.filter((m) => m.active).length)}</p>
+              {third.map((m) => <Member key={m.wallet} m={m} via={m.via} />)}
             </>
           )}
         </>

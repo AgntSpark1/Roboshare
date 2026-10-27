@@ -17,13 +17,57 @@ const NAV: { href: string; label: string; group: string }[] = [
   { href: "/autopilot", label: "自动分配", group: "资金" },
   { href: "/distributions", label: "分配批次", group: "资金" },
   { href: "/referrals", label: "邀请奖励", group: "资金" },
+  { href: "/teams", label: "推广团队", group: "资金" },
   { href: "/safe", label: "多签待签", group: "治理" },
   { href: "/governance", label: "治理提案", group: "治理" },
   { href: "/roles", label: "角色与权限", group: "治理" },
   { href: "/audit", label: "对账与审计日志", group: "治理" },
 ];
 
+/** The team leader back office (/leader) only needs a wallet sign-in; every other page is staff only. */
+const isLeaderPage = (path: string) => path === "/leader" || path.startsWith("/leader/");
+
 export function Gate({ children }: { children: ReactNode }) {
+  const path = usePathname() ?? "/";
+  return isLeaderPage(path) ? <LeaderGate>{children}</LeaderGate> : <StaffGate>{children}</StaffGate>;
+}
+
+function LeaderGate({ children }: { children: ReactNode }) {
+  const { isConnected } = useAccount();
+  const { me, loading } = useSession();
+  if (!isConnected || !me || loading) {
+    return (
+      <main className="login" id="main">
+        <div className="lcard">
+          <div>
+            <div className="eyebrow">ROBOSHARE · TEAM</div>
+            <h1 style={{ marginTop: 6 }}>团队后台</h1>
+            <p className="muted small" style={{ marginTop: 6 }}>团队长用自己的钱包签名登录，只能查看本团队数据。</p>
+          </div>
+          <div className={isConnected ? "lstep done" : "lstep"}><span className="n">1</span><span>连接团队长钱包</span>{!isConnected && <WalletButton />}</div>
+          <div className="lstep">
+            <span className="n">2</span>
+            <span>签名登录</span>
+            {isConnected && <WalletButton signInLabel="签名登录" />}
+          </div>
+        </div>
+      </main>
+    );
+  }
+  return (
+    <div className="main" style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <header className="bar">
+        <h1>团队后台</h1>
+        <span className="spacer" />
+        <span className="who mono">{shortAddr(me.wallet)}</span>
+        <SignOutButton />
+      </header>
+      <main className="work" id="main">{children}</main>
+    </div>
+  );
+}
+
+function StaffGate({ children }: { children: ReactNode }) {
   const { isConnected } = useAccount();
   const { me, loading } = useSession();
   const admin = useAdminMe();

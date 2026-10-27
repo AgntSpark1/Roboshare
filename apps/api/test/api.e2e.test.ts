@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
-import { PrismaClient } from "@roboshare/db";
-import { allocate, assetRegistryAbi, auditRegistryAbi, projectActivatorAbi, projectFactoryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL2_SHARE_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
+import { Prisma, PrismaClient } from "@roboshare/db";
+import { allocate, LEGACY_TIERS, assetRegistryAbi, auditRegistryAbi, projectActivatorAbi, projectFactoryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
 import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
@@ -322,9 +322,17 @@ describe("admin", () => {
       .send({ projectId: PID, reportRecordId: RECORD, amount: amount.toString(), snapshotBlock: "15" }).expect(200);
     const sorted = [investor, other].map((a) => a.address.toLowerCase()).sort();
     const units15 = Object.fromEntries([[investor.address.toLowerCase(), 60], [other.address.toLowerCase(), 40]]);
-    const mirror = allocate(amount, 0n, sorted.map((address) => ({ address, units: units15[address]! })));
-    expect(before.body.totalNet).toBe(mirror.totalNet.toString());
+    const at15 = sorted.map((address) => ({ address, units: units15[address]! }));
+    // Indexed before tiers were recorded: the distributor charges the legacy tiers (360-day term, no discount).
+    expect(before.body.totalNet).toBe(allocate(amount, 0n, at15, LEGACY_TIERS).totalNet.toString());
     expect(before.body.holders.map((h: any) => h.address)).toEqual(sorted);
+
+    // With the distributor's tiers recorded, the preview follows them (flat 30% for new projects).
+    await prisma.project.update({ where: { projectIdOnchain: PID }, data: { feeTiers: [{ minUnits: 1, bps: 3000 }] } });
+    const flat = await http().post("/api/v1/admin/distributions/preview").set("Cookie", cookies.operator!)
+      .send({ projectId: PID, reportRecordId: RECORD, amount: amount.toString(), snapshotBlock: "15" }).expect(200);
+    expect(flat.body.totalNet).toBe((7_000n * ONE).toString());
+    await prisma.project.update({ where: { projectIdOnchain: PID }, data: { feeTiers: Prisma.DbNull } });
 
     const after = await http().post("/api/v1/admin/distributions/preview").set("Cookie", cookies.operator!)
       .send({ projectId: PID, reportRecordId: RECORD, amount: amount.toString(), snapshotBlock: "25" }).expect(200);
@@ -532,7 +540,7 @@ describe("referrals", () => {
     const r = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
     expect(r.body.contract).toBe(REWARDS);
     expect(r.body.referredBy).toBeNull();
-    expect(r.body.referees).toEqual([expect.objectContaining({ wallet: other.address, shareBps: 2_000, active: true, boundAt: null, earned: (135n * ONE).toString() })]);
+    expect(r.body.referees).toEqual([expect.objectContaining({ wallet: other.address, shareBps: REFERRAL_LEVEL_BPS[0], active: true, boundAt: null, earned: (135n * ONE).toString() })]);
     expect(r.body.history.map((h: any) => [h.batchId, h.projectTitle, h.reward])).toEqual([
       [2, "Robotaxi 001", (10n * ONE).toString()],
       [1, "Robotaxi 001", (125n * ONE).toString()],
@@ -580,34 +588,104 @@ describe("referrals", () => {
   });
 
   it("wraps the on/off switch for both contracts in one Safe batch", async () => {
-    await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.operator!).send({ enabled: true, shareBps: 2_000, windowDays: 365 }).expect(403);
-    await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, shareBps: 6_000, windowDays: 365 }).expect(400);
-    const r = await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, shareBps: 2_000, windowDays: 365 }).expect(201);
+    await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.operator!).send({ enabled: true, windowDays: 365 }).expect(403);
+    await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, windowDays: 0 }).expect(400);
+    const r = await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, windowDays: 365 }).expect(201);
     expect(r.body.safe).toBe(SAFE);
     expect(r.body.tx.to).toBe(MULTISEND);
     expect(r.body.calls.map((c: any) => c.to)).toEqual([ROUTER, REWARDS]);
     const terms = decodeFunctionData({ abi: subscriptionRouterAbi, data: r.body.calls[0].data });
     expect(terms.functionName).toBe("setReferralTerms");
-    expect(terms.args).toEqual([true, 2_000, 365n * 86_400n]);
+    expect(terms.args).toEqual([true, REFERRAL_LEVEL_BPS[0], 365n * 86_400n]);
     expect(decodeFunctionData({ abi: referralRewardsAbi, data: r.body.calls[1].data }).functionName).toBe("setClaimsEnabled");
   });
 
-  it("lists the second level: people your referrals invited", async () => {
+  it("lists the second and third level: people your referrals invited, and theirs", async () => {
     const inv = investor.address.toLowerCase();
     const third = ADDR(0xc3);
-    await prisma.referral.create({ data: { referee: third, referrer: other.address.toLowerCase(), shareBps: 2_000, expiresAt: new Date(Date.now() + 86_400_000), boundBlock: 12n, boundTxHash: "0x12" } });
-    await prisma.referralAccrual.create({
-      data: { projectIdOnchain: PID, batchIdOnchain: 3, referee: third, level: 2, referrer: inv, fee: (100n * ONE).toString(), shareBps: REFERRAL_LEVEL2_SHARE_BPS, reward: (5n * ONE).toString() },
+    const fourth = ADDR(0xc4);
+    await prisma.referral.create({ data: { referee: third, referrer: other.address.toLowerCase(), shareBps: 1_000, expiresAt: new Date(Date.now() + 86_400_000), boundBlock: 12n, boundTxHash: "0x12" } });
+    await prisma.referral.create({ data: { referee: fourth, referrer: third, shareBps: 1_000, expiresAt: new Date(Date.now() + 86_400_000), boundBlock: 13n, boundTxHash: "0x13" } });
+    await prisma.referralAccrual.createMany({
+      data: [
+        { projectIdOnchain: PID, batchIdOnchain: 3, referee: third, level: 2, referrer: inv, gross: (100n * ONE).toString(), fee: (30n * ONE).toString(), shareBps: REFERRAL_LEVEL_BPS[1]!, reward: (5n * ONE).toString() },
+        { projectIdOnchain: PID, batchIdOnchain: 3, referee: fourth, level: 3, referrer: inv, gross: (100n * ONE).toString(), fee: (30n * ONE).toString(), shareBps: REFERRAL_LEVEL_BPS[2]!, reward: (3n * ONE).toString() },
+      ],
     });
     const r = await http().get("/api/v1/me/referrals").set("Cookie", cookies.investor!).expect(200);
-    expect(r.body.level2ShareBps).toBe(REFERRAL_LEVEL2_SHARE_BPS);
+    expect(r.body.levelBps).toEqual(REFERRAL_LEVEL_BPS);
     expect(r.body.referees).toHaveLength(1);
     expect(r.body.referees[0].earned).toBe((135n * ONE).toString());
     expect(r.body.level2).toEqual([
-      expect.objectContaining({ wallet: getAddress(third), via: other.address, shareBps: REFERRAL_LEVEL2_SHARE_BPS, active: true, earned: (5n * ONE).toString() }),
+      expect.objectContaining({ wallet: getAddress(third), via: other.address, shareBps: REFERRAL_LEVEL_BPS[1], active: true, earned: (5n * ONE).toString() }),
     ]);
-    expect(r.body.history[0]).toEqual(expect.objectContaining({ batchId: 3, level: 2, referee: getAddress(third), reward: (5n * ONE).toString() }));
-    expect(r.body.earned).toBe((140n * ONE).toString());
+    expect(r.body.level3).toEqual([
+      expect.objectContaining({ wallet: getAddress(fourth), via: getAddress(third), shareBps: REFERRAL_LEVEL_BPS[2], earned: (3n * ONE).toString() }),
+    ]);
+    expect(r.body.history.slice(0, 2)).toEqual([
+      expect.objectContaining({ batchId: 3, level: 2, referee: getAddress(third), gross: (100n * ONE).toString(), reward: (5n * ONE).toString() }),
+      expect.objectContaining({ batchId: 3, level: 3, referee: getAddress(fourth), reward: (3n * ONE).toString() }),
+    ]);
+    expect(r.body.earned).toBe((143n * ONE).toString());
+  });
+});
+
+describe("promotion teams", () => {
+  // After the referral tests: investor → other → 0xc3 → 0xc4, all on chain bindings. The investor also
+  // holds 1 wei escrowed in the frozen-wallet offering test.
+  const INVESTED = (100_000n * ONE + 1n).toString();
+  let id = "";
+
+  it("creates a team for operators only, with a normalised code", async () => {
+    await http().post("/api/v1/admin/teams").set("Cookie", cookies.reviewer!).send({ code: "A01", name: "华东一队", leader: investor.address }).expect(403);
+    await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "x", name: "bad", leader: investor.address }).expect(400);
+    const r = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: " a01 ", name: "华东一队", leader: investor.address }).expect(201);
+    expect(r.body).toEqual(expect.objectContaining({ code: "A01", name: "华东一队", leader: investor.address }));
+    id = r.body.id;
+  });
+
+  it("never lets a new team take wallets from an existing one", async () => {
+    const taken = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "A01", name: "dup", leader: ADDR(0xbeef) }).expect(409);
+    expect(taken.body.error.code).toBe("TEAM_CODE_TAKEN");
+    const twice = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "B01", name: "dup", leader: investor.address }).expect(409);
+    expect(twice.body.error.code).toBe("LEADER_HAS_TEAM");
+    const inside = await http().post("/api/v1/admin/teams").set("Cookie", cookies.operator!).send({ code: "B01", name: "sub", leader: ADDR(0xc3) }).expect(409);
+    expect(inside.body.error).toEqual(expect.objectContaining({ code: "LEADER_IN_TEAM", details: { team: "A01" } }));
+  });
+
+  it("resolves a team link to its leader", async () => {
+    const r = await http().get("/api/v1/teams/a01").expect(200);
+    expect(r.body).toEqual({ code: "A01", name: "华东一队", leader: investor.address });
+    await http().get("/api/v1/teams/ZZ99").expect(404);
+  });
+
+  it("counts the whole invite tree under the leader for staff", async () => {
+    const list = await http().get("/api/v1/admin/teams").set("Cookie", cookies.reviewer!).expect(200);
+    expect(list.body.items).toEqual([
+      expect.objectContaining({ code: "A01", leaderSubscribed: true, members: 4, investors: 2, invested: INVESTED, rewards: (143n * ONE).toString(), fee: (675n * ONE).toString() }),
+    ]);
+    const one = await http().get(`/api/v1/admin/teams/${id}`).set("Cookie", cookies.reviewer!).expect(200);
+    expect(one.body.members.map((m: any) => [m.wallet, m.depth, m.invitedBy, m.invites])).toEqual([
+      [investor.address, 0, null, 1],
+      [other.address, 1, investor.address, 1],
+      [getAddress(ADDR(0xc3)), 2, other.address, 1],
+      [getAddress(ADDR(0xc4)), 3, getAddress(ADDR(0xc3)), 0],
+    ]);
+    expect(one.body.totals.members).toBe(4);
+  });
+
+  it("shows the leader their own team with a wallet sign-in only", async () => {
+    const r = await http().get("/api/v1/team/me").set("Cookie", cookies.investor!).expect(200);
+    expect(r.body.team.code).toBe("A01");
+    expect(r.body.totals.invested).toBe(INVESTED);
+    const no = await http().get("/api/v1/team/me").set("Cookie", cookies.operator!).expect(403);
+    expect(no.body.error.code).toBe("NOT_TEAM_LEADER");
+    await http().get("/api/v1/team/me").expect(401);
+  });
+
+  it("renames a team but keeps its code and leader", async () => {
+    const r = await http().put(`/api/v1/admin/teams/${id}`).set("Cookie", cookies.operator!).send({ name: "华东一队（新）", code: "ZZ" }).expect(200);
+    expect(r.body).toEqual(expect.objectContaining({ code: "A01", name: "华东一队（新）", leader: investor.address }));
   });
 });
 
