@@ -115,4 +115,4 @@ for (const make of [zh, en]) {
 }
 await browser.close();
 rmSync(tmp, { recursive: true, force: true });
-writeFileSync(join(root, "apps/web/src/lib/whitepaper.json"), JSON.stringify({ version: "0.2", date: "2026-10", ...manifest }, null, 2) + "\n");
+writeFileSync(join(root, "apps/web/src/lib/whitepaper.json"), JSON.stringify({ version: "0.3", date: "2026-10", ...manifest }, null, 2) + "\n");

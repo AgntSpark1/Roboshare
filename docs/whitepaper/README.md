@@ -7,4 +7,4 @@ Designed Chinese and English whitepaper shown on the investor site at `/whitepap
 - Build: `NODE_PATH=$(npm root -g) node docs/whitepaper/build.mjs` (needs the `playwright` package and Chromium, set `PW_CHROMIUM_PATH` if not in the default location; poppler-utils; Python `pypdf`; network access to Google Fonts).
 - Output: `apps/web/public/whitepaper/*.pdf`, page previews in `apps/web/public/whitepaper/pages/<zh|en>/`, and `apps/web/src/lib/whitepaper.json` (page counts and sizes). Commit all of them after a rebuild.
 
-Status: draft v0.2, pending legal review before any public offering.
+Status: draft v0.3, pending legal review before any public offering.
