@@ -3,6 +3,7 @@ import { auditRegistryAbi, revenueDistributorAbi } from "@roboshare/shared";
 import { decodeEventLog, type Hex, type Log, type PublicClient } from "viem";
 import type { IndexerConfig } from "./config.js";
 import { CONTRACT_KINDS, type ContractKind } from "./contracts.js";
+import { readRecoveryBaseline } from "./recovery.js";
 import { toJson } from "./json.js";
 import { applyEvent, rebuildProjections, type StoredEvent } from "./projector.js";
 
@@ -217,6 +218,8 @@ export class Indexer {
         break;
       }
     }
+    const baseline = await readRecoveryBaseline(this.prisma, chainId);
+    if (baseline && (ancestor < BigInt(baseline.anchor) || !ancestorHash)) throw new Error("Reorg crosses recovery checkpoint; rebuild current state before resuming");
     await this.prisma.$transaction(async (tx) => {
       await tx.chainEvent.deleteMany({ where: { chainId, blockNumber: { gt: ancestor } } });
       await tx.chainBlock.deleteMany({ where: { chainId, number: { gt: ancestor } } });
