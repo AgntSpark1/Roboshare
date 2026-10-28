@@ -10,6 +10,7 @@ import { autoSettle, settleSender } from "./settler.js";
 import { Autopilot, dailyOperatingTotals, loadAutopilotConfig } from "./autopilot.js";
 import { Matchmaker, loadMatchmakerConfig } from "./matchmaker.js";
 import { loadCityConfig, runCityRewards } from "./city.js";
+import { loadDemoDailyConfig, runDemoDaily } from "./demoDaily.js";
 
 const POLL_MS = Number(process.env.INDEXER_POLL_MS ?? 3000);
 const RECONCILE_EVERY = Number(process.env.RECONCILE_EVERY_TICKS ?? 100);
@@ -18,6 +19,7 @@ const SETTLE_EVERY_MS = Number(process.env.SETTLE_POLL_MS ?? 15_000);
 const AUTOPILOT_EVERY_MS = Number(process.env.AUTOPILOT_EVERY_MS ?? 60_000);
 const MATCHMAKER_EVERY_MS = Number(process.env.MATCHMAKER_EVERY_MS ?? 30_000);
 const CITY_EVERY_MS = Number(process.env.CITY_REWARD_EVERY_MS ?? 3_600_000);
+const DEMO_DAILY_EVERY_MS = Number(process.env.DEMO_DAILY_EVERY_MS ?? 600_000);
 const AAVE_EVERY_MS = Number(process.env.AAVE_POLL_MS ?? 300_000);
 
 /** Optional: read-only Aave V3 market data from BSC mainnet (AAVE_RPC_URL), independent of CHAIN_ID. */
@@ -79,6 +81,11 @@ async function main() {
   if (cityCfg) console.log(JSON.stringify({ msg: "city reward enabled", start: cityCfg.start.toISOString() }));
   let lastCity = 0;
 
+  // Optional, testnets only: simulated daily operating figures for running vehicles (demoDaily.ts).
+  const demoCfg = loadDemoDailyConfig();
+  if (demoCfg) console.log(JSON.stringify({ msg: "demo daily operations enabled" }));
+  let lastDemo = 0;
+
   let ticks = 0;
   for (;;) {
     // Only one active indexer: hold a short Redis lease and renew it every loop.
@@ -117,6 +124,12 @@ async function main() {
         await runCityRewards(prisma, cityCfg)
           .then((r) => r.counted && console.log(JSON.stringify({ msg: "city reward", ...r })))
           .catch((err) => console.error(JSON.stringify({ msg: "city reward error", error: String(err) })));
+      }
+      if (demoCfg && Date.now() - lastDemo >= DEMO_DAILY_EVERY_MS) {
+        lastDemo = Date.now();
+        await runDemoDaily(prisma, demoCfg)
+          .then((r) => r.added && console.log(JSON.stringify({ msg: "demo daily operations", ...r })))
+          .catch((err) => console.error(JSON.stringify({ msg: "demo daily operations error", error: String(err) })));
       }
       try {
         const r = await indexer.tick();
