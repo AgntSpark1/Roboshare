@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@roboshare/db";
 import { PROJECT_STATES, RECORD_KINDS, RECORD_STATUSES, referralRewards, REFERRAL_LEVEL_BPS } from "@roboshare/shared";
 import type { ContractKind } from "./contracts.js";
+import { restoreRecoveryBaseline } from "./recovery.js";
 
 type Tx = Prisma.TransactionClient;
 type Args = Record<string, any>; // decoded event args, bigint already converted to strings
@@ -491,6 +492,7 @@ export async function rebuildProjections(prisma: PrismaClient, chainId: number):
       await tx.contractDeployment.deleteMany({ where: { chainId, projectId: { not: null } } });
       await tx.financialReport.updateMany({ data: { recordIdOnchain: null, status: "SUBMITTED" } });
 
+      await restoreRecoveryBaseline(tx, chainId);
       const singletons = await tx.contractDeployment.findMany({ where: { chainId } });
       const kinds = new Map(singletons.map((d) => [d.address, { kind: d.kind as ContractKind, projectId: d.projectId }]));
       const events = await tx.chainEvent.findMany({
