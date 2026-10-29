@@ -48,6 +48,10 @@
       "tx": "0x465e37d475a315802a15213b94afb1ad6baa4739743b43a2187739e4f35cf188"
     },
     "ProjectFactory": {
+      "address": "0x7822f2Be8350082B574C552ca50fac7536F17985",
+      "note": "2026-10-28 flat-fee factory (platform 30% / holders 70%), DeployLaunchFactory.s.sol; Safe admin; same LaunchTemplate. Earlier factories keep the projects they deployed."
+    },
+    "ProjectFactoryV2": {
       "address": "0x5eCE541b3bbc400C10EFa9eD2e40d8A2cB2c261c",
       "tx": "0xf4e8eec7e0bcdd5d47585e0b21b242a48ef0b8fdaae109818ed59c05401aff1a",
       "block": 136753282,
@@ -56,6 +60,10 @@
     "ProjectFactoryV1": {
       "address": "0x32E3879324A16B05eF9768687754C65D5D40Fa4A",
       "tx": "0x57f6926a2de6139d51e733819f35081f7501539718c7ce5382f66a4efad8c2fe"
+    },
+    "ProjectActivator": {
+      "address": "0xb9325DeC1692E94B03cF6d546a01FeA77cc3Adba",
+      "note": "2026-10-29 DeployActivator.s.sol; Safe admin; holds AssetRegistry admin, only moves FUNDED -> ACTIVE; launcher has ACTIVATOR_ROLE."
     }
   },
   "governance": {
