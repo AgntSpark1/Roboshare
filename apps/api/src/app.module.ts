@@ -1,5 +1,6 @@
 import { Module, type DynamicModule, type MiddlewareConsumer, type NestModule } from "@nestjs/common";
 import { AdminController } from "./admin/admin.controller.js";
+import { CollectController } from "./admin/collect.controller.js";
 import { GovernanceController } from "./admin/governance.controller.js";
 import { OpsController } from "./admin/ops.controller.js";
 import { AutopilotController } from "./admin/autopilot.controller.js";
@@ -22,13 +23,13 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(RateLimitMiddleware)
-      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController, PublicTeamController, LeaderTeamController, AdminTeamController);
+      .forRoutes(AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, CollectController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController, PublicTeamController, LeaderTeamController, AdminTeamController);
   }
 
   static forRoot(cfg: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController, PublicTeamController, LeaderTeamController, AdminTeamController],
+      controllers: [AuthController, PublicController, MeController, TxController, AdminController, GovernanceController, CollectController, OpsController, AutopilotController, MatchmakerController, MeReferralController, AdminReferralController, PublicTeamController, LeaderTeamController, AdminTeamController],
       providers: [
         { provide: APP_CONFIG, useValue: cfg },
         { provide: REDIS, useFactory: () => createRedis(cfg.redisUrl) },
