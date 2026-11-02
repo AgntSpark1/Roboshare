@@ -21,7 +21,7 @@
 | 挂单 | `list(projectId, units, pricePerUnit, expiresAt)`。卖家先对市场合约 `approve` 份额代币。只能挂 AssetRegistry 中已关联代币的项目 |
 | 改单 / 撤单 | 只有卖家本人。暂停期间仍可撤单 |
 | 购买 | `buy(listingId, units, maxPricePerUnit)`，可部分成交。USDT 直接从买家到卖家，份额直接从卖家到买家，同一笔交易完成 |
-| 资金托管 | 无。合约从不持有 USDT 或份额，没有提款函数 |
+| 资金托管 | 无。合约从不持有 USDT 或份额；治理的 `sweepUsdt` 应急权限（2026-11-02 加入）可转走误转入合约的 USDT，`pullUsdt` 可划走买家仍授权给市场的 USDT，但都不移动份额 |
 | 手续费 | 无（D-8：平台只收分配环节的分级手续费） |
 | 价格 | 卖家自定。买家的 `maxPricePerUnit` 防止成交前被改价 |
 | 转让限制 | 全部由份额代币执行：买家须合格且类别获准、卖家未被冻结、项目处于 FUNDED / ACTIVE、代币未暂停 |

@@ -126,6 +126,7 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
     event Claimed(uint256 indexed batchId, address indexed holder, uint256 net, address caller);
     event DustCarried(uint256 indexed batchId, uint256 dust);
     event DustSwept(uint256 amount, address treasury);
+    event UsdtSwept(address indexed to, uint256 amount);
 
     error ZeroValue();
     error BatchPending(uint256 batchId);
@@ -306,6 +307,18 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
         carriedDust = 0;
         paymentToken.safeTransfer(treasury, amount);
         emit DustSwept(amount, treasury);
+    }
+
+    /// @notice Governance moves this distributor's entire USDT balance (unclaimed allocations,
+    /// carried dust and any surplus) to `to`. Emergency lever: allocations stay on the books, so
+    /// `claim` reverts until the contract is topped up again, then pays exactly as before.
+    /// Works while paused.
+    function sweepUsdt(address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (to == address(0)) revert ZeroValue();
+        uint256 amount = paymentToken.balanceOf(address(this));
+        if (amount == 0) revert ZeroValue();
+        paymentToken.safeTransfer(to, amount);
+        emit UsdtSwept(to, amount);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {

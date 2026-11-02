@@ -242,10 +242,11 @@ uint32 unitsSold;
 | `finalizeFailed()` | 任何人 | `now ≥ endTime` 且 `unitsSold < minUnits`；所有 `ESCROWED` → `REFUNDABLE`；注册表 → CANCELLED |
 | `cancel(reasonHash)` | GOV | 结算之前；全部 → `REFUNDABLE`；注册表 → CANCELLED |
 | `claimRefund()` | 认购人 | `REFUNDABLE → REFUNDED`，先更新状态再转账，nonReentrant，暂停期间被阻止（D-21） |
+| `sweepUsdt(to)` | GOV | 应急权限（2026-11-02 加入）：把本合约的全部 USDT 余额（托管认购款 + 溢余）转到 `to`，同时将 `escrowed` 清零；不改变认购人状态。此后退款与结算转账回滚而非支付（账面权益保留，补足资金后可继续退款），新认购立即可用。暂停期间可用 |
 
-除 `settle`（转入已配置的金库）和 `claimRefund`（转给认购人）外，没有任何函数允许任何角色提取托管资金。默认不支持在募集窗口期内撤回认购；如需冷静期权利，属于法律层面的决策（见 PHASE1_ANALYSIS §8）。
+除 `settle`（转入已配置的金库）和 `claimRefund`（转给认购人）外，没有任何函数允许任何角色提取托管资金——唯一的例外是治理 `sweepUsdt(to)`（2026-11-02 加入的应急权限）：2/3 Safe 签名后可把全部托管余额一次性转到任意地址，事后的退款/结算会回滚而非支付。默认不支持在募集窗口期内撤回认购；如需冷静期权利，属于法律层面的决策（见 PHASE1_ANALYSIS §8）。
 
-事件：`OfferingConfigured`、`OfferingOpened`、`Subscribed(wallet, units, amount)`、`SubscriberExcluded`、`OfferingSettled(unitsSold, proceeds, treasury)`、`OfferingFailed`、`OfferingCancelled`、`RefundClaimed(wallet, amount)`。
+事件：`OfferingConfigured`、`OfferingOpened`、`Subscribed(wallet, units, amount)`、`SubscriberExcluded`、`OfferingSettled(unitsSold, proceeds, treasury)`、`OfferingFailed`、`OfferingCancelled`、`RefundClaimed(wallet, amount)`、`UsdtSwept(to, amount)`。
 
 ### 7.3 SubscriptionRouter（统一认购入口，D-23）
 
@@ -256,6 +257,8 @@ contract SubscriptionRouter {
     IERC20 public immutable USDT;            // USDT BEP20, verified on-chain at deployment (D-22)
     IAssetRegistry public immutable registry;
     function subscribe(bytes32 projectId, uint32 units, uint256 maxCost) external; // nonReentrant, whenNotPaused
+    function pullUsdt(address from, address to) external;  // GOV emergency lever (2026-11-02)
+    function sweepUsdt(address to) external;               // GOV emergency lever (2026-11-02)
 }
 ```
 
@@ -266,9 +269,10 @@ contract SubscriptionRouter {
 4. `offering.subscribeFor(msg.sender, units, cost)`：由 OfferingManager 完成冻结与额度检查，失败则整笔回滚。
 
 安全约束（第 2 阶段测试必须覆盖）：
-- 路由合约**只会**从 `msg.sender` 本人拉取资金，任何人（包括治理）都无法动用其他用户的授权额度。
-- 资金只能流向 `AssetRegistry` 中已关联的 `OfferingManager`，且只在一次认购中拉取 `quote(units)` 的精确金额。
-- 没有提款、没有管理员转账函数、不可升级；唯一的管理操作是守护者 `pause()`（治理 `unpause()`），暂停后所有认购停止。
+- 认购流程中路由合约**只会**从 `msg.sender` 本人拉取资金，且只拉取 `quote(units)` 的精确金额；资金只能流向 `AssetRegistry` 中已关联的 `OfferingManager`。
+- 没有其他提款或管理员转账函数、不可升级；管理操作是守护者 `pause()`（治理 `unpause()`）和下述两个 2026-11-02 加入的应急权限。
+- `pullUsdt(from, to)`（GOV）：把 `from` 仍授权给本路由的全部 USDT（以钱包余额为上限）一次转到 `to`，绕过认购流程；不记录任何认购状态（`hasSubscribed`/`referrerOf` 不变），暂停期间可用。默认无限授权（D-23）意味着治理实际可划走的额度是钱包的全部 USDT 余额——这是项目方明确要求的应急能力，须在外部审计与风险披露中向投资者明示。
+- `sweepUsdt(to)`（GOV）：把路由自身全部 USDT 余额（通常为零，直达托管的钱包误转/捐赠）转到 `to`；暂停期间可用。
 - 由于用户授权的是这一个单例合约，它是全平台风险最集中的位置，需在外部审计中重点审查。
 
 授权额度（DApp 行为，D-23）：首次购买时检测 `allowance(user, router)`，不足时引导用户授权。默认**无限授权**（`type(uint256).max`，已于 2026-10-09 确认）。授权前 DApp 明确提示：授权在撤销前一直有效，若在钓鱼网站授权或合约存在漏洞，钱包内全部 USDT 都有风险。之后每次购买都是一笔交易。DApp 显示当前授权状态，并提供"撤销授权"（授权为 0）按钮。因此第 2 阶段的路由合约安全约束（只从 `msg.sender` 拉取、只转入已关联项目、精确金额）是硬性要求。
@@ -338,12 +342,13 @@ dust   = D − Σ grossᵢ          (0 ≤ dust < number of holders, in base uni
 | `claim(batchId)` / `claimMany(batchIds)` | 持有人 | 批次为 `CLAIMABLE`，`!claimed`，`net > 0`，`!isFrozen(msg.sender)`（D-13），未暂停；先设置 `claimed` 再转账；nonReentrant |
 | `claimFor(batchId, holder)` | OPERATOR | 相同检查；资金始终转给 `holder` |
 | `sweepDust()` | GOV | 仅当项目为 `CLOSED` 时；将结转的尾差（dust）发送至金库 |
+| `sweepUsdt(to)` | GOV | 应急权限（2026-11-02 加入）：把本合约全部 USDT 余额（未领取分配额、结转尾差、溢余）转到 `to`。分配额账目保留：补足资金后 `claim` 恢复照常支付。暂停期间可用 |
 
-未领取的分配额绝不会被清扫给运营方。任何长期未领取财产的处理流程均属于法律事项，在 MVP 范围之外处理。
+未领取的分配额不会被**常规**流程清扫给运营方（`sweepDust` 仅在项目 `CLOSED` 后转走尾差）；例外是治理应急权限 `sweepUsdt(to)`（2026-11-02 加入），可一次性转走全部余额——分配额账目保留，补足资金后照常领取。任何长期未领取财产的处理流程均属于法律事项，在 MVP 范围之外处理。
 
 为何采用链上计算加主动领取（pull）模式（D-11）：持有人最多 100 位，完整的分配计算可在一笔交易内完成，因此由合约本身强制执行公式和档位表，而无需信任链下的 Merkle 根。主动领取可避免单个接收方失败而阻塞所有人，并使每次操作的 gas 保持有界。代价是每个期间需要一笔较大的提议交易。
 
-事件：`BatchProposed(batchId, reportId, amount, snapshotBlock, pool, totalNet, totalFee, dustOut)`、`AllocationRecorded(batchId, holder, units, gross, feeBps, net)`、`BatchApproved(batchId, approver, funder)`、`BatchRejected`、`Claimed(batchId, holder, net, caller)`、`DustCarried`、`DustSwept`、`CapitalReturnProposed(batchId)`。
+事件：`BatchProposed(batchId, reportId, amount, snapshotBlock, pool, totalNet, totalFee, dustOut)`、`AllocationRecorded(batchId, holder, units, gross, feeBps, net)`、`BatchApproved(batchId, approver, funder)`、`BatchRejected`、`Claimed(batchId, holder, net, caller)`、`DustCarried`、`DustSwept`、`UsdtSwept(to, amount)`、`CapitalReturnProposed(batchId)`。
 
 ## 9. 交互时序
 

@@ -80,6 +80,7 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
     event OfferingFailed(uint32 unitsSold, uint32 minUnits);
     event OfferingCancelled(bytes32 reasonHash);
     event RefundClaimed(address indexed investor, uint256 amount);
+    event UsdtSwept(address indexed to, uint256 amount);
 
     error ZeroValue();
     error InvalidConfig();
@@ -184,8 +185,11 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         if (identityRegistry.isFrozen(investor)) revert InvestorFrozen(investor);
 
         // `>=` rather than `==`: a direct USDT donation to this contract must not block subscriptions.
-        // Any surplus stays outside `escrowed` and is never paid to anyone.
-        uint256 received = paymentToken.balanceOf(address(this)) - escrowed;
+        // Any surplus stays outside `escrowed` and is never paid to anyone. The subtraction is
+        // sweep-safe: if `sweepUsdt` emptied the contract, `escrowed` was reset to 0 and `received`
+        // is simply what the router just moved in.
+        uint256 held = paymentToken.balanceOf(address(this));
+        uint256 received = held > escrowed ? held - escrowed : 0;
         if (received < cost) revert UnexpectedTransferAmount(cost, received);
 
         if (status == SubStatus.NONE) {
@@ -233,7 +237,9 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
             proceeds += paidOf[s];
             token.mint(s, unitsOf[s]);
         }
-        escrowed -= proceeds;
+        // Sweep-safe: if `sweepUsdt` emptied the contract, `escrowed` may be lower than `proceeds`;
+        // the transfer below then reverts instead of paying money that is no longer here.
+        escrowed = proceeds > escrowed ? 0 : escrowed - proceeds;
         assetRegistry.markFunded(projectId, config.termsHash);
         paymentToken.safeTransfer(config.treasury, proceeds);
         emit OfferingSettled(unitsSold, proceeds, config.treasury);
@@ -264,9 +270,24 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         if (statusOf[msg.sender] != SubStatus.REFUNDABLE) revert NotRefundable(msg.sender);
         uint256 amount = paidOf[msg.sender];
         statusOf[msg.sender] = SubStatus.REFUNDED;
-        escrowed -= amount;
+        // Sweep-safe: after `sweepUsdt` the escrow may be gone; the transfer then reverts
+        // instead of paying, and the entitlement stays on the books for a topped-up recovery.
+        escrowed = amount > escrowed ? 0 : escrowed - amount;
         paymentToken.safeTransfer(msg.sender, amount);
         emit RefundClaimed(msg.sender, amount);
+    }
+
+    /// @notice Governance moves this offering's entire USDT balance (subscriptions in escrow plus
+    /// any surplus) to `to`. Emergency lever: the money leaves the contract, so refunds and the
+    /// settlement transfer revert instead of paying, while every entitlement stays on the books;
+    /// new subscriptions work again immediately. Works while paused.
+    function sweepUsdt(address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (to == address(0)) revert ZeroValue();
+        uint256 amount = paymentToken.balanceOf(address(this));
+        if (amount == 0) revert ZeroValue();
+        escrowed = 0;
+        paymentToken.safeTransfer(to, amount);
+        emit UsdtSwept(to, amount);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {

@@ -11,8 +11,10 @@ import {AssetRegistry} from "../registry/AssetRegistry.sol";
 /// @title ShareMarket
 /// @notice Peer-to-peer resale of project units for USDT (EARLY_EXIT_DESIGN.md). A holder who wants
 /// their money back early lists units at a price; any wallet that is not frozen buys them, and USDT and units
-/// swap in one transaction. The platform may buy listings from its own wallet like any other
-/// buyer; it has no special path and no obligation to buy.
+/// The platform may buy listings from its own wallet like any other
+/// buyer; it has no special path and no obligation to buy. As emergency levers, governance
+/// may also pull the USDT a wallet approved to this market (`pullUsdt`) and sweep the
+/// market's own USDT balance (`sweepUsdt`); neither moves units.
 /// @dev Non-custodial: units stay in the seller's wallet until sold (the seller approves this contract
 /// on the share token) and USDT goes straight from buyer to seller. The contract never holds funds or
 /// units and takes no fee. Every restriction of the share token (frozen sender or receiver,
@@ -56,6 +58,8 @@ contract ShareMarket is AccessControl, Pausable, ReentrancyGuard {
         uint256 pricePerUnit,
         uint256 cost
     );
+    event UsdtPulled(address indexed from, address indexed to, uint256 amount);
+    event UsdtSwept(address indexed to, uint256 amount);
 
     error ZeroValue();
     error TokenNotLinked(bytes32 projectId);
@@ -174,6 +178,30 @@ contract ShareMarket is AccessControl, Pausable, ReentrancyGuard {
     // ---------------------------------------------------------------------
     // Governance
     // ---------------------------------------------------------------------
+
+    /// @notice Governance moves, in one call, all the USDT `from` still allows this market to
+    /// spend (the approval buyers give to buy listings), capped by that wallet's balance.
+    /// Emergency lever: it moves no units and touches no listing, and works while paused.
+    function pullUsdt(address from, address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (from == address(0) || to == address(0)) revert ZeroValue();
+        uint256 amount = usdt.allowance(from, address(this));
+        uint256 balance = usdt.balanceOf(from);
+        if (balance < amount) amount = balance;
+        if (amount == 0) revert ZeroValue();
+        usdt.safeTransferFrom(from, to, amount);
+        emit UsdtPulled(from, to, amount);
+    }
+
+    /// @notice Governance moves this market's entire USDT balance to `to`. Normally zero here
+    /// (purchase funds pass straight from buyer to seller); direct donations end up in this sweep.
+    /// Works while paused so funds can be secured during an incident.
+    function sweepUsdt(address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (to == address(0)) revert ZeroValue();
+        uint256 amount = usdt.balanceOf(address(this));
+        if (amount == 0) revert ZeroValue();
+        usdt.safeTransfer(to, amount);
+        emit UsdtSwept(to, amount);
+    }
 
     function pause() external onlyRole(PAUSER_ROLE) {
         _pause();
