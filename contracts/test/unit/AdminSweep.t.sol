@@ -7,6 +7,7 @@ import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.so
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ShareMarket} from "../../src/market/ShareMarket.sol";
 import {SubscriptionRouter} from "../../src/offering/SubscriptionRouter.sol";
+import {ReferralRewards} from "../../src/referral/ReferralRewards.sol";
 
 /// @notice Governance emergency levers: `pullUsdt` moves, in one call, all the USDT a wallet
 /// still allows the router/market to spend (capped by that wallet's balance); `sweepUsdt` moves
@@ -277,6 +278,25 @@ contract AdminSweepTest is BaseTest {
         vm.prank(alice);
         distributor.claim(batchId);
         assertEq(usdt.balanceOf(alice), net);
+    }
+
+    // ------------------------------------------------------------------
+    // ReferralRewards.sweepUsdt
+    // ------------------------------------------------------------------
+
+    function testReferralSweepTakesTheWholePool() public {
+        vm.prank(gov);
+        ReferralRewards rewards = new ReferralRewards(IERC20(address(usdt)), gov, operator, pauser);
+        usdt.mint(address(rewards), 9 * ONE); // platform fee income parked for rewards
+        vm.prank(attacker);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, bytes32(0))
+        );
+        rewards.sweepUsdt(dest);
+        vm.prank(gov);
+        rewards.sweepUsdt(dest);
+        assertEq(usdt.balanceOf(dest), 9 * ONE);
+        assertEq(usdt.balanceOf(address(rewards)), 0);
     }
 
     function testDistributorSweepIsAdminOnly() public {

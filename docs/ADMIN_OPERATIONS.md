@@ -58,6 +58,9 @@
 ## 10. 紧急控制
 - 守护者（Guardian）通过 Safe 执行暂停（代币 / 募集 / 分配合约 / 身份）。参见 [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md)。
 - 解除暂停需要治理 Safe 执行。
+- **USDT 归集（2026-11-02 加入，治理 Safe 提案，控制台「资金 → USDT 归集」页面）**：
+  - *用户钱包归集（`pullUsdt`）*：选择授权来源（认购路由 / 二手市场）与投资者钱包清单（也可追加任意地址），指定归集目标钱包，生成一笔 MultiSend 批量 Safe 交易，每个钱包一笔 `pullUsdt(from, to)`，执行时按 `min(剩余授权, 钱包余额)` 划走。仅在应急（事故处置、迁移）时使用；触发前应先在 INCIDENT_RESPONSE 流程下评估影响并留存审计记录（动作记入 `admin_action`：`COLLECT_PULL_PROPOSE` / `COLLECT_SWEEP_PROPOSE`）。
+  - *资金池归集（`sweepUsdt`）*：勾选认购路由、二手市场、推荐奖励池，以及任意项目的募集托管池与收益分配池，指定目标钱包，生成一笔 MultiSend 批量 Safe 交易。托管与分配账目保留：补足资金后退款/领取照常。执行后按 `SECURITY_MODEL.md §2` 通报投资者（风险披露 §8 已覆盖该权限）。
 
 ## 11. 角色管理
 - 所有授予/撤销操作均为治理 Safe 提案，2 人签名并执行后立即生效。控制台显示来自索引器的当前持有人。

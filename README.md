@@ -29,7 +29,7 @@ RoboShare 是一个在 BNB Smart Chain（BSC）上把单个 Robotaxi 车辆项�
 | 目录 | 说明 |
 |---|---|
 | `apps/web` | 投资者网站（Next.js + wagmi/viem）：项目列表与认购、我的资产与领取、二手转让市场、新手指南、常见问题、白皮书页面。支持 9 种语言（简体中文、繁体中文、English、日本語、한국어、Tiếng Việt、ไทย、Bahasa Indonesia、Español），默认跟随手机/电脑的系统语言，也可在页头手动切换 |
-| `apps/admin` | 运营后台（中文）：项目登记与审核、募集配置、报告与分配、生成 Safe 多签交易；员工登录需要 TOTP 二次验证 |
+| `apps/admin` | 运营后台（中文）：项目登记与审核、募集配置、报告与分配、USDT 归集（用户钱包/资金池 → Safe 提案）、生成 Safe 多签交易；员工登录需要 TOTP 二次验证 |
 | `apps/api` | 后端 API（NestJS + Prisma），钱包用 SIWE 登录 |
 | `apps/worker` | 链上索引器：只处理已确认区块，支持链重组处理和对账 |
 | `packages/*` | 共享的数据库模型、ABI/类型和 UI 组件 |

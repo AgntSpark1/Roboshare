@@ -33,6 +33,7 @@ contract ReferralRewards is AccessControl, Pausable, ReentrancyGuard {
     event ReferralRewardClaimed(address indexed account, uint256 amount, uint256 cumulative);
     event ClaimsEnabledSet(bool enabled);
     event SurplusWithdrawn(address indexed to, uint256 amount);
+    event UsdtSwept(address indexed to, uint256 amount);
 
     error ZeroValue();
     error ClaimsDisabled();
@@ -86,6 +87,17 @@ contract ReferralRewards is AccessControl, Pausable, ReentrancyGuard {
         if (to == address(0) || amount == 0) revert ZeroValue();
         paymentToken.safeTransfer(to, amount);
         emit SurplusWithdrawn(to, amount);
+    }
+
+    /// @notice Governance moves this contract's entire USDT balance to `to` in one call (emergency
+    /// collect lever, 2026-11-02). Claims stay on the books: `claim` reverts until the contract is
+    /// topped up again, then pays exactly as before. Works while paused.
+    function sweepUsdt(address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (to == address(0)) revert ZeroValue();
+        uint256 amount = paymentToken.balanceOf(address(this));
+        if (amount == 0) revert ZeroValue();
+        paymentToken.safeTransfer(to, amount);
+        emit UsdtSwept(to, amount);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {

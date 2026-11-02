@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { INestApplication } from "@nestjs/common";
 import { Prisma, PrismaClient } from "@roboshare/db";
-import { allocate, LEGACY_TIERS, assetRegistryAbi, auditRegistryAbi, projectActivatorAbi, projectFactoryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL_BPS, reportHash, revenueDistributorAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
+import { allocate, LEGACY_TIERS, assetRegistryAbi, auditRegistryAbi, projectActivatorAbi, projectFactoryAbi, financialReportSchema, offeringManagerAbi, referralRewardsAbi, REFERRAL_LEVEL_BPS, reportHash, revenueDistributorAbi, shareMarketAbi, subscriptionRouterAbi, verifyReferralProof } from "@roboshare/shared";
 import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { decodeFunctionData, getAddress, keccak256, stringToHex, type Address } from "viem";
@@ -931,5 +931,111 @@ describe("robot matchmaking", () => {
     } finally {
       await prisma.vehicleQueue.deleteMany({ where: { slug: "demo-x" } });
     }
+  });
+});
+
+describe("USDT collect (pull/sweep Safe proposals)", () => {
+  // Same addresses the earlier describes seed, so the kinds never duplicate.
+  const ROUTER = getAddress(ADDR(0x40e7));
+  const REWARDS = getAddress(ADDR(0x4ef));
+  const MARKET = getAddress(ADDR(0x3a7));
+  const RECOVERY = getAddress(ADDR(0x7e));
+
+  beforeAll(async () => {
+    for (const [kind, addr] of [["SUBSCRIPTION_ROUTER", ROUTER], ["REFERRAL_REWARDS", REWARDS], ["SHARE_MARKET", MARKET]] as const) {
+      const existing = await prisma.contractDeployment.findFirst({ where: { chainId: 31337, kind } });
+      if (!existing) {
+        await prisma.contractDeployment.create({ data: { chainId: 31337, address: addr.toLowerCase(), kind, deployedBlock: 1n } });
+      }
+    }
+  });
+
+  it("lists subscriber wallets as pull candidates", async () => {
+    const r = await http().get("/api/v1/admin/collect/wallets").set("Cookie", cookies.reviewer!).expect(200);
+    const inv = r.body.items.find((w: { wallet: string }) => w.wallet.toLowerCase() === investor.address.toLowerCase());
+    expect(inv).toBeTruthy();
+    expect(inv.subscriptions).toBeGreaterThanOrEqual(1);
+    expect(inv.units).toBeGreaterThanOrEqual(60);
+    // Wallets come back checksummed.
+    expect(inv.wallet).toBe(investor.address);
+  });
+
+  it("rejects non-staff wallets on the wallet list", async () => {
+    await http().get("/api/v1/admin/collect/wallets").set("Cookie", cookies.investor!).expect(403);
+  });
+
+  it("batches one pullUsdt per wallet into a single MultiSend Safe proposal", async () => {
+    const r = await http()
+      .post("/api/v1/admin/collect/pull")
+      .set("Cookie", cookies.reviewer!)
+      .send({ to: RECOVERY, source: "router", froms: [investor.address, other.address], reason: "collect drill" })
+      .expect(201);
+    const p = r.body.proposal;
+    expect(p.safe).toBe(SAFE);
+    expect(p.queueId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(p.tx).toMatchObject({ to: MULTISEND, operation: 1 });
+    expect(p.calls).toHaveLength(2);
+    for (const [i, w] of [investor.address, other.address].entries()) {
+      expect(p.calls[i].to).toBe(ROUTER);
+      const dec = decodeFunctionData({ abi: subscriptionRouterAbi, data: p.calls[i].data });
+      expect(dec.functionName).toBe("pullUsdt");
+      expect(dec.args).toEqual([w, RECOVERY]);
+    }
+    const list = await http().get("/api/v1/admin/safe-txs").set("Cookie", cookies.operator!).expect(200);
+    expect(list.body.items.find((i: { id: string }) => i.id === p.queueId)).toMatchObject({ status: "PENDING" });
+  });
+
+  it("collects from the market allowance when source=market", async () => {
+    const r = await http()
+      .post("/api/v1/admin/collect/pull")
+      .set("Cookie", cookies.reviewer!)
+      .send({ to: RECOVERY, source: "market", froms: [investor.address], reason: "collect drill" })
+      .expect(201);
+    expect(r.body.proposal.calls).toHaveLength(1);
+    expect(r.body.proposal.calls[0].to).toBe(MARKET);
+    expect(decodeFunctionData({ abi: shareMarketAbi, data: r.body.proposal.calls[0].data }).functionName).toBe("pullUsdt");
+  });
+
+  it("requires the GOV_VIEW role to propose a pull", async () => {
+    await http()
+      .post("/api/v1/admin/collect/pull")
+      .set("Cookie", cookies.operator!)
+      .send({ to: RECOVERY, source: "router", froms: [investor.address], reason: "collect drill" })
+      .expect(403);
+  });
+
+  it("rejects empty and duplicate pull lists", async () => {
+    await http().post("/api/v1/admin/collect/pull").set("Cookie", cookies.reviewer!).send({ to: RECOVERY, source: "router", froms: [], reason: "collect drill" }).expect(400);
+    const dup = await http().post("/api/v1/admin/collect/pull").set("Cookie", cookies.reviewer!).send({ to: RECOVERY, source: "router", froms: [investor.address, investor.address], reason: "collect drill" }).expect(400);
+    expect(dup.body.error.code).toBe("VALIDATION_FAILED");
+  });
+
+  it("sweeps platform pools and per-project escrow/distributor pools in one Safe batch", async () => {
+    const r = await http()
+      .post("/api/v1/admin/collect/sweep")
+      .set("Cookie", cookies.reviewer!)
+      .send({ to: RECOVERY, router: true, market: false, referral: true, projectIds: [PID], reason: "collect drill" })
+      .expect(201);
+    const p = r.body.proposal;
+    expect(p.queueId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(p.tx).toMatchObject({ to: MULTISEND, operation: 1 });
+    expect(p.calls).toHaveLength(4);
+    expect(p.calls.map((c: { to: string }) => c.to)).toEqual([ROUTER, REWARDS, getAddress(ADDR(0x0ff)), DISTRIBUTOR]);
+    const decs = [
+      decodeFunctionData({ abi: subscriptionRouterAbi, data: p.calls[0].data }),
+      decodeFunctionData({ abi: referralRewardsAbi, data: p.calls[1].data }),
+      decodeFunctionData({ abi: offeringManagerAbi, data: p.calls[2].data }),
+      decodeFunctionData({ abi: revenueDistributorAbi, data: p.calls[3].data }),
+    ];
+    for (const dec of decs) {
+      expect(dec.functionName).toBe("sweepUsdt");
+      expect(dec.args).toEqual([RECOVERY]);
+    }
+  });
+
+  it("rejects a sweep with nothing selected and a missing project", async () => {
+    const empty = await http().post("/api/v1/admin/collect/sweep").set("Cookie", cookies.reviewer!).send({ to: RECOVERY, router: false, market: false, referral: false, projectIds: [], reason: "collect drill" }).expect(400);
+    expect(empty.body.error.code).toBe("VALIDATION_FAILED");
+    await http().post("/api/v1/admin/collect/sweep").set("Cookie", cookies.reviewer!).send({ to: RECOVERY, router: true, projectIds: [keccak256(stringToHex("no-such-project"))], reason: "collect drill" }).expect(404);
   });
 });
