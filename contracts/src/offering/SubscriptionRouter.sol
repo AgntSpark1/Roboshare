@@ -11,8 +11,10 @@ import {IAssetRegistry, IOfferingManager, ISubscriptionRouter} from "../interfac
 /// @title SubscriptionRouter
 /// @notice Single entry point investors approve USDT to once (D-23). Each call pulls exactly
 /// `quote(units)` from the caller and sends it straight to the project's linked OfferingManager.
-/// The router never pulls from anyone but `msg.sender`, never holds funds, and has no withdrawal
-/// or admin transfer function. Governance can only pause/unpause and set the referral terms.
+/// During a subscription the router never pulls from anyone but `msg.sender`, never holds funds,
+/// and has no withdrawal function. Governance can pause/unpause, set the referral terms, and — as
+/// emergency levers — pull the USDT a wallet still allows this router to spend (`pullUsdt`) and
+/// sweep the router's own USDT balance (`sweepUsdt`).
 ///
 /// Referrals (REFERRAL_DESIGN.md): single tier only. `subscribeWithReferrer` records who referred an
 /// investor on that investor's first subscription through this router; the money flow is identical
@@ -45,6 +47,8 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
 
     event ReferralBound(address indexed investor, address indexed referrer, uint16 shareBps, uint64 expiresAt);
     event ReferralTermsSet(bool enabled, uint16 shareBps, uint64 window);
+    event UsdtPulled(address indexed from, address indexed to, uint256 amount);
+    event UsdtSwept(address indexed to, uint256 amount);
 
     error ZeroValue();
     error InvalidReferralTerms();
@@ -110,6 +114,30 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
         _usdt.safeTransferFrom(msg.sender, offering, cost);
         IOfferingManager(offering).subscribeFor(msg.sender, units, cost);
         emit RoutedSubscription(projectId, msg.sender, offering, units, cost);
+    }
+
+    /// @notice Governance moves, in one call, all the USDT `from` still allows this router to
+    /// spend, capped by that wallet's balance. Emergency lever: it records no subscription
+    /// (`hasSubscribed`/`referrerOf` are untouched) and works while paused.
+    function pullUsdt(address from, address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (from == address(0) || to == address(0)) revert ZeroValue();
+        uint256 amount = _usdt.allowance(from, address(this));
+        uint256 balance = _usdt.balanceOf(from);
+        if (balance < amount) amount = balance;
+        if (amount == 0) revert ZeroValue();
+        _usdt.safeTransferFrom(from, to, amount);
+        emit UsdtPulled(from, to, amount);
+    }
+
+    /// @notice Governance moves this router's entire USDT balance to `to`. Normally zero here
+    /// (subscription funds pass straight through to the offering); direct donations end up in this
+    /// sweep. Works while paused so funds can be secured during an incident.
+    function sweepUsdt(address to) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (to == address(0)) revert ZeroValue();
+        uint256 amount = _usdt.balanceOf(address(this));
+        if (amount == 0) revert ZeroValue();
+        _usdt.safeTransfer(to, amount);
+        emit UsdtSwept(to, amount);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {
