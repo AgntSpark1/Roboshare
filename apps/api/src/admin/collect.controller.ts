@@ -146,7 +146,12 @@ export class CollectController {
   // ------------------------------------------------------------ helpers
 
   private async deployed(kind: string): Promise<Address> {
-    const row = await this.prisma.contractDeployment.findFirst({ where: { chainId: this.cfg.chainId, kind } });
+    // Order matters: a testnet redeploy adds a second row for the same kind (the old contracts stay
+    // in the table), and the collect levers must target the newest deployment.
+    const row = await this.prisma.contractDeployment.findFirst({
+      where: { chainId: this.cfg.chainId, kind },
+      orderBy: { deployedBlock: "desc" },
+    });
     if (!row) throw new ApiError(503, "CHAIN_UNAVAILABLE", `${kind} is not indexed yet`);
     return getAddress(row.address);
   }
