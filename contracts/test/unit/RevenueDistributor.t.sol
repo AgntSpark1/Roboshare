@@ -380,7 +380,7 @@ contract ReentrancyTest is BaseTest, IReentryTarget {
 
     function test_RevertWhen_ClaimReentered() public {
         evil = new MockReentrantToken();
-        router = new SubscriptionRouter(IERC20(address(evil)), assets, gov, pauser);
+        router = new SubscriptionRouter(IERC20(address(evil)), assets, gov, operator, pauser);
         factory = new ProjectFactory(
             assets,
             audit,

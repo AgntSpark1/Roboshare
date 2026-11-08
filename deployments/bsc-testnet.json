@@ -2,76 +2,75 @@
   "network": "BSC testnet",
   "chainId": 97,
   "WARNING": "TESTNET ONLY. MockUSDT is a TEST-ONLY token anyone can mint; it has no value.",
-  "deployedAt": "2026-11-02",
-  "note": "Unified redeploy of main on 2026-11-02 (governance USDT emergency levers pullUsdt/sweepUsdt, PR #64; collect console, PR #66). The 2/3 Safe is admin directly; no timelock. Deployer 0x7E21246617183CFC44Ce388BbB98F4f721EBfd93. The 2026-10-12 deployment is retired.",
-  "startBlock": 140759396,
+  "deployedAt": "2026-11-08",
+  "note": "D-34 redeploy (operator delegation, PR #68): day-to-day actions (offering configure/open, transitions, launch template, referral terms) are OPERATOR_ROLE single-signature; only USDT collection (pull/sweep/withdraw) stays Safe-gated. The 2/3 Safe is admin everywhere and holds OPERATOR too. The 2026-11-02 deployment is retired. Router OPERATOR_ROLE for the operator wallet was granted by Safe tx 0x5aba36ff (constructor backfill for the 11-08 contracts).",
+  "startBlock": 141548088,
   "contracts": {
     "MockUSDT": {
       "address": "0x416b9b4fF2f862e3128B60996e7CD7c3cf87942B",
-      "note": "Reused from the 2026-10-12 deployment so existing tUSDT balances and approvals survive."
+      "note": "Reused; existing tUSDT balances and approvals survive."
     },
     "IdentityRegistry": {
-      "address": "0xc9a962dd3f9ddf29c8aa195ae782f208cfbac607",
-      "tx": "0xabe814a6a14ffedb03da3abe586a9c9c3eb98898d2c290250d107d8e54f7da31",
-      "block": 140759396
+      "address": "0xa5c321f31841453b5075d31c87e06118eecb3237",
+      "tx": "0x4631c2ee76eed3ca911d2916f38a9ae20a5a1f35b00542c19cf12c10ee498f0e",
+      "block": 141548088
     },
     "AssetRegistry": {
-      "address": "0x9485840fd14c63966f5060fcc2619ad62820e133",
-      "tx": "0x407585d551b7fd823e3967561751020b1c3bdef67ec84f67f54bebfdf054f2f0",
-      "block": 140759402
+      "address": "0xc020aa4999bbab6cb812ff04d9fee49ce27fe320",
+      "tx": "0xc487f27f975f19264220ff572a18847282855742e11ba749ff2a2c3ea5de0127",
+      "block": 141548095
     },
     "AuditRegistry": {
-      "address": "0x9a613c5952b3b31fa83a7676fb292e599e0c6148",
-      "tx": "0x818ecf9f9a59644090fc5cbd13f3ee8ffe05804b35f748353dd97add8800e507",
-      "block": 140759409
+      "address": "0xbd9421b6b50a41795da4951d2f44bbd60105f354",
+      "tx": "0xc277597a2c21a9a7d5a191a439409cc9a2e357dbf2f29254094943c406fb0876",
+      "block": 141548098
     },
     "SubscriptionRouter": {
-      "address": "0xa9ad961298f0a521d1e3726df278515ba2ea4ca2",
-      "tx": "0xa453c6a3ebbe4eae6b030000cca131130599d6e681cc916619e00e21e3b8da54",
-      "block": 140759424
+      "address": "0x5541850520ca8d9e8550c4d4387a4b5f593af0e0",
+      "tx": "0xcfcd59a31f05323343764d64a66725bdf2f3d06c5879307c41b3fc0995ac5d8a",
+      "block": 141548102
     },
     "ReferralRewards": {
-      "address": "0x1394a968ac75534266cc887ae4627aa8c38968f0",
-      "tx": "0x861100935aa4126a6646a96b68be4afeabc35c892cda53d8e11c4c13f58e2760",
-      "block": 140759429
+      "address": "0x3fa90e9cb250f254ab47d26d5469c36a70864b2c",
+      "tx": "0x84d3b8ed5153a972f08a1449df4835b459f5985e12aaabb35a7dea3514571fce",
+      "block": 141548112
     },
     "ShareMarket": {
-      "address": "0x3c1c513f985bf10465f3c1015fb9fc1899a6338c",
-      "tx": "0xe9967040eaf9a7c8a49c5b5511306bff67ecbb34d548e52ce1d41b335c851330",
-      "block": 140759437
+      "address": "0xd0093017f36ffd4366944cdb7a12484c01591880",
+      "tx": "0xf65155fe57da2ef89bc414ac9ae8ef7ba64a06f04453986bbae6b00b93d861b9",
+      "block": 141548117
     },
     "TokenDeployer": {
-      "address": "0x22fa663e70396bf28a8616e11866678c4fc9118f",
-      "tx": "0x03cb8e0c87ad4907beabbe3d407d899e3c9670974e2ea397957111ec34729e28",
-      "block": 140759445
+      "address": "0xf403244b478c9f7506b6caa3b13ce6c62306d378",
+      "tx": "0x31cea1791d1085a654d0572d055b7c96ae28190aaaccae38a04fffd91af8b1ae",
+      "block": 141548121
     },
     "OfferingDeployer": {
-      "address": "0x1f1faadc7c5f20a5cb69cfac276c83578b3edefe",
-      "tx": "0x209c82294cc535e5ccb017ef426c5ce1c40365cca71b888881a0ea2af39f23c7",
-      "block": 140759454
+      "address": "0x7608ce5f688b0ab9292b53e8ee1d56cda32cc942",
+      "tx": "0x6d3def8d9f1d42a294703538a6bf003a52043951f93271f8451ded6eb955cdc9",
+      "block": 141548125
     },
     "DistributorDeployer": {
-      "address": "0xca8541353f314bb9d73f50010dba8543bc3dd87c",
-      "tx": "0x7730b3d7dc42074d02096a30462ab18970c5d1d7eda352b863822db7335cca30",
-      "block": 140759462
+      "address": "0x5e372a0d7d2aac68ad0a2da972fa7320c83e57f6",
+      "tx": "0x0953467b834f8e21bed92fb2fb8286f7634fbba8ac4a61a1e2109866c0c3782c",
+      "block": 141548128
     },
     "ProjectFactory": {
-      "address": "0x132911a7987e7f6732c4d472f6bd551b88fbb3e5",
-      "tx": "0x68a869c2d855c49c5673a15e49dd46fae586d27f2f3cdc5ed4f25e720dd2c420",
-      "block": 140759467,
-      "note": "Deployed by Deploy.s.sol (has launch, flat 30% fee tiers); deployer renounced. Do NOT confuse with the main-deploy basic factory."
+      "address": "0xb6ef3d8133ddc2fbd0b6a8d1a774419bac3ce2d3",
+      "tx": "0x006edbf520fd749a76e5a4b06faee53e4e6d8f831fac87f3d871685da73a7bba",
+      "block": 141548132
     },
     "ProjectFactoryLaunch": {
-      "address": "0xa90da43cc62307f1d0374509d671a371c9860474",
-      "tx": "0xf03d4c0990d157f12fd58f2869fa60f44c6c95af7b1d7fad375445560a0a2430",
-      "block": 140759729,
-      "note": "2026-11-02 DeployLaunchFactory.s.sol over the main factory; roles copied; template starts disabled; Safe must grant FACTORY_ROLE and set the launch template."
+      "address": "0xf94c9f2eab090fb3cd024d6b8fbd44734e0ce1a0",
+      "tx": "0x1fbe4a1f3a947b98e06b282481f7906bd37b60cd1275c6e320c7dd2d205ca7e7",
+      "block": 141548230,
+      "note": "D-34: operator-level factory governance; template starts disabled; Safe must grant FACTORY_ROLE and set the launch template."
     },
     "ProjectActivator": {
-      "address": "0x1eb87edac1ffa225030df72e3b7baceb27d91457",
-      "tx": "0x7763b27134ca6c349dd99a311cc80e89360ae8d9e8859f765a3883dc6a8bb55f",
-      "block": 140759768,
-      "note": "2026-11-02 DeployActivator.s.sol; Safe admin; holds AssetRegistry admin, only moves FUNDED -> ACTIVE; launcher has ACTIVATOR_ROLE (Safe must configure)."
+      "address": "0x902fca1ca0eee17d0e2f7da0e02dc11b9529e37d",
+      "tx": "0x141d09aab35e9fbfacf65b67281f4eba6a7a200399cd3f79263a4b544b02e959",
+      "block": 141548266,
+      "note": "Safe admin; needs AssetRegistry admin handover + ACTIVATOR_ROLE (console \u64ae\u5408 page)."
     }
   },
   "governance": {
@@ -95,7 +94,7 @@
     "feeRecipient": "0x42EA4D5FC64C3A02512ba12A2AE33066040726A1",
     "settler": "0x43DAf13690424D0e40EDe889444f2987e7D751dE",
     "autopilotSubmitter": "0xdAb257aE4F3E7c9584E60F202Bf137AcA8f90B56",
-    "autopilotApprover": "0x4DDb888BEB3bE46f847E8E7C7C99e5Cc1Ef2190e",
+    "autopilotApprover": "0x4DDb888BEB3aE46f847E8E7C7C99e5Cc1Ef2190e",
     "backstop": "0x0C2d2C338DCCf44f95ede95C1fBcaF7A52540Ed4"
   },
   "verification": "pending (needs Etherscan v2 API key)"

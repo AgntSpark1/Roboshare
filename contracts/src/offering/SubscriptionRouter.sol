@@ -57,7 +57,7 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
     error OfferingNotLinked(bytes32 projectId);
     error CostAboveMax(uint256 cost, uint256 maxCost);
 
-    constructor(IERC20 usdt_, IAssetRegistry assetRegistry_, address admin, address pauser) {
+    constructor(IERC20 usdt_, IAssetRegistry assetRegistry_, address admin, address operator_, address pauser) {
         if (address(usdt_) == address(0) || address(assetRegistry_) == address(0) || admin == address(0)) {
             revert ZeroValue();
         }
@@ -66,6 +66,7 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         // D-34: referral terms are operator-level; the Safe keeps the role too.
         _grantRole(OPERATOR_ROLE, admin);
+        if (operator_ != address(0) && operator_ != admin) _grantRole(OPERATOR_ROLE, operator_);
         if (pauser != address(0)) _grantRole(PAUSER_ROLE, pauser);
     }
 
