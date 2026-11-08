@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {BaseTest} from "../BaseTest.sol";
+import {RevenueDistributor} from "../../src/distribution/RevenueDistributor.sol";
 import {ProjectFactory} from "../../src/factory/ProjectFactory.sol";
 import {OfferingManager} from "../../src/offering/OfferingManager.sol";
 import {RwaShareToken} from "../../src/token/RwaShareToken.sol";
@@ -182,6 +183,22 @@ contract LaunchTest is BaseTest {
         assertTrue(offering.hasRole(offering.DEFAULT_ADMIN_ROLE(), gov));
         assertFalse(offering.hasRole(offering.DEFAULT_ADMIN_ROLE(), address(factory)));
     }
+
+    /// D-35: a launched project's RevenueDistributor grants the autopilot wallets at deploy time,
+    /// so automatic distribution needs no Safe batch per project.
+    function test_LaunchGrantsAutopilotOnDistributor() public {
+        _registerAndVerify();
+        vm.prank(gov);
+        factory.setLaunchTemplate(_template(true));
+        vm.prank(gov);
+        ProjectFactory.Deployment memory d = factory.launch(PID, "RoboShare Vehicle 1", "RSV1");
+        bytes32 opRole = keccak256("OPERATOR_ROLE");
+        bytes32 revRole = keccak256("REVIEWER_ROLE");
+        RevenueDistributor dist = RevenueDistributor(d.distributor);
+        assertTrue(dist.hasRole(opRole, autopilot), "submitter OPERATOR");
+        assertTrue(dist.hasRole(revRole, autopilotApprover), "approver REVIEWER");
+    }
+
 }
 
 import {DeployLaunchFactory} from "../../script/DeployLaunchFactory.s.sol";
@@ -195,7 +212,7 @@ contract DeployLaunchFactoryTest is BaseTest {
         assertEq(address(f.tokenDeployer()), address(factory.tokenDeployer()));
         assertTrue(f.hasRole(f.DEFAULT_ADMIN_ROLE(), gov));
         assertFalse(f.hasRole(f.DEFAULT_ADMIN_ROLE(), address(s)));
-        (, address op,,,) = f.roles();
+        (, address op,,,,,) = f.roles();
         assertEq(op, operator);
     }
 }

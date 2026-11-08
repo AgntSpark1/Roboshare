@@ -34,7 +34,7 @@ contract DeployScriptTest is Test {
         assertTrue(d.audit.hasRole(0x00, c.safe));
         assertTrue(d.router.hasRole(0x00, c.safe));
         assertTrue(d.factory.hasRole(0x00, c.safe));
-        (address factoryAdmin,,,,) = d.factory.roles();
+        (address factoryAdmin,,,,,,) = d.factory.roles();
         assertEq(factoryAdmin, c.safe); // per-project contracts get the Safe as admin too
         assertTrue(d.referralRewards.hasRole(0x00, c.safe));
         assertFalse(d.referralRewards.claimsEnabled());

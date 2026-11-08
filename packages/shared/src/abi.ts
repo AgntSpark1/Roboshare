@@ -3157,6 +3157,16 @@ export const projectFactoryAbi = [
             "name": "feeRecipient",
             "type": "address",
             "internalType": "address"
+          },
+          {
+            "name": "autopilotSubmitter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "autopilotApprover",
+            "type": "address",
+            "internalType": "address"
           }
         ]
       },
@@ -3242,6 +3252,24 @@ export const projectFactoryAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IAuditRegistry"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "autopilotWallets",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "submitter",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "approver",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -3581,6 +3609,16 @@ export const projectFactoryAbi = [
         "name": "feeRecipient",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "autopilotSubmitter",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "autopilotApprover",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -3689,6 +3727,16 @@ export const projectFactoryAbi = [
           },
           {
             "name": "feeRecipient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "autopilotSubmitter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "autopilotApprover",
             "type": "address",
             "internalType": "address"
           }
@@ -3959,6 +4007,16 @@ export const projectFactoryAbi = [
           },
           {
             "name": "feeRecipient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "autopilotSubmitter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "autopilotApprover",
             "type": "address",
             "internalType": "address"
           }
@@ -6371,6 +6429,16 @@ export const revenueDistributorAbi = [
           },
           {
             "name": "pauser",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "autopilotSubmitter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "autopilotApprover",
             "type": "address",
             "internalType": "address"
           },
