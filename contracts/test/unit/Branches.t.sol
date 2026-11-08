@@ -57,7 +57,7 @@ contract ConstructorValidationTest is BaseTest {
             operator: operator,
             reviewer: reviewer,
             pauser: pauser,
-            tierMinUnits: mins,
+            autopilotSubmitter: address(0), autopilotApprover: address(0), tierMinUnits: mins,
             tierBps: bps
         });
     }
@@ -111,7 +111,7 @@ contract ConstructorValidationTest is BaseTest {
         vm.prank(gov);
         vm.expectRevert(ProjectFactory.ZeroValue.selector);
         factory.setRoles(
-            ProjectFactory.Roles({admin: address(0), operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient})
+            ProjectFactory.Roles({admin: address(0), operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient, autopilotSubmitter: address(0), autopilotApprover: address(0)})
         );
     }
 }

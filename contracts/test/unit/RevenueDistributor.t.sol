@@ -390,7 +390,9 @@ contract ReentrancyTest is BaseTest, IReentryTarget {
             factory.offeringDeployer(),
             factory.distributorDeployer(),
             ProjectFactory.Roles({
-                admin: gov, operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient
+                admin: gov, operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient,
+                autopilotSubmitter: address(0),
+                autopilotApprover: address(0)
             }),
             gov
         );

@@ -90,7 +90,9 @@ contract Deploy is Script {
                 operator: c.operator,
                 reviewer: c.reviewer,
                 pauser: c.pauser,
-                feeRecipient: c.feeRecipient
+                feeRecipient: c.feeRecipient,
+                autopilotSubmitter: vm.envOr("AUTOPILOT_SUBMITTER", address(0)), // D-35
+                autopilotApprover: vm.envOr("AUTOPILOT_APPROVER", address(0))
             }),
             c.safe
         );

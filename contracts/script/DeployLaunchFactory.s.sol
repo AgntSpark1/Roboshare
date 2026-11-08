@@ -39,21 +39,17 @@ contract DeployLaunchFactory is Script {
     }
 
     function deploy(ProjectFactory old, address safe) public returns (ProjectFactory factory) {
-        (address admin, address operator, address reviewer, address pauser, address feeRecipient) = old.roles();
+        (address admin, address operator, address reviewer, address pauser, address feeRecipient,,) = old.roles();
         if (admin != safe) revert CheckFailed("old factory admin is not SAFE");
-        factory = new ProjectFactory(
-            old.assetRegistry(),
-            old.auditRegistry(),
-            old.identityRegistry(),
-            old.router(),
-            old.tokenDeployer(),
-            old.offeringDeployer(),
-            old.distributorDeployer(),
-            ProjectFactory.Roles({
-                admin: admin, operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient
-            }),
-            safe
-        );
+        // D-35: autopilot wallets come from env (the current chain factory predates the field);
+        // they are granted to each new project's RevenueDistributor at deploy time.
+        address autopilotSubmitter = vm.envOr("AUTOPILOT_SUBMITTER", address(0));
+        address autopilotApprover = vm.envOr("AUTOPILOT_APPROVER", address(0));
+        ProjectFactory.Roles memory r = ProjectFactory.Roles({
+            admin: admin, operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient,
+            autopilotSubmitter: autopilotSubmitter, autopilotApprover: autopilotApprover
+        });
+        factory = _newFactory(old, r, safe);
         if (!factory.hasRole(0x00, safe)) revert CheckFailed("safe admin");
         // D-34: keep operator-level factory governance from the old deployment.
         if (operator != address(0) && !factory.hasRole(factory.OPERATOR_ROLE(), operator)) {
@@ -62,6 +58,22 @@ contract DeployLaunchFactory is Script {
         if (factory.hasRole(0x00, msg.sender) && msg.sender != safe) revert CheckFailed("deployer admin");
         (bool enabled,,,,,,,,) = factory.launchTemplate();
         if (enabled) revert CheckFailed("template must start disabled");
+    }
+
+    function _newFactory(ProjectFactory old, ProjectFactory.Roles memory r, address safe)
+        internal returns (ProjectFactory)
+    {
+        return new ProjectFactory(
+            old.assetRegistry(),
+            old.auditRegistry(),
+            old.identityRegistry(),
+            old.router(),
+            old.tokenDeployer(),
+            old.offeringDeployer(),
+            old.distributorDeployer(),
+            r,
+            safe
+        );
     }
 
     function _required(string memory name) internal view returns (address a) {

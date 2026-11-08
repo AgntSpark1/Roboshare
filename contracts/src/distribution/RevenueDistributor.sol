@@ -81,6 +81,10 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
         address operator;
         address reviewer;
         address pauser;
+        /// D-35 (2026-11-08): the monthly autopilot wallets are granted OPERATOR/REVIEWER at deploy
+        /// time so a new project needs no Safe batch to enable automatic distribution. Zero = skip.
+        address autopilotSubmitter;
+        address autopilotApprover;
         uint32[] tierMinUnits;
         uint16[] tierBps;
     }
@@ -172,6 +176,9 @@ contract RevenueDistributor is IRevenueDistributor, AccessControl, Pausable, Ree
         if (p.operator != address(0)) _grantRole(OPERATOR_ROLE, p.operator);
         if (p.reviewer != address(0)) _grantRole(REVIEWER_ROLE, p.reviewer);
         if (p.pauser != address(0)) _grantRole(PAUSER_ROLE, p.pauser);
+        // D-35: autopilot wallets can propose/approve batches from day one (no Safe batch per project).
+        if (p.autopilotSubmitter != address(0)) _grantRole(OPERATOR_ROLE, p.autopilotSubmitter);
+        if (p.autopilotApprover != address(0)) _grantRole(REVIEWER_ROLE, p.autopilotApprover);
     }
 
     // ---------------------------------------------------------------------

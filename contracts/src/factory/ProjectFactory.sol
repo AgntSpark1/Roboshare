@@ -76,6 +76,9 @@ contract ProjectFactory is AccessControl {
         address reviewer;
         address pauser; // guardian Safe
         address feeRecipient;
+        /// D-35: granted to each project's RevenueDistributor at deploy time (zero = skip).
+        address autopilotSubmitter;
+        address autopilotApprover;
     }
 
     struct ProjectParams {
@@ -273,6 +276,8 @@ contract ProjectFactory is AccessControl {
                 operator: r.operator,
                 reviewer: r.reviewer,
                 pauser: r.pauser,
+                autopilotSubmitter: r.autopilotSubmitter,
+                autopilotApprover: r.autopilotApprover,
                 tierMinUnits: minUnits,
                 tierBps: bps
             })
@@ -288,5 +293,10 @@ contract ProjectFactory is AccessControl {
         if (r.admin == address(0) || r.feeRecipient == address(0)) revert ZeroValue();
         roles = r;
         emit RolesUpdated(r);
+    }
+
+    /// @dev Roles for new deployments (D-35): autopilot wallets, optional (zero = not granted).
+    function autopilotWallets() external view returns (address submitter, address approver) {
+        return (roles.autopilotSubmitter, roles.autopilotApprover);
     }
 }

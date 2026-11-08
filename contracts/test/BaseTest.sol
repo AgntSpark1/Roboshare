@@ -26,6 +26,9 @@ abstract contract BaseTest is Test {
     address internal treasury = makeAddr("treasury");
     address internal feeRecipient = makeAddr("feeRecipient");
     address internal attacker = makeAddr("attacker");
+    /// D-35: autopilot wallets granted to each project's distributor at deploy time.
+    address internal autopilot = makeAddr("autopilot");
+    address internal autopilotApprover = makeAddr("autopilotApprover");
 
     uint256 internal constant ONE = 1e18; // 1 USDT in base units (mock uses 18 decimals)
     uint256 internal constant UNIT_PRICE = 1_000 * ONE;
@@ -66,7 +69,8 @@ abstract contract BaseTest is Test {
             new OfferingDeployer(),
             new DistributorDeployer(),
             ProjectFactory.Roles({
-                admin: gov, operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient
+                admin: gov, operator: operator, reviewer: reviewer, pauser: pauser, feeRecipient: feeRecipient,
+                autopilotSubmitter: autopilot, autopilotApprover: autopilotApprover
             }),
             gov
         );
