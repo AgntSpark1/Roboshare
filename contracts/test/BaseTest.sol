@@ -56,7 +56,7 @@ abstract contract BaseTest is Test {
         assets = new AssetRegistry(gov);
         audit = new AuditRegistry(gov);
         usdt = new MockUSDT();
-        router = new SubscriptionRouter(IERC20(address(usdt)), assets, gov, pauser);
+        router = new SubscriptionRouter(IERC20(address(usdt)), assets, gov, operator, pauser);
         factory = new ProjectFactory(
             assets,
             audit,

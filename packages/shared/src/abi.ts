@@ -2337,6 +2337,11 @@ export const subscriptionRouterAbi = [
         "internalType": "address"
       },
       {
+        "name": "operator_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "pauser",
         "type": "address",
         "internalType": "address"

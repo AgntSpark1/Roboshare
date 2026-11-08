@@ -72,7 +72,7 @@ contract Deploy is Script {
         d.identity = new IdentityRegistry(deployer);
         d.assets = new AssetRegistry(deployer);
         d.audit = new AuditRegistry(deployer);
-        d.router = new SubscriptionRouter(IERC20(d.usdt), d.assets, c.safe, c.pauser);
+        d.router = new SubscriptionRouter(IERC20(d.usdt), d.assets, c.safe, c.operator, c.pauser);
         // Referrals ship switched off in both contracts; only the Safe can enable them.
         d.referralRewards = new ReferralRewards(IERC20(d.usdt), c.safe, c.operator, c.pauser);
         // Peer-to-peer resale for early exit (EARLY_EXIT_DESIGN.md); no fees, no custody.
@@ -125,6 +125,7 @@ contract Deploy is Script {
         _check(d.router.hasRole(admin, c.safe), "router admin");
         _check(d.factory.hasRole(admin, c.safe), "factory admin");
         _check(d.factory.hasRole(d.factory.OPERATOR_ROLE(), c.operator), "factory operator");
+        _check(d.router.hasRole(d.router.OPERATOR_ROLE(), c.operator), "router operator");
         _check(!d.identity.hasRole(admin, deployer), "identity deployer renounced");
         _check(!d.assets.hasRole(admin, deployer), "assets deployer renounced");
         _check(!d.audit.hasRole(admin, deployer), "audit deployer renounced");

@@ -30,7 +30,7 @@ contract ConstructorValidationTest is BaseTest {
         vm.expectRevert(AuditRegistry.ZeroValue.selector);
         new AuditRegistry(address(0));
         vm.expectRevert(SubscriptionRouter.ZeroValue.selector);
-        new SubscriptionRouter(IERC20(address(0)), assets, gov, pauser);
+        new SubscriptionRouter(IERC20(address(0)), assets, gov, operator, pauser);
     }
 
     function test_RevertWhen_TokenOrOfferingMisconfigured() public {

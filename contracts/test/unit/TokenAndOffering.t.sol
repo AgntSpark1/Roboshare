@@ -369,7 +369,7 @@ contract FeeOnTransferPaymentTest is BaseTest {
     function test_RevertWhen_PaymentTokenTakesFee() public {
         MockFeeOnTransferToken fot = new MockFeeOnTransferToken();
         // A separate router + project wired to the fee-on-transfer token.
-        router = new SubscriptionRouter(IERC20(address(fot)), assets, gov, pauser);
+        router = new SubscriptionRouter(IERC20(address(fot)), assets, gov, operator, pauser);
         factory = _factoryFor(router);
         vm.startPrank(gov);
         assets.grantRole(assets.FACTORY_ROLE(), address(factory));
