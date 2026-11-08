@@ -3,7 +3,6 @@ import { useState } from "react";
 import { keccak256, stringToHex } from "viem";
 import { DEFAULT_TERM_DAYS } from "@roboshare/shared";
 import { api, shortAddr, StatePill, type PreparedTx, type ProjectListItem, type SafeProposal } from "@roboshare/ui";
-import { ProposalView } from "@/components/Proposal";
 import { TxAction } from "@/components/TxAction";
 import { errorText, useRoles } from "@/lib/admin";
 import { projectName, useProjects, useRefresh } from "@/lib/data";
@@ -12,7 +11,6 @@ export default function Projects() {
   const projects = useProjects();
   const { can } = useRoles();
   const refresh = useRefresh();
-  const [proposal, setProposal] = useState<SafeProposal | null>(null);
   const [err, setErr] = useState<string | null>(null);
   return (
     <>
@@ -40,21 +38,14 @@ export default function Projects() {
                           onDone={refresh}
                         />
                       )}
-                      {p.state === "FUNDED" && can("GOV_VIEW") && (
-                        <button
-                          type="button"
+                      {p.state === "FUNDED" && can("OPERATOR") && (
+                        <TxAction
+                          label="投运（ACTIVE，运营钱包直签）"
                           className="btn sm"
-                          onClick={async () => {
-                            setErr(null);
-                            try {
-                              setProposal((await api.post<{ proposal: SafeProposal }>(`/admin/projects/${p.id}/transition`, { to: "ACTIVE", reason: "vehicle in service" })).proposal);
-                            } catch (e) {
-                              setErr(errorText(e));
-                            }
-                          }}
-                        >
-                          生成投运提案（ACTIVE）
-                        </button>
+                          confirm={`将 ${projectName(p)} 转为 ACTIVE（投运）。确定？`}
+                          prepare={async () => (await api.post<{ txs: PreparedTx[] }>(`/admin/projects/${p.id}/transition`, { to: "ACTIVE", reason: "vehicle in service" })).txs}
+                          onDone={refresh}
+                        />
                       )}
                     </div>
                   </td>
@@ -65,7 +56,6 @@ export default function Projects() {
         </div>
         {err && <p className="err" role="alert">{err}</p>}
       </section>
-      {proposal && <ProposalView proposal={proposal} />}
     </>
   );
 }

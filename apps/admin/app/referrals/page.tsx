@@ -2,7 +2,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, formatUsdt, shortAddr, type PreparedTx, type SafeProposal } from "@roboshare/ui";
-import { ProposalView } from "@/components/Proposal";
 import { TxAction } from "@/components/TxAction";
 import { errorText, useRoles } from "@/lib/admin";
 import { useRefresh } from "@/lib/data";
@@ -105,20 +104,16 @@ export default function Referrals() {
 function TermsProposal() {
   const [enabled, setEnabled] = useState(false);
   const [days, setDays] = useState("365");
-  const [proposal, setProposal] = useState<SafeProposal | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  async function prepare() {
+  // D-34: referral terms are operator-level; the operator wallet signs both calls directly.
+  async function steps(): Promise<PreparedTx[]> {
     setErr(null);
-    setProposal(null);
-    try {
-      setProposal(await api.post<SafeProposal>("/admin/referrals/terms", { enabled, windowDays: Number(days) }));
-    } catch (e) {
-      setErr(errorText(e));
-    }
+    const r = await api.post<{ txs: PreparedTx[] }>("/admin/referrals/terms", { enabled, windowDays: Number(days) });
+    return r.txs;
   }
   return (
     <section className="panel" aria-labelledby="terms">
-      <h2 id="terms">开关与条款（治理提案）</h2>
+      <h2 id="terms">开关与条款（运营钱包直接签名）</h2>
       <div className="form">
         <div className="fgrid">
           <label className="field"><span>状态</span>
@@ -130,9 +125,13 @@ function TermsProposal() {
           <label className="field"><span>绑定后有效天数</span><input value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} /></label>
         </div>
         <p className="muted small">奖励比例 10% / 5% / 3% 写在代码里，这里只设开关和绑定后的奖励期；新奖励期只影响之后的新绑定。同时开关邀请绑定和奖励领取。</p>
-        <div><button type="button" className="btn sm" onClick={prepare}>生成 Safe 提案</button></div>
+        <div><TxAction
+          label="用运营钱包设置条款并开关"
+          className="btn sm"
+          confirm={enabled ? "开启推荐奖励（先经律师确认）。确定？" : "关闭推荐奖励。确定？"}
+          prepare={steps}
+        /></div>
         {err && <p className="err" role="alert">{err}</p>}
-        {proposal && <ProposalView proposal={proposal} />}
       </div>
     </section>
   );

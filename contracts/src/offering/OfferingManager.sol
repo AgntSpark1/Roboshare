@@ -124,7 +124,10 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         router = router_;
         paymentToken = IERC20(ISubscriptionRouter(router_).USDT());
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        // D-34 (2026-11-08): configure/open/exclude/cancel are operator-level day-to-day actions.
+        // The admin (governance Safe) keeps the operator role so it can still act directly.
         if (operator != address(0)) _grantRole(OPERATOR_ROLE, operator);
+        if (admin != address(0) && admin != operator) _grantRole(OPERATOR_ROLE, admin);
         if (pauser != address(0)) _grantRole(PAUSER_ROLE, pauser);
     }
 
@@ -132,7 +135,7 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
     // Governance: configure and open
     // ---------------------------------------------------------------------
 
-    function configure(OfferingConfig calldata cfg) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function configure(OfferingConfig calldata cfg) external onlyRole(OPERATOR_ROLE) {
         if (opened) revert AlreadyOpened();
         if (configured) revert AlreadyConfigured();
         ProjectState s = assetRegistry.stateOf(projectId);
@@ -147,7 +150,7 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         emit OfferingConfigured(cfg);
     }
 
-    function open() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function open() external onlyRole(OPERATOR_ROLE) {
         if (!configured) revert NotConfigured();
         if (opened) revert AlreadyOpened();
         opened = true;
@@ -208,7 +211,7 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
     // ---------------------------------------------------------------------
 
     /// @notice Governance removes a subscriber (e.g. a frozen wallet) before settlement.
-    function excludeSubscriber(address investor, bytes32 reasonHash) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function excludeSubscriber(address investor, bytes32 reasonHash) external onlyRole(OPERATOR_ROLE) {
         if (outcome != Outcome.NONE) revert OfferingFinalized();
         if (statusOf[investor] != SubStatus.ESCROWED) revert NotRefundable(investor);
         statusOf[investor] = SubStatus.REFUNDABLE;
@@ -256,7 +259,7 @@ contract OfferingManager is IOfferingManager, AccessControl, Pausable, Reentranc
         emit OfferingFailed(unitsSold, config.minUnits);
     }
 
-    function cancel(bytes32 reasonHash) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+    function cancel(bytes32 reasonHash) external onlyRole(OPERATOR_ROLE) nonReentrant {
         if (!opened) revert NotOpen();
         if (outcome != Outcome.NONE) revert OfferingFinalized();
         if (reasonHash == 0) revert ZeroValue();

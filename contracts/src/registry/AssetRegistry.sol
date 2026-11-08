@@ -136,6 +136,8 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
 
     function _authorizeTransition(Project storage p, ProjectState from, ProjectState to) private view {
         bool admin = hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // 2026-11-08 运营权限下放:下述日常状态流转不再要求治理 Safe,OPERATOR 即可(D-34);
+        // 资金归集类治理权限(见 SECURITY_MODEL)仍为 Safe 专用。REVIEWER 双人规则不变。
 
         if (from == ProjectState.DRAFT && to == ProjectState.VERIFIED) {
             if (!hasRole(REVIEWER_ROLE, msg.sender)) revert Unauthorized(msg.sender);
@@ -164,12 +166,13 @@ contract AssetRegistry is IAssetRegistry, AccessControl {
             ) || (to == ProjectState.EXIT_PENDING && (from == ProjectState.ACTIVE || from == ProjectState.SUSPENDED));
 
         if (adminOnly) {
-            if (!admin) revert Unauthorized(msg.sender);
+            // 日常运营流转:operator 或治理 Safe。
+            if (!admin && !hasRole(OPERATOR_ROLE, msg.sender)) revert Unauthorized(msg.sender);
             return;
         }
 
         if (to == ProjectState.CLOSED && (from == ProjectState.EXIT_PENDING || from == ProjectState.TERMINATED)) {
-            if (!admin) revert Unauthorized(msg.sender);
+            if (!admin && !hasRole(OPERATOR_ROLE, msg.sender)) revert Unauthorized(msg.sender);
             if (p.distributor != address(0) && IRevenueDistributor(p.distributor).hasPendingBatch()) {
                 revert PendingDistribution();
             }

@@ -3,7 +3,6 @@ import { useState } from "react";
 import { keccak256, stringToHex, isAddress } from "viem";
 import { api, countdown, useChainNow, formatUsdt, OfferingProgress, parseUsdt, type PreparedTx, type SafeProposal } from "@roboshare/ui";
 import { SHARE_CAP } from "@roboshare/shared";
-import { ProposalView } from "@/components/Proposal";
 import { TxAction } from "@/components/TxAction";
 import { errorText, useRoles } from "@/lib/admin";
 import { projectName, useProjects, useRefresh } from "@/lib/data";
@@ -55,32 +54,28 @@ export default function Offerings() {
 
 function ConfigureOffering({ projects }: { projects: { id: string; name: string }[] }) {
   const [f, setF] = useState({ id: projects[0]!.id, price: "500", min: "60", perWallet: "", days: "14", treasury: "", terms: "" });
-  const [proposal, setProposal] = useState<SafeProposal | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
-  async function make() {
+  // D-34: configure/open are operator-level on-chain; the operator wallet signs both in one flow.
+  async function steps(): Promise<PreparedTx[]> {
     setErr(null);
-    try {
-      const now = Math.floor(Date.now() / 1000);
-      const r = await api.post<{ proposal: SafeProposal }>(`/admin/projects/${f.id}/offering`, {
-        unitPrice: parseUsdt(f.price).toString(),
-        minUnits: Number(f.min),
-        // Blank means no per-wallet cap: the contract caps at the total units.
-        perWalletMax: f.perWallet.trim() ? Number(f.perWallet) : SHARE_CAP,
-        // No timelock: the offering opens as soon as the Safe executes, so the window starts now.
-        startTime: now,
-        endTime: now + Number(f.days) * 86_400,
-        treasury: f.treasury,
-        termsHash: keccak256(stringToHex(f.terms)),
-      });
-      setProposal(r.proposal);
-    } catch (e) {
-      setErr(errorText(e));
-    }
+    const now = Math.floor(Date.now() / 1000);
+    const r = await api.post<{ txs: PreparedTx[] }>(`/admin/projects/${f.id}/offering`, {
+      unitPrice: parseUsdt(f.price).toString(),
+      minUnits: Number(f.min),
+      // Blank means no per-wallet cap: the contract caps at the total units.
+      perWalletMax: f.perWallet.trim() ? Number(f.perWallet) : SHARE_CAP,
+      // The window starts when the operator wallet signs.
+      startTime: now,
+      endTime: now + Number(f.days) * 86_400,
+      treasury: f.treasury,
+      termsHash: keccak256(stringToHex(f.terms)),
+    });
+    return r.txs;
   }
   return (
     <section className="panel" aria-labelledby="cfg">
-      <h2 id="cfg">开启募集（治理提案）</h2>
+      <h2 id="cfg">开启募集（运营钱包直接签名）</h2>
       <div className="form">
         <div className="fgrid">
           <label className="field"><span>项目</span>
@@ -89,14 +84,18 @@ function ConfigureOffering({ projects }: { projects: { id: string; name: string 
           <label className="field"><span>每份价格（USDT）</span><input value={f.price} onChange={set("price")} inputMode="decimal" /></label>
           <label className="field"><span>最低成功份数（1–100）</span><input value={f.min} onChange={set("min")} inputMode="numeric" /></label>
           <label className="field"><span>每钱包上限（留空为不限）</span><input value={f.perWallet} onChange={set("perWallet")} inputMode="numeric" placeholder="不限" /></label>
-          <label className="field"><span>募集天数（Safe 执行后立即开始）</span><input value={f.days} onChange={set("days")} inputMode="numeric" /></label>
+          <label className="field"><span>募集天数（签名后立即开始）</span><input value={f.days} onChange={set("days")} inputMode="numeric" /></label>
           <label className="field"><span>项目资金账户地址</span><input value={f.treasury} onChange={set("treasury")} placeholder="0x…" /></label>
         </div>
         <label className="field"><span>募集条款内容或版本号（哈希上链）</span><input value={f.terms} onChange={set("terms")} /></label>
-        <div><button type="button" className="btn primary sm" disabled={!isAddress(f.treasury) || !f.terms} onClick={make}>生成 Safe 提案</button></div>
+        <TxAction
+          label="用运营钱包开启募集（configure + open）"
+          disabled={!isAddress(f.treasury) || !f.terms}
+          confirm={`开启 ${projects.find((p) => p.id === f.id)?.name} 的募集：每份 ${f.price} USDT。确定？`}
+          prepare={steps}
+        />
         {err && <p className="err" role="alert">{err}</p>}
       </div>
-      {proposal && <div style={{ marginTop: 14 }}><ProposalView proposal={proposal} /></div>}
     </section>
   );
 }

@@ -71,12 +71,15 @@ export class GovernanceController {
       termsHash: body.termsHash as Hex,
     };
     const offering = getAddress(p.offeringAddress);
-    const proposal = await this.queue(req, viaSafe(this.cfg.chainId, this.safe(), [
-      call(offering, offeringManagerAbi, "configure", [cfg]),
-      call(offering, offeringManagerAbi, "open", []),
-    ], `configure and open offering ${id}`));
+    // D-34 (2026-11-08): configure/open are OPERATOR-level on-chain; the operator wallet signs directly.
     await this.audit(req, "OFFERING_PROPOSE", "project", id, body);
-    return plain({ proposal });
+    return plain({
+      signer: "运营钱包（OPERATOR_ROLE）直接签名",
+      txs: [
+        prepare(this.cfg.chainId, offering, offeringManagerAbi, "configure", [cfg], `configure offering ${id}`),
+        prepare(this.cfg.chainId, offering, offeringManagerAbi, "open", [], `open offering ${id}`),
+      ],
+    });
   }
 
   @Post("offerings/:id/settle")
@@ -104,11 +107,12 @@ export class GovernanceController {
     const p = await this.project(id);
     const sub = await this.prisma.subscription.findUnique({ where: { projectIdOnchain_wallet: { projectIdOnchain: id, wallet: lc(body.wallet) } } });
     if (!sub || sub.status !== "ESCROWED") throw notFound("escrowed subscription");
-    const proposal = await this.queue(req, viaSafe(this.cfg.chainId, this.safe(), [
-      call(getAddress(p.offeringAddress!), offeringManagerAbi, "excludeSubscriber", [getAddress(body.wallet), keccak256(stringToHex(body.reason))]),
-    ], `exclude ${body.wallet} from offering ${id}`));
+    // D-34: excludeSubscriber is OPERATOR-level; the operator wallet signs directly.
     await this.audit(req, "OFFERING_EXCLUDE_PROPOSE", "project", id, body);
-    return plain({ proposal });
+    return plain({
+      signer: "运营钱包（OPERATOR_ROLE）直接签名",
+      txs: [prepare(this.cfg.chainId, getAddress(p.offeringAddress!), offeringManagerAbi, "excludeSubscriber", [getAddress(body.wallet), keccak256(stringToHex(body.reason))], `exclude ${body.wallet} from offering ${id}`)],
+    });
   }
 
   @Post("projects/:id/transition")
@@ -121,8 +125,11 @@ export class GovernanceController {
     if (REVIEWER_DIRECT.has(body.to) && req.staffRoles?.includes("REVIEWER")) {
       return { tx: prepare(this.cfg.chainId, registry, assetRegistryAbi, "transition", args, `Move project to ${body.to} (reviewer wallet, not the registrant)`) };
     }
-    const proposal = await this.queue(req, viaSafe(this.cfg.chainId, this.safe(), [call(registry, assetRegistryAbi, "transition", args)], `move project ${id} to ${body.to}`));
-    return plain({ proposal });
+    // D-34: day-to-day transitions are OPERATOR-level; the operator wallet signs directly.
+    return plain({
+      signer: "运营钱包（OPERATOR_ROLE）直接签名",
+      txs: [prepare(this.cfg.chainId, registry, assetRegistryAbi, "transition", args, `Move project to ${body.to} (operator wallet)`)],
+    });
   }
 
   /** Emergency pause, prepared for the Guardian (PAUSER) Safe. Pausing needs no governance signatures. */

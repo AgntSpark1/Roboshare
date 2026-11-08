@@ -25,6 +25,8 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
     using SafeERC20 for IERC20;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    /// @notice D-34 (2026-11-08): referral terms are operator-level; pullUsdt/sweepUsdt stay admin.
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     IERC20 private immutable _usdt;
     IAssetRegistry public immutable assetRegistry;
@@ -62,6 +64,8 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
         _usdt = usdt_;
         assetRegistry = assetRegistry_;
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        // D-34: referral terms are operator-level; the Safe keeps the role too.
+        _grantRole(OPERATOR_ROLE, admin);
         if (pauser != address(0)) _grantRole(PAUSER_ROLE, pauser);
     }
 
@@ -90,8 +94,8 @@ contract SubscriptionRouter is ISubscriptionRouter, AccessControl, Pausable, Ree
         }
     }
 
-    /// @notice Governance (Safe) only. New terms apply to bindings made afterwards.
-    function setReferralTerms(bool enabled, uint16 shareBps, uint64 window) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    /// @notice Operator or governance (Safe) (D-34). New terms apply to bindings made afterwards.
+    function setReferralTerms(bool enabled, uint16 shareBps, uint64 window) external onlyRole(OPERATOR_ROLE) {
         if (shareBps > MAX_REFERRAL_SHARE_BPS || window == 0 || window > MAX_REFERRAL_WINDOW) {
             revert InvalidReferralTerms();
         }
