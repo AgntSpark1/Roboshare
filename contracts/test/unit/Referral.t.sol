@@ -128,10 +128,11 @@ contract ReferralBindingTest is BaseTest {
         vm.expectRevert(SubscriptionRouter.InvalidReferralTerms.selector);
         router.setReferralTerms(true, 2_000, 3_651 days);
         vm.stopPrank();
+        // D-34: referral terms are operator-gated now; an outside wallet is rejected with the operator role.
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, operator, bytes32(0))
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, router.OPERATOR_ROLE())
         );
-        vm.prank(operator);
+        vm.prank(attacker);
         router.setReferralTerms(true, 2_000, 365 days);
     }
 
@@ -261,8 +262,11 @@ contract ReferralRewardsTest is BaseTest {
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, bytes32(0))
         );
         rewards.withdraw(attacker, 1);
+        // D-34: the claims master switch is operator-gated now.
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, bytes32(0))
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, rewards.OPERATOR_ROLE()
+            )
         );
         rewards.setClaimsEnabled(true);
         vm.stopPrank();

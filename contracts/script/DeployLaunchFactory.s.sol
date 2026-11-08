@@ -55,6 +55,10 @@ contract DeployLaunchFactory is Script {
             safe
         );
         if (!factory.hasRole(0x00, safe)) revert CheckFailed("safe admin");
+        // D-34: keep operator-level factory governance from the old deployment.
+        if (operator != address(0) && !factory.hasRole(factory.OPERATOR_ROLE(), operator)) {
+            factory.grantRole(factory.OPERATOR_ROLE(), operator);
+        }
         if (factory.hasRole(0x00, msg.sender) && msg.sender != safe) revert CheckFailed("deployer admin");
         (bool enabled,,,,,,,,) = factory.launchTemplate();
         if (enabled) revert CheckFailed("template must start disabled");

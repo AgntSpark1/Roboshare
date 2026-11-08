@@ -419,16 +419,12 @@ describe("governance prepares (Safe, no timelock, never signed by the server)", 
     const now = Math.floor(Date.now() / 1000);
     const body = { unitPrice: (1_000n * ONE).toString(), minUnits: 60, perWalletMax: 100, startTime: now, endTime: now + 30 * 86_400, treasury: ADDR(0x7e), termsHash: keccak256(stringToHex("terms")) };
     const r = await http().post(`/api/v1/admin/projects/${PID2}/offering`).set("Cookie", cookies.reviewer!).send(body).expect(201);
-    const p = r.body.proposal;
-    expect(p.safe).toBe(SAFE);
-    expect(p.tx).toMatchObject({ to: MULTISEND, operation: 1 });
-    expect(p).not.toHaveProperty("schedule");
-    expect(p.calls).toHaveLength(2);
-    // The MultiSend payload carries both calls, in order.
-    expect(p.tx.data).toContain(p.calls[0].data.slice(2));
-    expect(p.tx.data.indexOf(p.calls[0].data.slice(2))).toBeLessThan(p.tx.data.indexOf(p.calls[1].data.slice(2)));
-    expect(decodeFunctionData({ abi: offeringManagerAbi, data: p.calls[0].data }).functionName).toBe("configure");
-    expect(decodeFunctionData({ abi: offeringManagerAbi, data: p.calls[1].data }).functionName).toBe("open");
+    // D-34: configure/open are operator-level direct transactions now, not a Safe batch.
+    expect(r.body.signer).toContain("OPERATOR");
+    expect(r.body.txs).toHaveLength(2);
+    expect(decodeFunctionData({ abi: offeringManagerAbi, data: r.body.txs[0].data }).functionName).toBe("configure");
+    expect(decodeFunctionData({ abi: offeringManagerAbi, data: r.body.txs[1].data }).functionName).toBe("open");
+    expect(r.body.txs[0].to.toLowerCase()).toBe(OFFERING2.toLowerCase());
     // An active project cannot get a new offering.
     const bad = await http().post(`/api/v1/admin/projects/${PID}/offering`).set("Cookie", cookies.reviewer!).send(body).expect(409);
     expect(bad.body.error.code).toBe("PROJECT_STATE_INVALID");
@@ -457,7 +453,7 @@ describe("governance prepares (Safe, no timelock, never signed by the server)", 
     expect(blocked.body.error).toMatchObject({ code: "SUBSCRIBER_FROZEN", details: { wallets: [late.address] } });
 
     const ex = await http().post(`/api/v1/admin/offerings/${PID2}/exclude`).set("Cookie", cookies.reviewer!).send({ wallet: late.address, reason: "stolen wallet" }).expect(201);
-    expect(decodeFunctionData({ abi: offeringManagerAbi, data: ex.body.proposal.calls[0].data }).functionName).toBe("excludeSubscriber");
+    expect(decodeFunctionData({ abi: offeringManagerAbi, data: ex.body.txs[0].data }).functionName).toBe("excludeSubscriber");
 
     await prisma.subscription.update({ where: { projectIdOnchain_wallet: { projectIdOnchain: PID2, wallet: late.address.toLowerCase() } }, data: { status: "REFUNDABLE" } });
     const ok = await http().post(`/api/v1/admin/offerings/${PID2}/settle`).set("Cookie", cookies.operator!).expect(200);
@@ -468,9 +464,10 @@ describe("governance prepares (Safe, no timelock, never signed by the server)", 
     const direct = await http().post(`/api/v1/admin/projects/${PID2}/transition`).set("Cookie", cookies.reviewer!).send({ to: "VERIFIED", reason: "documents checked" }).expect(201);
     expect(direct.body.tx).toBeDefined();
     const gov = await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "incident" }).expect(201);
-    expect(gov.body.proposal.safe).toBe(SAFE);
-    // A single call goes to its target directly (operation 0), not through MultiSend.
-    expect(gov.body.proposal.tx).toMatchObject({ to: ADDR(0xa55e), operation: 0 });
+    // D-34: day-to-day transitions are operator-level direct transactions now.
+    expect(gov.body.signer).toContain("OPERATOR");
+    expect(decodeFunctionData({ abi: assetRegistryAbi, data: gov.body.txs[0].data }).functionName).toBe("transition");
+    expect(gov.body.txs[0].to.toLowerCase()).toBe(ADDR(0xa55e).toLowerCase());
   });
 
   it("prepares the project pause set for the Guardian", async () => {
@@ -591,13 +588,13 @@ describe("referrals", () => {
     await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.operator!).send({ enabled: true, windowDays: 365 }).expect(403);
     await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, windowDays: 0 }).expect(400);
     const r = await http().post("/api/v1/admin/referrals/terms").set("Cookie", cookies.reviewer!).send({ enabled: true, windowDays: 365 }).expect(201);
-    expect(r.body.safe).toBe(SAFE);
-    expect(r.body.tx.to).toBe(MULTISEND);
-    expect(r.body.calls.map((c: any) => c.to)).toEqual([ROUTER, REWARDS]);
-    const terms = decodeFunctionData({ abi: subscriptionRouterAbi, data: r.body.calls[0].data });
+    // D-34: referral terms are operator-level direct transactions now.
+    expect(r.body.signer).toContain("OPERATOR");
+    expect(r.body.txs.map((t: any) => t.to)).toEqual([ROUTER, REWARDS]);
+    const terms = decodeFunctionData({ abi: subscriptionRouterAbi, data: r.body.txs[0].data });
     expect(terms.functionName).toBe("setReferralTerms");
     expect(terms.args).toEqual([true, REFERRAL_LEVEL_BPS[0], 365n * 86_400n]);
-    expect(decodeFunctionData({ abi: referralRewardsAbi, data: r.body.calls[1].data }).functionName).toBe("setClaimsEnabled");
+    expect(decodeFunctionData({ abi: referralRewardsAbi, data: r.body.txs[1].data }).functionName).toBe("setClaimsEnabled");
   });
 
   it("lists the second and third level: people your referrals invited, and theirs", async () => {
@@ -759,17 +756,18 @@ describe("rate limiting", () => {
 
 describe("console operations (Safe queue)", () => {
   it("queues governance proposals so owners confirm them in the console", async () => {
-    const r = await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "queue test" }).expect(201);
+    // D-34: transitions are operator-direct now; the collect levers stay Safe-gated, so they queue.
+    const r = await http().post(`/api/v1/admin/collect/pull`).set("Cookie", cookies.reviewer!).send({ to: ADDR(0x7e), source: "router", froms: [investor.address], reason: "queue test" }).expect(201);
     const id = r.body.proposal.queueId;
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     const list = await http().get("/api/v1/admin/safe-txs").set("Cookie", cookies.operator!).expect(200);
     const row = list.body.items.find((i: any) => i.id === id);
-    expect(row).toMatchObject({ status: "PENDING", safeNonce: null, safe: SAFE.toLowerCase(), to: ADDR(0xa55e).toLowerCase(), operation: 0 });
+    expect(row).toMatchObject({ status: "PENDING", safeNonce: null, safe: SAFE.toLowerCase(), to: getAddress(ADDR(0x40e7)).toLowerCase(), operation: 0 });
     expect(row.calls).toHaveLength(1);
   });
 
   it("fixes each nonce once and never gives two pending transactions the same one", async () => {
-    const mk = async () => (await http().post(`/api/v1/admin/projects/${PID}/transition`).set("Cookie", cookies.reviewer!).send({ to: "SUSPENDED", reason: "nonce test" }).expect(201)).body.proposal.queueId as string;
+    const mk = async () => (await http().post(`/api/v1/admin/collect/pull`).set("Cookie", cookies.reviewer!).send({ to: ADDR(0x7e), source: "router", froms: [investor.address], reason: "nonce test" }).expect(201)).body.proposal.queueId as string;
     const a = await mk();
     const b = await mk();
     await http().post(`/api/v1/admin/safe-txs/${a}/nonce`).set("Cookie", cookies.reviewer!).send({ nonce: 7 }).expect(200);

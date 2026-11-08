@@ -232,7 +232,14 @@ export class AdminReferralController {
       call(rewards, referralRewardsAbi, "setClaimsEnabled", [body.enabled]),
     ];
     await this.audit(req, "REFERRAL_TERMS_PREPARE", "referral", "terms", body);
-    return queueSafe(this.prisma, viaSafe(this.cfg.chainId, safe, calls, `referral terms ${body.enabled ? "on" : "off"}`), req.session!.wallet);
+    // D-34 (2026-11-08): referral terms are OPERATOR-level on-chain; the operator wallet signs directly.
+    return plain({
+      signer: "运营钱包（OPERATOR_ROLE）直接签名",
+      txs: [
+        prepare(this.cfg.chainId, router, subscriptionRouterAbi, "setReferralTerms", [body.enabled, REFERRAL_DEFAULT_SHARE_BPS, BigInt(body.windowDays) * 86_400n], `referral terms ${body.enabled ? "on" : "off"} (router)`),
+        prepare(this.cfg.chainId, rewards, referralRewardsAbi, "setClaimsEnabled", [body.enabled], `referral claims ${body.enabled ? "on" : "off"} (rewards)`),
+      ],
+    });
   }
 
   private async audit(req: AuthedRequest, action: string, targetType: string, targetId: string, payload: unknown) {

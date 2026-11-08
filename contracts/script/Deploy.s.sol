@@ -95,6 +95,8 @@ contract Deploy is Script {
             c.safe
         );
 
+        // D-34: the factory constructor already grants OPERATOR_ROLE to roles.operator and the Safe
+        // (ProjectFactory constructor), so no explicit grant is needed here; the check below verifies it.
         d.identity.grantRole(d.identity.COMPLIANCE_AGENT_ROLE(), c.complianceAgent);
         d.identity.grantRole(d.identity.PAUSER_ROLE(), c.pauser);
         d.assets.grantRole(d.assets.OPERATOR_ROLE(), c.operator);
@@ -122,6 +124,7 @@ contract Deploy is Script {
         _check(d.audit.hasRole(admin, c.safe), "audit admin");
         _check(d.router.hasRole(admin, c.safe), "router admin");
         _check(d.factory.hasRole(admin, c.safe), "factory admin");
+        _check(d.factory.hasRole(d.factory.OPERATOR_ROLE(), c.operator), "factory operator");
         _check(!d.identity.hasRole(admin, deployer), "identity deployer renounced");
         _check(!d.assets.hasRole(admin, deployer), "assets deployer renounced");
         _check(!d.audit.hasRole(admin, deployer), "audit deployer renounced");

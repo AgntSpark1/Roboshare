@@ -67,6 +67,9 @@ contract DistributorDeployer {
 /// transaction. Governance can disable the template or revoke the role at any time.
 contract ProjectFactory is AccessControl {
     bytes32 public constant LAUNCHER_ROLE = keccak256("LAUNCHER_ROLE");
+    /// @notice 2026-11-08 运营权限下放(D-34):launch 模板、角色配置、项目部署由运营钱包直接执行;
+    /// 治理 Safe 同时持有该角色。资金归集类权限不在本合约。
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     struct Roles {
         address admin; // governance Safe
         address operator;
@@ -156,13 +159,16 @@ contract ProjectFactory is AccessControl {
         distributorDeployer = distributorDeployer_;
         _setRoles(roles_);
         _grantRole(DEFAULT_ADMIN_ROLE, factoryAdmin);
+        // D-34: day-to-day factory governance is operator-level; the Safe keeps it too.
+        _grantRole(OPERATOR_ROLE, factoryAdmin);
+        if (roles_.operator != address(0)) _grantRole(OPERATOR_ROLE, roles_.operator);
     }
 
-    function setRoles(Roles calldata roles_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setRoles(Roles calldata roles_) external onlyRole(OPERATOR_ROLE) {
         _setRoles(roles_);
     }
 
-    function setLaunchTemplate(LaunchTemplate calldata t) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setLaunchTemplate(LaunchTemplate calldata t) external onlyRole(OPERATOR_ROLE) {
         if (t.enabled) {
             uint32 cap = 100; // RwaShareToken.CAP, checked again by OfferingManager.configure
             if (
@@ -177,7 +183,7 @@ contract ProjectFactory is AccessControl {
 
     function deployProject(ProjectParams calldata p)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(OPERATOR_ROLE)
         returns (Deployment memory d)
     {
         d = _deploy(p, roles.admin);
@@ -204,6 +210,10 @@ contract ProjectFactory is AccessControl {
         // This factory is the offering's admin only until the offering is open, then governance takes over.
         d = _deploy(ProjectParams({projectId: projectId, name: name, symbol: symbol, treasury: t.treasury}), address(this));
         OfferingManager offering = OfferingManager(d.offering);
+        // D-34: configure/open are OPERATOR-gated now; the factory holds the offering admin and grants
+        // itself the operator role for the length of this launch, then hands admin to governance.
+        bytes32 operatorRole = offering.OPERATOR_ROLE();
+        offering.grantRole(operatorRole, address(this));
         uint64 endTime = uint64(block.timestamp) + uint64(t.durationDays) * 1 days;
         offering.configure(
             OfferingManager.OfferingConfig({
@@ -220,7 +230,14 @@ contract ProjectFactory is AccessControl {
         offering.open();
         bytes32 adminRole = offering.DEFAULT_ADMIN_ROLE();
         offering.grantRole(adminRole, roles.admin);
+        // Keep the operator able to run day-to-day offering actions (D-34); the Safe holds admin.
+        // Granted while this factory still holds admin, before the renounce below.
+        if (roles.operator != address(0) && roles.operator != roles.admin) {
+            offering.grantRole(operatorRole, roles.operator);
+        }
+        if (roles.admin != address(this)) offering.grantRole(operatorRole, roles.admin);
         offering.renounceRole(adminRole, address(this));
+        offering.renounceRole(operatorRole, address(this));
         emit ProjectLaunched(projectId, msg.sender, d.offering, endTime);
     }
 

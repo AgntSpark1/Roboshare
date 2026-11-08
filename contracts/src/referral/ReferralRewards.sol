@@ -19,6 +19,8 @@ contract ReferralRewards is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes32 public constant ROOT_SETTER_ROLE = keccak256("ROOT_SETTER_ROLE");
+    /// @notice D-34 (2026-11-08): the master switch is operator-level; withdraw/sweep stay admin.
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     IERC20 public immutable paymentToken;
@@ -47,6 +49,8 @@ contract ReferralRewards is AccessControl, Pausable, ReentrancyGuard {
         paymentToken = paymentToken_;
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(ROOT_SETTER_ROLE, rootSetter);
+        if (rootSetter != address(0)) _grantRole(OPERATOR_ROLE, rootSetter);
+        if (admin != address(0) && admin != rootSetter) _grantRole(OPERATOR_ROLE, admin);
         if (pauser != address(0)) _grantRole(PAUSER_ROLE, pauser);
     }
 
@@ -76,8 +80,8 @@ contract ReferralRewards is AccessControl, Pausable, ReentrancyGuard {
         emit ReferralRewardClaimed(account, amount, cumulativeAmount);
     }
 
-    /// @notice Governance (Safe) master switch. Off by default; mainnet needs legal sign-off first.
-    function setClaimsEnabled(bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    /// @notice Master switch: operator or governance (D-34). Off by default; mainnet needs legal sign-off first.
+    function setClaimsEnabled(bool enabled) external onlyRole(OPERATOR_ROLE) {
         claimsEnabled = enabled;
         emit ClaimsEnabledSet(enabled);
     }
